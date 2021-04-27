@@ -1,0 +1,55 @@
+$MenuBorderColor: rgb(127, 191, 255);
+$SubMenuBackgroundColor: rgb(0, 126, 255);
+$SubMenuSelectedColor: rgb(0, 79, 160);
+
+.EmptyElement {
+  width: 0;
+  height: 0;
+  visibility: hidden;
+}
+.Hide {
+  display: none;
+}
+
+.Show {
+  display: block;
+}
+
+.App {
+  display: grid;
+  grid-template-rows: 50px 1fr 30px;
+  background: rgba(255, 255, 0, 0.5);
+  height: 100%;
+
+  .BoxSubMenu {
+    position: absolute;
+    background: $SubMenuBackgroundColor;
+    border: {
+      style: solid;
+      color: $MenuBorderColor;
+      width: 1px;
+    }
+    color: rgb(225,225,225);
+
+    .SubMenu {
+      cursor: pointer;
+      background: $SubMenuBackgroundColor;
+      border: {
+        style: solid;
+        color: $MenuBorderColor;
+        width: 0 0 1px 0;
+      }
+      padding: 5px 20px;
+
+      &:hover {
+        background: $SubMenuSelectedColor;
+        color: rgb(255,255,255);
+      }
+
+      &:last-child {
+        border-bottom-width: 0;
+      }
+    }
+  }
+}
+

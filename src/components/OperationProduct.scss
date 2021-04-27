@@ -1,0 +1,313 @@
+$MenuBorderColor: rgb(127, 191, 255);
+$MenuBackgroundColor: rgb(127, 191, 255);
+$MenuSelectedColor: rgb(191, 223, 255);
+
+.OperationProduct {
+  display: grid;
+  background: rgba(255,0,0,0.1);
+
+  .Main {
+    display: grid;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    margin: 5px;
+    grid-template-rows: auto 1fr;
+    grid-gap: 5px;
+
+    .BoxToolbar {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto auto auto auto;
+      grid-gap: 5px;
+
+      .TableName {
+        display: grid;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin: 5px;
+      }
+    }
+
+    .SqlSelectStatement {
+      display: grid;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      margin: 5px 0 5px 5px;
+    }
+
+    .BoxRecord {
+      display: grid;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      margin: 5px;
+    }
+
+    .BoxFields {
+      display: grid;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      margin: 5px;
+      grid-template-columns: auto auto 1fr auto;
+
+      .BoxFieldName {
+        display: grid;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin: 5px;
+
+        .FieldName {
+          display: grid;
+          background: rgba(55, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          margin: 5px;
+        }
+
+
+      }
+
+      .BoxFieldType {
+        display: grid;
+        background: rgba(255, 55, 55, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin: 5px;
+
+        .FieldType {
+          display: grid;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          margin: 5px;
+        }
+      }
+
+      .BoxFieldValue {
+        display: grid;
+        background: rgba(255, 255, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        //margin: 5px;
+
+        .FieldValue {
+          display: grid;
+          background: rgba(255, 255, 0, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          margin: 5px;
+        }
+      }
+    }
+  }
+
+  .DialogDynamic {
+    position: absolute;
+    display: grid;
+    background: rgba(0, 0, 0, 0.75);
+    color: black;
+
+    .Box {
+      margin: 30px 30%;
+      border: 1px solid $MenuSelectedColor;
+      background: $MenuBorderColor;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+
+      .BoxDialogTitle {
+        display: grid;
+        align-content: center;
+        margin-left: 10px;
+        font-size: 1.6rem;
+        font-weight: bold;
+        color: white;
+        margin-bottom: 3px;
+      }
+
+      .BoxToolbar {
+        background: rgba(55,55,55,0.75);
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-gap: 5px;
+
+        Button {
+          margin: 5px 0 5px 0;
+
+          &:last-child {
+            margin-right: 5px;
+          }
+        }
+      }
+
+
+      .BoxFields {
+        //background: yellow;
+        margin: 10px;
+
+        .BoxField {
+          //border: 1px solid red;
+          margin-top: 5px;
+
+          &:first-child {
+            margin-top: 0;
+          }
+
+          .Title {
+            display: inline-block;
+
+          }
+
+
+          .Value {
+
+          }
+        }
+      }
+
+      .BoxMessage {
+        background: rgba(55,55,55,0.75);
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        grid-gap: 5px;
+
+        .Message {
+          display: grid;
+          align-content: center;
+          margin-left: 10px;
+          font-weight: bold;
+          color: white;
+          margin-bottom: 3px;
+        }
+
+        Button {
+          margin: 5px 0 5px 0;
+
+          &:last-child {
+            margin-right: 5px;
+          }
+        }
+      }
+
+      .BoxFieldsConfig {
+        display: grid;
+        grid-template-rows: auto auto;
+
+        .BoxKeyValueListSelection {
+          background: darkcyan;
+          display: grid;
+          grid-template-rows: auto auto;
+          grid-template-columns: 1fr 1fr 1fr 1fr;
+        }
+      }
+    }
+  }
+
+  .DialogDynamicConfig {
+    position: absolute;
+    display: grid;
+    background: rgba(0, 0, 0, 0.75);
+    color: black;
+
+    .Box {
+      margin: 30px 20%;
+      border: 1px solid $MenuSelectedColor;
+      background: $MenuBorderColor;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+
+      .BoxDialogTitle {
+        display: grid;
+        align-content: center;
+        margin-left: 10px;
+        font-size: 1.6rem;
+        font-weight: bold;
+        color: white;
+        margin-bottom: 3px;
+      }
+
+      .BoxToolbar {
+        background: rgba(55,55,55,0.75);
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-gap: 5px;
+
+        Button {
+          margin: 5px 0 5px 0;
+
+          &:last-child {
+            margin-right: 5px;
+          }
+        }
+      }
+
+
+      .BoxFields {
+        //background: yellow;
+        margin: 10px;
+
+        .BoxField {
+          //border: 1px solid red;
+          margin-top: 5px;
+
+          &:first-child {
+            margin-top: 0;
+          }
+
+          .Title {
+            display: inline-block;
+
+          }
+
+
+          .Value {
+
+          }
+        }
+      }
+
+      .BoxMessage {
+        background: rgba(55,55,55,0.75);
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        grid-gap: 5px;
+
+        .Message {
+          display: grid;
+          align-content: center;
+          margin-left: 10px;
+          font-weight: bold;
+          color: white;
+          margin-bottom: 3px;
+        }
+
+        Button {
+          margin: 5px 0 5px 0;
+
+          &:last-child {
+            margin-right: 5px;
+          }
+        }
+      }
+
+      .FieldName {
+        font: {
+          size: 1.8rem;
+        }
+      }
+
+      .BoxFieldsConfig {
+        display: grid;
+        grid-template-rows: auto auto;
+
+        .BoxKeyValueListSelection {
+          background: darkcyan;
+          display: grid;
+          grid-template-rows: auto auto;
+          grid-template-columns: 1fr 1fr 1fr 1fr;
+          grid-gap: 0 5px;
+
+          .Title {
+            display: grid;
+            color: white;
+            align-content: center;
+            justify-content: center;
+
+          }
+        }
+      }
+    }
+  }
+}

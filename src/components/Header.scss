@@ -1,0 +1,105 @@
+$MenuBorderColor: rgb(127, 191, 255);
+$MenuBackgroundColor: rgb(127, 191, 255);
+$MenuSelectedColor: rgb(191, 223, 255);
+
+.Header {
+  border: { style: solid; color: $MenuBorderColor; width: 0 0 1px 0; }
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: 1fr;
+  background: rgba(55, 125, 225, 1);
+  align-content: center;
+  justify-items: start;
+
+  .BoxTitle {
+    //background: rgba(0, 225, 0, 1);
+    //border: { style: solid; color: red; width: 1px; }
+    display: grid;
+    align-content: center;
+    justify-items: start;
+
+    .Title {
+      //background: rgba(155, 155, 255, 1);
+      //border: { style: solid; color: red; width: 1px; }
+      display: inline-block;
+      margin-left: 20px;
+      font: {
+        size: 2.8rem;
+        weight: bold;
+      }
+      letter-spacing: 2px;
+      color: white;
+      //text-shadow: 3px 3px;
+      //box-shadow: 3px 3px;
+    }
+  }
+
+  .BoxMenus {
+    //border: { style: solid; color: red; width: 1px; }
+    display: grid;
+    grid-template-columns: auto auto auto auto auto auto auto 1fr;
+    grid-gap: 10px;
+    margin-left: 20px;
+    align-content: end;
+    justify-items: center;
+    //margin-bottom: 1px;
+
+    .Menu {
+      display: inline-block;
+      cursor: pointer;
+      background: $MenuBackgroundColor;
+      border: {
+        style: solid;
+        color: $MenuBorderColor;
+        width: 1px 1px 0 1px;
+      }
+
+      border-radius: 5px 5px 0 0;
+      padding: 3px 20px;
+      user-select: none;
+
+      &:hover {
+        //border: {
+        //  style: solid;
+        //  color: $MenuBorderColor;
+        //  width: 3px 1px 1px 1px;
+        //}
+        background: $MenuSelectedColor;
+      }
+    }
+  }
+
+  .BoxUser {
+    //background: green;
+    //border: { style: solid; color: red; width: 1px; }
+    display: grid;
+    align-content: center;
+    justify-items: start;
+    margin-right: 20px;
+    align-content: start;
+    justify-items: center;
+
+    .Username {
+      display: inline-block;
+      cursor: pointer;
+      background: $MenuBackgroundColor;
+      border: {
+        style: solid;
+        color: $MenuBorderColor;
+        width: 0 1px 1px 1px;
+      }
+      border-radius: 0 0 10px 10px;
+      padding: 3px 20px 3px 20px;
+      user-select: none;
+
+      &:hover {
+        //border: {
+        //  style: solid;
+        //  color: $MenuBorderColor;
+        //  width: 3px 1px 1px 1px;
+        //}
+        background: $MenuSelectedColor;
+      }
+    }
+  }
+}

@@ -1,0 +1,60 @@
+$HeaderBackgroundColor: rgb(65, 102, 175);
+$HeaderBorderColor: rgb(90, 90, 90);
+$MenuBackgroundColor: rgba(55, 55, 55, 0.5);
+$MenuBorderColor: rgb(29, 147, 252);
+
+.Header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-gap: 10px;
+  //justify-items: center;
+  align-items: center;
+  background: $HeaderBackgroundColor;
+  color: white;
+  border: {
+    width: 0 0 1px 0;
+    style: solid;
+    color: $HeaderBorderColor;
+  }
+
+  .Title {
+    margin-left: 20px;
+    font: {
+      size: 28px;
+      weight: bold;
+    }
+  }
+
+  .BoxMenus {
+    display: grid;
+    grid-gap: 10px;
+
+    .Menu {
+      background: $MenuBackgroundColor;
+      border: {
+        width: 1px;
+        style: solid;
+        color: $MenuBorderColor;
+      }
+      padding: 3px 20px 5px 20px;
+      border-radius: 30px;
+      cursor: pointer;
+
+      &:first-child {
+        margin-left: 20px;
+      }
+    }
+  }
+
+  .BoxUser {
+    background: $MenuBackgroundColor;
+    border: {
+      width: 1px;
+      style: solid;
+      color: $MenuBorderColor;
+    }
+    padding: 3px 20px 5px 20px;
+    border-radius: 30px;
+    margin-right: 20px;
+  }
+}

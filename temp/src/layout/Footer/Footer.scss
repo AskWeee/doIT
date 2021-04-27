@@ -1,0 +1,42 @@
+$MenuBorderColor: rgb(127, 191, 255);
+$MenuBackgroundColor: rgb(127, 191, 255);
+$MenuSelectedColor: rgb(191, 223, 255);
+
+.Footer {
+  border: {
+    style: solid;
+    color: $MenuBorderColor;
+    width: 1px 0 0  0;
+  }
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: 1fr;
+  background: rgba(55, 125, 225, 1);
+  align-content: center;
+  justify-items: center;
+  color: white;
+
+  .BoxMessage {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    margin-left: 10px;
+
+    .Message {
+      display: inline-block;
+    }
+  }
+
+
+  .BoxClock {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    margin-right: 10px;
+
+    .Clock {
+      display: inline-block;
+      //font-size: 1.6rem;
+    }
+  }
+}

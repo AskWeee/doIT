@@ -1,17 +1,22 @@
+import React from 'react'
 import 'antd/dist/antd.css'
 import './App.scss'
-import React from 'react'
+import Header from "./layout/Header/Header";
+import Content from "./layout/Content/Content";
+import Footer from "./layout/Footer/Footer";
 import GCtx from "./GCtx";
-import Header from "./components/Header";
-import Content from "./components/Content";
-import Footer from "./components/Footer";
+import {IAppProps, IAppState, ISender} from "./GInterface";
 
-class App extends React.Component{
+class App extends React.PureComponent<IAppProps, IAppState> {
   static contextType = GCtx;
 
-  constructor(props) {
+  ComContent: any;
+
+  constructor(props: IAppProps) {
     super(props);
+
     this.state = {
+      child: null,
       changeData: () => {
         this.setState({});
       },
@@ -19,7 +24,7 @@ class App extends React.Component{
       isShownSubMenu: false,
       subMenus: [],
       event: {target: undefined, x: 0, y: 0, w: 0, h: 0},
-      changeSubMenus: (event, items) => {
+      changeSubMenus: (event: React.MouseEvent<HTMLDivElement>, items: []) => {
         console.log(event);
 
         let e = {
@@ -36,7 +41,7 @@ class App extends React.Component{
       contentChildren: [<Footer/>, <Footer/>],
       changeContentChildren: () => {
       },
-      jsxSubMenu: []
+      jsxSubMenu: new Array<any>()
     }
 
     this.onRefContent = this.onRefContent.bind(this);
@@ -55,11 +60,11 @@ class App extends React.Component{
     //!!!do not set state again.
   }
 
-  onRefContent(ref) {
+  onRefContent(ref: any) {
     this.ComContent = ref;
   }
 
-  onMenuClicked(sender) {
+  onMenuClicked(sender: ISender) {
     let s = {
       id: sender.id,
       x: Math.ceil(sender.x),
@@ -71,7 +76,7 @@ class App extends React.Component{
     let isShown = !this.state.isShownSubMenu;
     let jsxSubMenu = [];
 
-    let subMenus = [];
+    let subMenus:any = [];
     let children = this.context.mapMenus.get(s.id).children;
 
     for(let [key, value] of children){
@@ -85,7 +90,7 @@ class App extends React.Component{
              onClick={(e) => {
                this.onSubMenuClicked(e)
              }}>{item.label}</div>);
-    }
+      }
 
     this.setState({
       jsxSubMenu: jsxSubMenu,
@@ -94,7 +99,7 @@ class App extends React.Component{
     });
   }
 
-  onSubMenuClicked() {
+  onSubMenuClicked(event: any) {
     this.ComContent.showComponent();
     this.setState({isShownSubMenu: !this.state.isShownSubMenu});
   }
@@ -104,19 +109,20 @@ class App extends React.Component{
       <GCtx.Provider value={this.context}>
         <div className="App">
           <Header/>
-          <Content onRef={(ref) => this.onRefContent(ref)}/>
+          <Content onRef={(ref: any) => this.onRefContent(ref)}/>
           <Footer/>
           <div id="boxSubMenu"
                className={this.state.isShownSubMenu ? "BoxSubMenu Show" : "BoxSubMenu Hide"}
-               style={{left: this.state.sender.x, top: this.state.sender.y}}>
+               style={{left: this.state.sender.x, top: this.state.sender.y}}
+          >
             {this.state.jsxSubMenu.map((item) => {
               return item
             })}
           </div>
         </div>
       </GCtx.Provider>
-    );
+    )
   }
 }
 
-export default App;
+export default App
