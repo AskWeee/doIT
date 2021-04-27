@@ -3,6 +3,8 @@ import React from "react";
 const GCtx = React.createContext({
   author: '管理员',
   message: "message from global context",
+  serviceIp: "10.50.10.7",
+  reactElementKey: 0,
   mapMenus: new Map(),
   menus: [
     {id: 'menu_database', label: '数据库管理', desc: '数据库管理', ref: null, children: [
@@ -42,6 +44,10 @@ const GCtx = React.createContext({
         {id: 'menu_help_about', label: '关于本系统', desc: '', ref: null}
       ]}],
   subMenus: [],
+  getElementKey: () => {
+    let key = this.reactElementKey++;
+    return key.toString();
+  },
   onMenuClicked: () => {},
   changeData: () => {},
   changeSubMenus: () => {},

@@ -33,7 +33,7 @@ export default class KSelect extends React.Component {
     return <div style={{display: "inline-block"}}>
       <Select onChange = { this.onChange.bind(this) } style={{width: "100%"}} defaultValue="0">
         <Select.Option value="0">请选择</Select.Option>
-        {this.state.data.map((item: any) => (
+        {this.state.data.map((item) => (
           <Select.Option key={item} value={item}>{item}</Select.Option>
         ))}
       </Select>

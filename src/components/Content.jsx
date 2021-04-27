@@ -1,7 +1,8 @@
 import React from 'react';
 import './Content.scss'
 import GCtx from "../GCtx";
-import OperationProduct from "./OperationProduct";
+import DatabaseImport from "./DatabaseImport";
+import LowcodeSingleTable from "./LowcodeSingleTable";
 
 class Content extends React.Component {
   static contextType = GCtx;
@@ -16,13 +17,18 @@ class Content extends React.Component {
     this.props.onRef(this);
   }
 
-  testFun(){
-    this.setState({message: this.context.message + " - sub menu is clicked."});
+  showComponentDatabaseImport() {
+    let children = [];
+    children.push(<DatabaseImport key="menu_database_import"/>);
+
+    this.setState({
+      children: children
+    })
   }
 
-  showComponent() {
+  showComponentLowcodeSingleTable() {
     let children = [];
-    children.push(<OperationProduct key="menu_operation_product"/>);
+    children.push(<LowcodeSingleTable key="menu_lowcode_single_table"/>);
 
     this.setState({
       children: children
@@ -36,7 +42,7 @@ class Content extends React.Component {
   render() {
     return (
       <div className="Content">
-        {this.state.children.map((item, index) => {
+        {this.state.children.map((item) => {
           return item
         })}
       </div>)

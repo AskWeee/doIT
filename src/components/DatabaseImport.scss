@@ -1,0 +1,25 @@
+.DatabaseImport {
+  display: grid;
+  background: rgba(55,175, 255, 0.2);
+  grid-template-columns: 1fr 40%;
+  margin: 5px;
+  border: 1px solid rgba(55,55,55,1);
+
+  .DivTest {
+    //display: inline-block;
+    background: rgba(255, 0, 0, 0.2);
+    margin: 5px;
+  }
+
+  .BoxKnown {
+    background: rgba(55,175, 255, 0.2);
+    border: 1px solid rgba(55,55,55,1);
+  }
+
+
+  .BoxUnknown {
+    background: rgba(55,175, 255, 0.2);
+    border: 1px solid rgba(55,55,55,1);
+  }
+
+}

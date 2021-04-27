@@ -83,7 +83,7 @@ class App extends React.Component{
         <div key={item.id}
              className={"SubMenu"}
              onClick={(e) => {
-               this.onSubMenuClicked(e)
+               this.onSubMenuClicked(e, item.id)
              }}>{item.label}</div>);
     }
 
@@ -94,8 +94,18 @@ class App extends React.Component{
     });
   }
 
-  onSubMenuClicked() {
-    this.ComContent.showComponent();
+  onSubMenuClicked(e, s) {
+    switch(s) {
+      case 'menu_lowcode_single_table':
+        this.ComContent.showComponentLowcodeSingleTable();
+        break
+      case 'menu_database_import':
+        this.ComContent.showComponentDatabaseImport();
+        break
+      default:
+        break
+    }
+
     this.setState({isShownSubMenu: !this.state.isShownSubMenu});
   }
 

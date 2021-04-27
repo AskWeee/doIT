@@ -1,15 +1,13 @@
 import React from 'react'
-import ReactDom from 'react-dom'
-import './OperationProduct.scss'
+import './LowcodeSingleTable.scss'
 import axios from "axios";
 import {Button, DatePicker, Input, InputNumber, Select, Table, TimePicker} from 'antd'
 import moment from 'moment';
 import KSelect from "./KSelect";
 
-export default class OperationProduct extends React.Component {
+export default class LowcodeSingleTable extends React.Component {
   gStrServiceIp = "10.50.10.7";
   gStrSql = "";
-  gDomMain;
   gMapAntdSelectedRowValues = new Map(); // 存储当前表格选中行的记录值
   gMapQueryFieldsInfo = new Map(); // 存储当前表格选中行的记录值
   gIntDatabaseRecordKey = 999;
@@ -24,16 +22,13 @@ export default class OperationProduct extends React.Component {
       }
 
       this.gArrSelectedRowValues = selectedRows;
-    },
-    getCheckboxProps: (record) => ({
-      disabled: record.product_id === '1',
-      name: record.product_id
-    })
+    }
   };
   gMapTablesInfo = new Map(); // {tableName: {fields: [{filedName: {fieldAttributeName: fieldAttributeValues}]
   gMapTablesConfig = new Map();
   ComContent;
   exampleRef = React.createRef();
+  gRefDomMain = React.createRef();
   gRefs = [];
 
   constructor(props) {
@@ -98,11 +93,10 @@ export default class OperationProduct extends React.Component {
     this.doGetTableConfigDatasource = this.doGetTableConfigDatasource.bind(this);
     this.onRefContent = this.onRefContent.bind(this);
 
-    this.doGetSchema();
+
   }
 
   onRefContent(ref) {
-    console.log("onRefContent", ref);
     this.ComContent = ref;
   }
 
@@ -162,10 +156,12 @@ export default class OperationProduct extends React.Component {
           case "field_nullable":
             tableInfo.field_nullable.columnIndex = i;
             break
+          default:
+            break
         }
       }
 
-      let datasource = [];
+      //let datasource = [];
       for (let i = 0; i < data.records.length; i++) {
         let v = {key: i};
         let tName = data.records[i].fieldValues[tableInfo.table_name.columnIndex].toLowerCase();
@@ -200,12 +196,12 @@ export default class OperationProduct extends React.Component {
           Object.defineProperty(v, columns[j],
             {value: data.records[i].fieldValues[j], enumerable: true, writable: true});
         }
-        datasource.push(v);
+        //datasource.push(v);
       }
 
       let arrTableNames = [];
       this.gMapTablesInfo.forEach(function (value, key) {
-        arrTableNames.push(key);
+        arrTableNames.push({key});
       });
 
       this.setState({tableNames: arrTableNames});
@@ -232,8 +228,8 @@ export default class OperationProduct extends React.Component {
   doGetTableConfigDatasource(tableName) {
     let strServiceIp = this.gStrServiceIp;
     let tableConfig = this.gMapTablesConfig.get(tableName);
-    console.log(tableConfig);
     let fieldConfig = undefined;
+
     if (tableConfig !== undefined) {
       tableConfig.fields.forEach((value, key) => {
         fieldConfig = value;
@@ -281,7 +277,6 @@ export default class OperationProduct extends React.Component {
                 });
               }
 
-              console.log(mapTableConfigDatasource);
               this.setState({
                 mapTableConfigDatasource: mapTableConfigDatasource
               });
@@ -295,8 +290,7 @@ export default class OperationProduct extends React.Component {
   }
 
   componentDidMount() {
-    this.gDomMain = ReactDom.findDOMNode(this);
-    // this.doRefresh()
+    this.doGetSchema();
   }
 
   doFilter() {
@@ -306,10 +300,10 @@ export default class OperationProduct extends React.Component {
   doQuery() {
     let style = {
       display: "grid",
-      width: this.gDomMain.offsetWidth - 10,
-      height: this.gDomMain.offsetHeight - 10,
+      width: this.gRefDomMain.current.offsetWidth - 10,// this.gDomMain.offsetWidth - 10,
+      height: this.gRefDomMain.current.offsetHeight - 10,// this.gDomMain.offsetHeight - 10,
       left: "5px",
-      top: this.gDomMain.offsetTop + 5
+      top: this.gRefDomMain.current.offsetTop + 5// this.gDomMain.offsetTop + 5
     }
 
     let jsxDialog = [];
@@ -429,6 +423,8 @@ export default class OperationProduct extends React.Component {
           case "like":
             operator = " like ";
             break
+          default:
+            break
         }
         strSql += key + operator;
         switch (value.type) {
@@ -446,6 +442,8 @@ export default class OperationProduct extends React.Component {
               if (strTime === "") strTime = "00:00:00";
               strSql += strDate + " " + strTime + "' and "
             }
+            break
+          default:
             break
         }
 
@@ -581,10 +579,10 @@ export default class OperationProduct extends React.Component {
   doInsert() {
     let style = {
       display: "grid",
-      width: this.gDomMain.offsetWidth - 10,
-      height: this.gDomMain.offsetHeight - 10,
+      width: this.gRefDomMain.current.offsetWidth - 10,// this.gDomMain.offsetWidth - 10,
+      height: this.gRefDomMain.current.offsetHeight - 10,// this.gDomMain.offsetHeight - 10,
       left: "5px",
-      top: this.gDomMain.offsetTop + 5
+      top: this.gRefDomMain.current.offsetTop + 5// this.gDomMain.offsetTop + 5
     }
 
     let jsxDialog = [];
@@ -706,6 +704,8 @@ export default class OperationProduct extends React.Component {
           Object.defineProperty(objRecord, key,
             {value: (value.value.date + " " + value.value.time), enumerable: true, writable: true});
           break
+        default:
+          break
       }
 
     });
@@ -755,14 +755,14 @@ export default class OperationProduct extends React.Component {
 
     let style = {
       display: "grid",
-      width: this.gDomMain.offsetWidth - 10,
-      height: this.gDomMain.offsetHeight - 10,
+      width: this.gRefDomMain.current.offsetWidth - 10,// this.gDomMain.offsetWidth - 10,
+      height: this.gRefDomMain.current.offsetHeight - 10,// this.gDomMain.offsetHeight - 10,
       left: "5px",
-      top: this.gDomMain.offsetTop + 5
+      top: this.gRefDomMain.current.offsetTop + 5// this.gDomMain.offsetTop + 5
     }
 
     let jsxDialog = [];
-    let arrFieldsWritable = this.doGetFieldsWritable(this.state.tableName);
+    //let arrFieldsWritable = this.doGetFieldsWritable(this.state.tableName);
 
     let columns = [];
     if (this.gMapTablesInfo.has(this.state.tableName)) {
@@ -893,6 +893,8 @@ export default class OperationProduct extends React.Component {
           if (strTime === "") strTime = s[key].split(" ")[1];
           strSql += "'" + strDate + " " + strTime + "',";
           break
+        default:
+          break
       }
 
     });
@@ -921,7 +923,6 @@ export default class OperationProduct extends React.Component {
             oTemp = " is ";
             vTemp = "null"
           }
-          ;
           strWhere += propertyName + oTemp + vTemp + " and ";
         } else if (strType === "varchar") {
           let oTemp = " = ";
@@ -1052,10 +1053,10 @@ export default class OperationProduct extends React.Component {
   doConfig() {
     let style = {
       display: "grid",
-      width: this.gDomMain.offsetWidth - 10,
-      height: this.gDomMain.offsetHeight - 10,
+      width: this.gRefDomMain.current.offsetWidth - 10,// this.gDomMain.offsetWidth - 10,
+      height: this.gRefDomMain.current.offsetHeight - 10,// this.gDomMain.offsetHeight - 10,
       left: "5px",
-      top: this.gDomMain.offsetTop + 5
+      top: this.gRefDomMain.current.offsetTop + 5// this.gDomMain.offsetTop + 5
     }
 
     let jsxDialog = [];
@@ -1068,7 +1069,7 @@ export default class OperationProduct extends React.Component {
       });
     }
 
-    let tableConfig = this.gMapTablesConfig.get(this.state.tableName);
+    //let tableConfig = this.gMapTablesConfig.get(this.state.tableName);
 
     let tables = [];
     this.gMapTablesInfo.forEach(function (value, key) {
@@ -1080,16 +1081,16 @@ export default class OperationProduct extends React.Component {
     for (let i = 0; i < fields.length; i++) {
       let fieldName = fields[i].fieldName;
       let fieldType = fields[i].fieldType;
-      let keyComDynamic = fields[i].domKey;
+      //let keyComDynamic = fields[i].domKey;
       let comDynamic;
-      let hasConfig = false;
-      let fieldConfig = undefined;
-      if (tableConfig !== undefined) {
-        fieldConfig = tableConfig.fields.get(fieldName);
-        if (fieldConfig !== undefined) {
-          hasConfig = true;
-        }
-      }
+      // let hasConfig = false;
+      // let fieldConfig = undefined;
+      // if (tableConfig !== undefined) {
+      //   fieldConfig = tableConfig.fields.get(fieldName);
+      //   if (fieldConfig !== undefined) {
+      //     hasConfig = true;
+      //   }
+      // }
 
       this.gRefs[i] = [];
       this.gRefs[i].push(React.createRef());
@@ -1176,49 +1177,53 @@ export default class OperationProduct extends React.Component {
 
         this.gMapAntdSelectedRowValues.get(sender).value.time = e.format("HH:mm:ss");
         break
+      default:
+        break
     }
   }
 
-  onChangeSelect(e, sender, type) {
-    switch (type) {
-      case 'int':
-        if (!this.gMapAntdSelectedRowValues.has(sender)) {
-          this.gMapAntdSelectedRowValues.set(sender, {value: e, type: "int", operator: "greatEqual"});
-        } else {
-          this.gMapAntdSelectedRowValues.get(sender).value = e;
-        }
-        break
-      case 'varchar':
-        if (!this.gMapAntdSelectedRowValues.has(sender)) {
-          this.gMapAntdSelectedRowValues.set(sender, {value: e, type: "varchar", operator: "like"});
-        } else {
-          this.gMapAntdSelectedRowValues.get(sender).value = e;
-        }
-        break
-      case 'date':
-        if (!this.gMapAntdSelectedRowValues.has(sender)) {
-          this.gMapAntdSelectedRowValues.set(sender, {
-            value: {date: moment(e, 'yyyy-MM-DD'), time: "00:00:00"},
-            type: "datetime",
-            operator: "greatEqual"
-          });
-        } else {
-          this.gMapAntdSelectedRowValues.get(sender).value.date = moment(e, 'yyyy-MM-DD');
-        }
-        break
-      case 'time':
-        if (!this.gMapAntdSelectedRowValues.has(sender)) {
-          this.gMapAntdSelectedRowValues.set(sender, {
-            value: {date: undefined, time: moment(e, 'HH:mm:ss')},
-            type: "datetime",
-            operator: "greatEqual"
-          });
-        } else {
-          this.gMapAntdSelectedRowValues.get(sender).value.time = moment(e, 'HH:mm:ss');
-        }
-        break
-    }
-  }
+  // onChangeSelect(e, sender, type) {
+  //   switch (type) {
+  //     case 'int':
+  //       if (!this.gMapAntdSelectedRowValues.has(sender)) {
+  //         this.gMapAntdSelectedRowValues.set(sender, {value: e, type: "int", operator: "greatEqual"});
+  //       } else {
+  //         this.gMapAntdSelectedRowValues.get(sender).value = e;
+  //       }
+  //       break
+  //     case 'varchar':
+  //       if (!this.gMapAntdSelectedRowValues.has(sender)) {
+  //         this.gMapAntdSelectedRowValues.set(sender, {value: e, type: "varchar", operator: "like"});
+  //       } else {
+  //         this.gMapAntdSelectedRowValues.get(sender).value = e;
+  //       }
+  //       break
+  //     case 'date':
+  //       if (!this.gMapAntdSelectedRowValues.has(sender)) {
+  //         this.gMapAntdSelectedRowValues.set(sender, {
+  //           value: {date: moment(e, 'yyyy-MM-DD'), time: "00:00:00"},
+  //           type: "datetime",
+  //           operator: "greatEqual"
+  //         });
+  //       } else {
+  //         this.gMapAntdSelectedRowValues.get(sender).value.date = moment(e, 'yyyy-MM-DD');
+  //       }
+  //       break
+  //     case 'time':
+  //       if (!this.gMapAntdSelectedRowValues.has(sender)) {
+  //         this.gMapAntdSelectedRowValues.set(sender, {
+  //           value: {date: undefined, time: moment(e, 'HH:mm:ss')},
+  //           type: "datetime",
+  //           operator: "greatEqual"
+  //         });
+  //       } else {
+  //         this.gMapAntdSelectedRowValues.get(sender).value.time = moment(e, 'HH:mm:ss');
+  //       }
+  //       break
+  //     default:
+  //       break
+  //   }
+  // }
 
   onChangeTableSelected(e) {
     this.gStrSql = "select * from " + e;
@@ -1264,6 +1269,8 @@ export default class OperationProduct extends React.Component {
           this.gMapQueryFieldsInfo.get(sender).operator.time = e;
         }
         break
+      default:
+        break
     }
   }
 
@@ -1281,11 +1288,12 @@ export default class OperationProduct extends React.Component {
 
         this.gMapAntdSelectedRowValues.get(s).value = e;
         break
+      default:
+        break
     }
   }
 
   onChangeTableConfigSelected(e, s, f, i) {
-    console.log("............................", e, s, f, i);
     let sd = [];
 
     if (!this.gMapTablesConfig.has(this.state.tableName)) {
@@ -1307,7 +1315,7 @@ export default class OperationProduct extends React.Component {
       this.gMapTablesConfig.get(this.state.tableName).fields.get(f).datasource.table = e;
 
       let fields = this.gMapTablesInfo.get(e).fields;
-      fields.forEach(function (value:any, key:any) {
+      fields.forEach(function (value, key) {
         sd.push(key);
       })
 
@@ -1346,6 +1354,8 @@ export default class OperationProduct extends React.Component {
 
         this.gMapQueryFieldsInfo.get(sender).value.time = e.format("HH:mm:ss");
         break
+      default:
+        break
     }
   }
 
@@ -1355,7 +1365,7 @@ export default class OperationProduct extends React.Component {
 
   render() {
     return (
-      <div className="OperationProduct">
+      <div ref={this.gRefDomMain} className="LowcodeSingleTable">
         <div className="Main">
           <div className="BoxToolbar">
             <Select defaultValue={this.state.tableNames[0]}
