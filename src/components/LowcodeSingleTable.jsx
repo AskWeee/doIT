@@ -201,8 +201,10 @@ export default class LowcodeSingleTable extends React.Component {
 
       let arrTableNames = [];
       this.gMapTablesInfo.forEach(function (value, key) {
-        arrTableNames.push({key});
+        arrTableNames.push(key);
       });
+
+      console.log(".............", arrTableNames);
 
       this.setState({tableNames: arrTableNames});
       this.doGetConfig();
@@ -226,6 +228,7 @@ export default class LowcodeSingleTable extends React.Component {
   }
 
   doGetTableConfigDatasource(tableName) {
+    console.log(".............");
     let strServiceIp = this.gStrServiceIp;
     let tableConfig = this.gMapTablesConfig.get(tableName);
     let fieldConfig = undefined;
@@ -263,6 +266,7 @@ export default class LowcodeSingleTable extends React.Component {
               }
             })
             .then((response) => {
+              console.log("==========================");
               let data = response.data;
               const {mapTableConfigDatasource} = this.state;
 
