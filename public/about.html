@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>doIT - About</title>
+    <link href="css/about.css" rel="stylesheet">
+    <script src="js/jquery-3.3.1.min.js" type="application/javascript"></script>
+</head>
+<body>
+<div id="about" class="clsBoxReleaseNotes">
+    <table>
+        <tr><td><div class="clsComTitle">doIT - DevOps Is Tasty</div></td></tr>
+        <tr class="clsBoxVersion"><td><div class="clsVersion">最近一次产品更新</div></td></tr>
+        <tr>
+            <td>
+                <ol>
+                    <li class="clsVersionTitle">... 产品更新日期：2021-04-25 ...</li>
+                    <li>20210419. 低代码管理 - 单表维护页面生成： 提供枚举字段的选择功能。</li>
+                    <li>20210421. 低代码管理 - 单表维护页面生成： 提供表字段属性配置功能。</li>
+                    <li>20210427. 低代码管理 - 单表维护页面生成： 提供数据呈现显示关联字段值功能。</li>
+                    <li>???20210429. 数据库管理 - 库表结构及数据导入： 提供数据库结构导入功能。</li>
+                    <li>???. 低代码管理： 单表维护页面生成： 提供字段隐藏（无需编辑）功能。</li>
+                    <li>???. 系统配置 - 产品维护： 完成产品相关信息的录入及维护工作</li>
+                    <li>???. 系统配置 - 产品维护： 001： 单表数据录入，目的：测试单表数据维护界面的开发方式，为后期低代码做准备。</li>
+                    <li>???. 系统配置 - 产品维护： 002： 级联表数据录入，目的：测试单表数据维护界面的开发方式，为后期低代码做准备。</li>
+                    <li>???. 系统配置 - 产品维护： 003： 完善产品信息录入及维护功能页面的开发。</li>
+                    <li>???. 产品分发：docker image的制作及分发</li>
+                    <li>???. 数据库管理 - 库表结构对比： 设计并实现基础功能。</li>
+                    <li>???. 数据库管理 - 库表基础数据对比： 设计并实现基础功能。</li>
+                    <li>???. 运维管理 - kafka专项监控： 设计并实现基础功能。</li>
+                    <div style="display: none"><pre>
+数据可视化：
+消息队列的数据变化，动画方式呈现
+系统监控的实用化，监控主机
+监控消息
+网络拓扑自发现，通过业务数据的传递来发现网络
+监控告警，监控队列
+监控磁盘，如根目录增长等
+实用化为主
+视图服务编辑
+指标服务编辑
+核心产品要贯穿起来，要保证业务实现的简介，可视化
+进程的自发现，发现后进行信息补充，保证可识别
+grafana的二次开发
+数据源的二次开发</pre></div>
+                </ol>
+            </td>
+        </tr>
+        <tr class="clsBoxVersion"><td><div class="clsVersion">产品更新历史记录</div></td></tr>
+        <tr>
+            <td>
+                <ol>
+                    <li class="clsVersionTitle">... 产品更新日期：2021-04-21 ...</li>
+                    <li>. 系统框架： 更换了系统技术架构，核心仍使用react.js，但使用node.js生态作为开发及运行环境支持</li>
+                    <li>. 系统框架： 使用 context 作为组件间数据传递方式</li>
+                    <li>. 系统框架： 引入Axios，用于通过 rest 服务获取数据。</li>
+                    <li>. 中层服务： 设计实现数据库访问查询服务。</li>
+                    <li>. 中层服务： 设计实现数据库访问SQL透传服务。</li>
+                    <li>. 低代码管理： 设计实现单表的数据录入功能。</li>
+                    <li>. 低代码管理： 设计实现单表记录的修改及删除功能。</li>
+                    <li>. 低代码管理： 设计实现单表数据查询功能。</li>
+                    <li>. 低代码管理： 设计实现呈现全库（MySQL）数据表列表功能。</li>
+                    <li>. 低代码管理： 优化单表查询、新增、修改、删除功能。</li>
+                    <li class="clsVersionTitle">... 产品更新日期：2021-04-13 ...</li>
+                    <li>. 系统框架： 创建简易框架</li>
+                    <li>. 产品结构配置： 完成UI设计（使用React jsx方式/Ant Design UI）</li>
+                    <li>. 数据库结构导出： 完成UI设计(使用React Js方式）</li>
+                    <li>. 数据库结构比较： 完成UI设计(使用React Js方式）</li>
+                    <li>. 数据库结构导入： 完成UI设计(使用React Js方式）</li>
+                    <li class="clsVersionTitle">... 产品更新日期：2021-04-09 ...</li>
+                    <li>. GO</li>
+                    <li class="clsVersionTitle">... 产品更新日期：2019-04-08 ...</li>
+                    <li>. READY</li>
+                </ol>
+            </td>
+        </tr>
+    </table>
+</div>
+<script type="application/javascript">
+  $(document).ready(function () {
+    let w = window.innerWidth;
+    let h = window.innerHeight;
+    $("#about").outerWidth(w - 100).outerHeight(h - 100).css("left", 50).css("top", 50);
+  });
+
+  $(window).resize(function () {
+    let w = window.innerWidth;
+    let h = window.innerHeight;
+    $("#about").outerWidth(w).outerHeight(h);
+  });
+
+</script>
+</body>

@@ -4,9 +4,12 @@ import axios from "axios";
 import {Button, DatePicker, Input, InputNumber, Select, Table, TimePicker} from 'antd'
 import moment from 'moment';
 import KSelect from "./KSelect";
+import GCtx from "../GCtx";
 
 export default class LowcodeSingleTable extends React.Component {
-  gStrServiceIp = "10.50.10.7";
+  static contextType = GCtx;
+
+  //gStrServiceIp = "10.50.10.7";
   gStrSql = "";
   gMapAntdSelectedRowValues = new Map(); // 存储当前表格选中行的记录值
   gMapQueryFieldsInfo = new Map(); // 存储当前表格选中行的记录值
@@ -111,7 +114,7 @@ export default class LowcodeSingleTable extends React.Component {
 
   doGetSchema() {
     axios.post(
-      "http://" + this.gStrServiceIp + ":8090/rest/mysql/schema",
+      "http://" + this.context.serviceIp + ":8090/rest/mysql/schema",
       {
         sql: "",
         pageRows: 0,
@@ -229,7 +232,7 @@ export default class LowcodeSingleTable extends React.Component {
 
   doGetTableConfigDatasource(tableName) {
     console.log(".............");
-    let strServiceIp = this.gStrServiceIp;
+    //let strServiceIp = this.gStrServiceIp;
     let tableConfig = this.gMapTablesConfig.get(tableName);
     let fieldConfig = undefined;
 
@@ -254,7 +257,7 @@ export default class LowcodeSingleTable extends React.Component {
 
           console.log("K-SQL-GET-RELATED-VALUE", strSql);
 
-          axios.post("http://" + strServiceIp + ":8090/rest/mysql/select", {
+          axios.post("http://" + this.context.serviceIp + ":8090/rest/mysql/select", {
               sql: strSql,
               pageRows: 0,
               pageNum: 0,
@@ -461,7 +464,7 @@ export default class LowcodeSingleTable extends React.Component {
     this.gStrSql = strSql;
 
     // /*
-    axios.post("http://" + this.gStrServiceIp + ":8090/rest/mysql/select", {
+    axios.post("http://" + this.context.serviceIp + ":8090/rest/mysql/select", {
         sql: this.gStrSql,
         pageRows: 0,
         pageNum: 0,
@@ -550,7 +553,7 @@ export default class LowcodeSingleTable extends React.Component {
     console.log("K-SQL-DELETE", strSql);
 
     // /*
-    axios.post("http://" + this.gStrServiceIp + ":8090/rest/mysql/execute", {
+    axios.post("http://" + this.context.serviceIp + ":8090/rest/mysql/execute", {
         sql: strSql,
         pageRows: 0,
         pageNum: 0,
@@ -720,7 +723,7 @@ export default class LowcodeSingleTable extends React.Component {
     let strSql = "insert into " + tableName + "(" + strColumns + ") values(" + strValues + ")";
     console.log("K-SQL-INSERT", strSql);
 
-    axios.post("http://" + this.gStrServiceIp + ":8090/rest/mysql/execute", {
+    axios.post("http://" + this.context.serviceIp + ":8090/rest/mysql/execute", {
         sql: strSql,
         pageRows: 0,
         pageNum: 0,
@@ -959,7 +962,7 @@ export default class LowcodeSingleTable extends React.Component {
     strSql = "update " + tableName + " set " + strSql;
     console.log("K-SQL-UPDATE", strSql);
 
-    axios.post("http://" + this.gStrServiceIp + ":8090/rest/mysql/execute", {
+    axios.post("http://" + this.context.serviceIp + ":8090/rest/mysql/execute", {
         sql: strSql,
         pageRows: 0,
         pageNum: 0,
@@ -1006,7 +1009,7 @@ export default class LowcodeSingleTable extends React.Component {
   }
 
   doRefresh() {
-    axios.post("http://" + this.gStrServiceIp + ":8090/rest/mysql/select", {
+    axios.post("http://" + this.context.serviceIp + ":8090/rest/mysql/select", {
         sql: this.gStrSql,
         pageRows: 0,
         pageNum: 0,

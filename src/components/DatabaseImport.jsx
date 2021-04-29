@@ -9,8 +9,14 @@ export default class DatabaseImport extends React.Component {
   static contextType = GCtx;
 
   gMapTablesInfo = new Map();
+  gMapKnownTablesInfo = new Map();
   gTableUnknownSelected = [];
   gTableKnownSelected = [];
+  gMapFlags = new Map();
+  gMapFlagTimers = new Map();
+  gCounter = 0;
+  gTablesKnown = [];
+  gTablesUnknown = [];
 
   constructor(props) {
     super(props);
@@ -24,14 +30,14 @@ export default class DatabaseImport extends React.Component {
       productsTreeData: []
     }
 
+    this.test = this.test.bind(this);
     this.doGetProducts = this.doGetProducts.bind(this);
-    //this.doGetSchemaNames = this.doGetSchemaNames.bind(this);
     this.doGetSchemaKnown = this.doGetSchemaKnown.bind(this);
     this.doGetSchemaAll = this.doGetSchemaAll.bind(this);
     this.onSelect = this.onSelect.bind(this);
     this.onTableUnknownChecked = this.onTableUnknownChecked.bind(this);
     this.onTableKnownChecked = this.onTableKnownChecked.bind(this);
-    this.onButtonCompareClicked = this.onButtonCompareClicked.bind(this);
+    this.doTablesCompare = this.doTablesCompare.bind(this);
     this.onButtonInClicked = this.onButtonInClicked.bind(this);
     this.onButtonOutClicked = this.onButtonOutClicked.bind(this);
     this.doGetProductInfo = this.doGetProductInfo.bind(this);
@@ -39,11 +45,25 @@ export default class DatabaseImport extends React.Component {
     this.doGetTableRecords = this.doGetTableRecords.bind(this);
   }
 
+  test(s) {
+    console.log(s);
+  }
+
   componentDidMount() {
+    this.gMapFlags = new Map();
+    this.gMapFlags.set("doGetProducts", {value: false});
     this.doGetProducts();
-    //this.doGetSchemaNames();
+    this.gMapFlags.set("doGetSchemaKnown", {value: false});
     this.doGetSchemaKnown();
     this.doGetSchemaAll();
+
+    let timerPointer = setInterval(() => {
+      if ((this.gMapFlags.get("doGetProducts").value) && (this.gMapFlags.get("doGetSchemaKnown").value)) {
+        clearTimeout(timerPointer);
+        this.gMapFlags = new Map();
+        this.doTablesCompare();
+      }
+    })
   }
 
   doGetTableRecords(sql) {
@@ -58,7 +78,20 @@ export default class DatabaseImport extends React.Component {
           'Content-Type': 'application/json'
         }
       })
+  }
 
+  doSqlExecuteMySql(sql) {
+    return axios.post("http://" + this.context.serviceIp + ":8090/rest/mysql/execute", {
+        sql: sql,
+        pageRows: 0,
+        pageNum: 0,
+        tag: "test by K"
+      },
+      {
+        headers: {  //头部参数
+          'Content-Type': 'application/json'
+        }
+      })
   }
 
   doGetProductInfo() {
@@ -110,7 +143,7 @@ export default class DatabaseImport extends React.Component {
       " user_id, user_name, product_line_id, user_desc" +
       " from tad_db_user";
 
-    let mapProductInfo= new Map();
+    let mapProductInfo = new Map();
     let mapProductLineInfo = new Map();
     let mapProductRel = new Map();
     let mapDbUserInfo = new Map();
@@ -233,10 +266,15 @@ export default class DatabaseImport extends React.Component {
   }
 
   doGetSchemaKnown() {
+    let strSql = "select" +
+      " t.table_name table_name, " +
+      " c.column_name field_name" +
+      " from tad_table t, tad_table_column c" +
+      " where t.table_name = c.table_name"
     axios.post(
-      "http://" + this.context.serviceIp + ":8090/rest/mysql/schema",
+      "http://" + this.context.serviceIp + ":8090/rest/mysql/select",
       {
-        sql: "",
+        sql: strSql,
         pageRows: 0,
         pageNum: 0,
         tag: "do get schema"
@@ -247,55 +285,28 @@ export default class DatabaseImport extends React.Component {
         }
       }).then((response) => {
       let data = response.data;
-      let columns = [];
+      //let columns = [];
       let tableInfo = {
-        table_name: {columnIndex: 0},
-        field_name: {columnIndex: 0},
-        field_key: {columnIndex: 0},
-        field_type: {columnIndex: 0},
-        field_length: {columnIndex: 0},
-        field_nullable: {columnIndex: 0}
-      }
-      for (let i = 0; i < data.table.tableFields.length; i++) {
-        let fieldName = data.table.tableFields[i].fieldName;
-        columns.push(fieldName);
-
-        switch (fieldName) {
-          case "table_name":
-            tableInfo.table_name.columnIndex = i;
-            break
-          case "field_name":
-            tableInfo.field_name.columnIndex = i;
-            break
-          case "field_key":
-            tableInfo.field_key.columnIndex = i;
-            break
-          case "field_type":
-            tableInfo.field_type.columnIndex = i;
-            break
-          case "field_length":
-            tableInfo.field_length.columnIndex = i;
-            break
-          case "field_nullable":
-            tableInfo.field_nullable.columnIndex = i;
-            break
-          default:
-            break
-        }
+        table_name: {index: 0},
+        field_name: {index: 1},
+        field_key: {index: 0},
+        field_type: {index: 0},
+        field_length: {index: 0},
+        field_nullable: {index: 0}
       }
 
       for (let i = 0; i < data.records.length; i++) {
         let v = {key: i};
-        let tName = data.records[i].fieldValues[tableInfo.table_name.columnIndex].toLowerCase();
-        let fName = data.records[i].fieldValues[tableInfo.field_name.columnIndex].toLowerCase();
-        let fKey = data.records[i].fieldValues[tableInfo.field_key.columnIndex].toLowerCase();
-        let fType = data.records[i].fieldValues[tableInfo.field_type.columnIndex].toLowerCase();
-        let fLength = data.records[i].fieldValues[tableInfo.field_length.columnIndex];
-        let fNullable = data.records[i].fieldValues[tableInfo.field_nullable.columnIndex].toLowerCase();
+        let tName = data.records[i].fieldValues[tableInfo.table_name.index].toLowerCase();
+        let fName = data.records[i].fieldValues[tableInfo.field_name.index].toLowerCase();
+        let fKey = ""; //data.records[i].fieldValues[tableInfo.field_key.index].toLowerCase();
+        let fType = ""; //data.records[i].fieldValues[tableInfo.field_type.index].toLowerCase();
+        let fLength = 0; //data.records[i].fieldValues[tableInfo.field_length.index];
+        let fNullable = ""; //data.records[i].fieldValues[tableInfo.field_nullable.index].toLowerCase();
         let fWritable = "yes";
-        if (!this.gMapTablesInfo.has(tName)) {
-          this.gMapTablesInfo.set(tName, {fields: new Map()});
-          this.gMapTablesInfo.get(tName).fields.set(fName, {
+        if (!this.gMapKnownTablesInfo.has(tName)) {
+          this.gMapKnownTablesInfo.set(tName, {fields: new Map()});
+          this.gMapKnownTablesInfo.get(tName).fields.set(fName, {
             "isPrimaryKey": fKey === "pri",
             "type": fType,
             "length": fLength,
@@ -303,7 +314,7 @@ export default class DatabaseImport extends React.Component {
             "isWritable": fWritable === "yes"
           });
         } else {
-          this.gMapTablesInfo.get(tName).fields.set(fName, {
+          this.gMapKnownTablesInfo.get(tName).fields.set(fName, {
             "isPrimaryKey": fKey === "pri",
             "type": fType,
             "length": fLength,
@@ -312,16 +323,16 @@ export default class DatabaseImport extends React.Component {
           });
         }
 
-        if (this.gMapTablesInfo.get(tName).fields.get(fName).isPrimaryKey) this.gMapTablesInfo.get(tName).fields.get(fName).isWritable = false;
+        if (this.gMapKnownTablesInfo.get(tName).fields.get(fName).isPrimaryKey)
+          this.gMapKnownTablesInfo.get(tName).fields.get(fName).isWritable = false;
 
-        for (let j = 0; j < columns.length; j++) {
-          Object.defineProperty(v, columns[j],
-            {value: data.records[i].fieldValues[j], enumerable: true, writable: true});
-        }
+        // for (let j = 0; j < columns.length; j++) {
+        //   Object.defineProperty(v, columns[j],
+        //     {value: data.records[i].fieldValues[j], enumerable: true, writable: true});
+        // }
       }
 
-      let tablesKnown = [];
-      this.gMapTablesInfo.forEach(function (value1, key1) {
+      this.gMapKnownTablesInfo.forEach((value1, key1) => {
         let tables = {
           title: key1,
           key: key1,
@@ -349,15 +360,12 @@ export default class DatabaseImport extends React.Component {
           })
         });
 
-        if (Math.random() * 10 > 5) {
-          tablesKnown.push(tables);
-        }
+        this.gTablesKnown.push(tables);
       });
 
-      //todo:: this.doGetConfig();
-
+      this.gMapFlags.get("doGetProducts").value = true;
       this.setState({
-        tablesKnown: tablesKnown
+        tablesKnown: this.gTablesKnown
       })
 
     }).catch(function (error) {
@@ -487,6 +495,7 @@ export default class DatabaseImport extends React.Component {
 
       //todo:: this.doGetConfig();
 
+      this.gMapFlags.get("doGetSchemaKnown").value = true;
       this.setState({
         tablesAll: tablesAll
       })
@@ -509,8 +518,8 @@ export default class DatabaseImport extends React.Component {
     this.gTableKnownSelected = info.checkedNodes;
   };
 
-  onButtonCompareClicked() {
-    let tablesUnknown = JSON.parse(JSON.stringify(this.state.tablesUnknown));
+  doTablesCompare() {
+    //let tablesUnknown = JSON.parse(JSON.stringify(this.state.tablesUnknown));
     const {tablesKnown, tablesAll} = this.state;
     for (let i = 0; i < tablesAll.length; i++) {
       let isFound = false;
@@ -521,32 +530,96 @@ export default class DatabaseImport extends React.Component {
         }
       }
       if (!isFound) {
-        tablesUnknown.push(tablesAll[i]);
+        this.gTablesUnknown.push(tablesAll[i]);
       }
     }
 
     this.setState({
-      tablesUnknown: tablesUnknown
+      tablesUnknown: this.gTablesUnknown
     })
   }
 
   onButtonInClicked() {
-    let tablesKnown = JSON.parse(JSON.stringify(this.state.tablesKnown));
-    let tablesUnknown = JSON.parse(JSON.stringify(this.state.tablesUnknown));
+    for (let i = 0; i < this.gTableUnknownSelected.length; i++) {
+      let tableName = this.gTableUnknownSelected[i].title;
+      let sqlTable = "insert into tad_table(table_name) values('" +
+        tableName + "')";
+      let pKey = tableName;
+      let tKey = tableName;
+      this.gMapFlags.set(pKey, new Map());
+      this.gMapFlags.get(pKey).set(tKey, {type: "table", value: false});
+      axios.post("http://" + this.context.serviceIp + ":8090/rest/mysql/execute",
+        {sql: sqlTable, pageRows: 0, pageNum: 0, tag: ""},
+        {headers: {'Content-Type': 'application/json'}}
+      ).then((response) => {
+        let data = response.data;
+        if (data.code === 200) {
+          this.gMapFlags.get(pKey).get(tKey).value = true;
+        }
+      });
 
-    this.gTableUnknownSelected.forEach(function (item) {
-      tablesKnown.push(item);
-      for(let i = 0; i < tablesUnknown.length; i++) {
-        if (tablesUnknown[i].title === item.title) {
-          tablesUnknown.splice(i, 1);
+      for (let j = 0; j < this.gTableUnknownSelected[i].children.length; j++) {
+        let tableColumnName = this.gTableUnknownSelected[i].children[j].title;
+        let sqlTableColumn = "insert into tad_table_column(table_name, column_name) values('" +
+          tableName + "', '" +
+          tableColumnName + "')";
+        let cKey = tableName + "__" + tableColumnName;
+        this.gMapFlags.get(pKey).set(cKey, {type: "tableColumn", value: false});
+        axios.post("http://" + this.context.serviceIp + ":8090/rest/mysql/execute",
+          {sql: sqlTableColumn, pageRows: 0, pageNum: 0, tag: ""},
+          {headers: {'Content-Type': 'application/json'}}
+        ).then((response) => {
+          let data = response.data;
+          if (data.code === 200) {
+            this.gMapFlags.get(pKey).get(cKey).value = true;
+          }
+        });
+      }
+
+      let timerPointer = setInterval(() => {
+        for (let value of this.gMapFlags.get(pKey).values()) {
+          if (value.type === "table" && value.value) {
+            clearTimeout(timerPointer);
+            this.gMapFlagTimers.get(pKey).pointer = 1;
+            break
+          }
+        }
+      }, 100);
+
+      this.gMapFlagTimers.set(pKey, {
+        pointer: timerPointer
+      });
+    }
+
+    let tp = setInterval(() => {
+      let isAllDone = true;
+      for (let v of this.gMapFlagTimers.values()) {
+        if (v.pointer !== 1) {
+          isAllDone = false;
           break
         }
       }
-    })
+      if (isAllDone) {
+        clearTimeout(tp);
 
-    this.setState({
-      tablesKnown: tablesKnown,
-      tablesUnknown: tablesUnknown
+        for (let i = 0; i < this.gTableUnknownSelected.length; i++) {
+          this.gTablesKnown.push(this.gTableUnknownSelected[i]);
+
+          for (let j = this.gTablesUnknown.length - 1; j >= 0; j--) {
+            if (this.gTablesUnknown[j].title === this.gTableUnknownSelected[i].title) {
+              this.gTablesUnknown.splice(j, 1);
+              break
+            }
+          }
+        }
+
+        let tablesKnown = JSON.parse(JSON.stringify(this.gTablesKnown));
+        let tablesUnknown = JSON.parse(JSON.stringify(this.gTablesUnknown));
+        this.setState({
+          tablesKnown: tablesKnown,
+          tablesUnknown: tablesUnknown
+        })
+      }
     })
   }
 
@@ -556,7 +629,7 @@ export default class DatabaseImport extends React.Component {
 
     this.gTableKnownSelected.forEach(function (item) {
       tablesUnknown.push(item);
-      for(let i = 0; i < tablesKnown.length; i++) {
+      for (let i = 0; i < tablesKnown.length; i++) {
         if (tablesKnown[i].title === item.title) {
           tablesKnown.splice(i, 1);
           break
@@ -611,7 +684,6 @@ export default class DatabaseImport extends React.Component {
         </div>
       </div>
       <div className={"BoxButtons"}>
-        <Button onClick={this.onButtonCompareClicked}>比较</Button>
         <Button onClick={this.onButtonInClicked}>移入</Button>
         <Button onClick={this.onButtonOutClicked}>移出</Button>
       </div>
