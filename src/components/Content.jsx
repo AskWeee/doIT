@@ -2,6 +2,7 @@ import React from 'react';
 import './Content.scss'
 import GCtx from "../GCtx";
 import DatabaseImport from "./DatabaseImport";
+import DatabaseExport from "./DatabaseExport";
 import LowcodeSingleTable from "./LowcodeSingleTable";
 
 class Content extends React.Component {
@@ -20,6 +21,15 @@ class Content extends React.Component {
   showComponentDatabaseImport() {
     let children = [];
     children.push(<DatabaseImport key="menu_database_import"/>);
+
+    this.setState({
+      children: children
+    })
+  }
+
+  showComponentDatabaseExport() {
+    let children = [];
+    children.push(<DatabaseExport key="menu_database_export"/>);
 
     this.setState({
       children: children

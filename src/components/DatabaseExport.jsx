@@ -1,11 +1,12 @@
 import React from 'react'
-import './DatabaseImport.scss'
+import './DatabaseExport.scss'
 import axios from "axios";
 import GCtx from "../GCtx";
-import {Button, Tree} from 'antd'
+import {Button, Select, Tree} from 'antd'
 import {CaretDownOutlined, TagOutlined} from '@ant-design/icons'
+import moment from 'moment';
 
-export default class DatabaseImport extends React.Component {
+export default class DatabaseExport extends React.Component {
   static contextType = GCtx;
 
   gMapTablesInfo = new Map();
@@ -17,6 +18,7 @@ export default class DatabaseImport extends React.Component {
   gCounter = 0;
   gTablesKnown = [];
   gTablesUnknown = [];
+  gRefDomMain = React.createRef();
 
   constructor(props) {
     super(props);
@@ -27,7 +29,11 @@ export default class DatabaseImport extends React.Component {
       tablesUnknown: [],
       tablesKnown: [],
       dbUsersTreeData: [],
-      productsTreeData: []
+      productsTreeData: [],
+      dbTypeTreeData: [],
+      styleDialogSqlGenerated: {display: "none"},
+      styleDialogHistoryCompare: {display: "none"},
+      sqlGenerated: ""
     }
 
     this.test = this.test.bind(this);
@@ -43,6 +49,11 @@ export default class DatabaseImport extends React.Component {
     this.doGetProductInfo = this.doGetProductInfo.bind(this);
     this.doGetProductLineInfo = this.doGetProductLineInfo.bind(this);
     this.doGetTableRecords = this.doGetTableRecords.bind(this);
+    this.onButtonExportClicked = this.onButtonExportClicked.bind(this);
+    this.onButtonSqlGeneratedClicked = this.onButtonSqlGeneratedClicked.bind(this);
+    this.onButtonHistoryCompareClicked = this.onButtonHistoryCompareClicked.bind(this);
+    this.onButtonCloseDialogDynamicSqlGeneratedClicked = this.onButtonCloseDialogDynamicSqlGeneratedClicked.bind(this);
+    this.onButtonCloseDialogDynamicHistoryCompareClicked = this.onButtonCloseDialogDynamicHistoryCompareClicked.bind(this);
   }
 
   test(s) {
@@ -50,20 +61,9 @@ export default class DatabaseImport extends React.Component {
   }
 
   componentDidMount() {
-    this.gMapFlags = new Map();
-    this.gMapFlags.set("doGetProducts", {value: false});
     this.doGetProducts();
-    this.gMapFlags.set("doGetSchemaKnown", {value: false});
     this.doGetSchemaKnown();
     this.doGetSchemaAll();
-
-    let timerPointer = setInterval(() => {
-      if ((this.gMapFlags.get("doGetProducts").value) && (this.gMapFlags.get("doGetSchemaKnown").value)) {
-        clearTimeout(timerPointer);
-        this.gMapFlags = new Map();
-        this.doTablesCompare();
-      }
-    })
   }
 
   doGetTableRecords(sql) {
@@ -142,28 +142,50 @@ export default class DatabaseImport extends React.Component {
     let sqlDbUserInfo = "select" +
       " user_id, user_name, product_line_id, user_desc" +
       " from tad_db_user";
+    let sqlDbTypeInfo = "select" +
+      " db_id, db_name" +
+      " from tad_db_type_info";
 
     let mapProductInfo = new Map();
     let mapProductLineInfo = new Map();
     let mapProductRel = new Map();
     let mapDbUserInfo = new Map();
+    let mapDbTypeInfo = new Map();
     let mapModuleInfo = new Map();
     let arrProductLineInfo = [];
     let dbUsersTreeData = [];
+    let dbTypeTreeData = [];
 
     axios.all([
       this.doGetTableRecords(sqlProductInfo),
       this.doGetTableRecords(sqlProductLineInfo),
       this.doGetTableRecords(strProductRel),
       this.doGetTableRecords(sqlModuleInfo),
-      this.doGetTableRecords(sqlDbUserInfo)
+      this.doGetTableRecords(sqlDbUserInfo),
+      this.doGetTableRecords(sqlDbTypeInfo)
     ])
       .then(axios.spread((
         productInfo,
         productLineInfo,
         productRel,
         moduleInfo,
-        dbUserInfo) => {
+        dbUserInfo,
+        dbTypeInfo) => {
+
+        dbTypeInfo.data.records.forEach(function (item) {
+          let dbId = item.fieldValues[0];
+          if (!mapDbTypeInfo.has(dbId)) {
+            mapDbTypeInfo.set(dbId, {
+              dbName: item.fieldValues[1]
+            });
+
+            dbTypeTreeData.push({
+              title: item.fieldValues[1],
+              key: dbId,
+              children: []
+            })
+          }
+        })
 
         dbUserInfo.data.records.forEach(function (item) {
           let userId = item.fieldValues[0];
@@ -259,6 +281,7 @@ export default class DatabaseImport extends React.Component {
         })
 
         this.setState({
+          dbTypeTreeData: dbTypeTreeData,
           dbUsersTreeData: dbUsersTreeData,
           productsTreeData: productsTreeData
         });
@@ -363,7 +386,6 @@ export default class DatabaseImport extends React.Component {
         this.gTablesKnown.push(tables);
       });
 
-      this.gMapFlags.get("doGetProducts").value = true;
       this.setState({
         tablesKnown: this.gTablesKnown
       })
@@ -495,7 +517,6 @@ export default class DatabaseImport extends React.Component {
 
       //todo:: this.doGetConfig();
 
-      this.gMapFlags.get("doGetSchemaKnown").value = true;
       this.setState({
         tablesAll: tablesAll
       })
@@ -540,111 +561,140 @@ export default class DatabaseImport extends React.Component {
   }
 
   onButtonInClicked() {
-    for (let i = 0; i < this.gTableUnknownSelected.length; i++) {
-      let tableName = this.gTableUnknownSelected[i].title;
-      let sqlTable = "insert into tad_table(table_name) values('" +
-        tableName + "')";
-      let pKey = tableName;
-      let tKey = tableName;
-      this.gMapFlags.set(pKey, new Map());
-      this.gMapFlags.get(pKey).set(tKey, {type: "table", value: false});
-      axios.post("http://" + this.context.serviceIp + ":8090/rest/mysql/execute",
-        {sql: sqlTable, pageRows: 0, pageNum: 0, tag: ""},
-        {headers: {'Content-Type': 'application/json'}}
-      ).then((response) => {
-        let data = response.data;
-        if (data.code === 200) {
-          this.gMapFlags.get(pKey).get(tKey).value = true;
-        }
-      });
-
-      for (let j = 0; j < this.gTableUnknownSelected[i].children.length; j++) {
-        let tableColumnName = this.gTableUnknownSelected[i].children[j].title;
-        let sqlTableColumn = "insert into tad_table_column(table_name, column_name) values('" +
-          tableName + "', '" +
-          tableColumnName + "')";
-        let cKey = tableName + "__" + tableColumnName;
-        this.gMapFlags.get(pKey).set(cKey, {type: "tableColumn", value: false});
-        axios.post("http://" + this.context.serviceIp + ":8090/rest/mysql/execute",
-          {sql: sqlTableColumn, pageRows: 0, pageNum: 0, tag: ""},
-          {headers: {'Content-Type': 'application/json'}}
-        ).then((response) => {
-          let data = response.data;
-          if (data.code === 200) {
-            this.gMapFlags.get(pKey).get(cKey).value = true;
-          }
-        });
-      }
-
-      let timerPointer = setInterval(() => {
-        for (let value of this.gMapFlags.get(pKey).values()) {
-          if (value.type === "table" && value.value) {
-            clearTimeout(timerPointer);
-            this.gMapFlagTimers.get(pKey).pointer = 1;
-            break
-          }
-        }
-      }, 100);
-
-      this.gMapFlagTimers.set(pKey, {
-        pointer: timerPointer
-      });
-    }
-
-    let tp = setInterval(() => {
-      let isAllDone = true;
-      for (let v of this.gMapFlagTimers.values()) {
-        if (v.pointer !== 1) {
-          isAllDone = false;
+    for (let i = 0; i < this.gTableKnownSelected.length; i++) {
+      let isFound = false;
+      for (let j = this.gTablesUnknown.length - 1; j >= 0; j--) {
+        if (this.gTablesUnknown[j].title === this.gTableKnownSelected[i].title) {
+          isFound = true;
           break
         }
       }
-      if (isAllDone) {
-        clearTimeout(tp);
-
-        for (let i = 0; i < this.gTableUnknownSelected.length; i++) {
-          this.gTablesKnown.push(this.gTableUnknownSelected[i]);
-
-          for (let j = this.gTablesUnknown.length - 1; j >= 0; j--) {
-            if (this.gTablesUnknown[j].title === this.gTableUnknownSelected[i].title) {
-              this.gTablesUnknown.splice(j, 1);
-              break
-            }
-          }
-        }
-
-        let tablesKnown = JSON.parse(JSON.stringify(this.gTablesKnown));
-        let tablesUnknown = JSON.parse(JSON.stringify(this.gTablesUnknown));
-        this.setState({
-          tablesKnown: tablesKnown,
-          tablesUnknown: tablesUnknown
-        })
+      if (!isFound) {
+        this.gTablesUnknown.push(this.gTableKnownSelected[i]);
       }
+    }
+
+    this.setState({
+      tablesUnknown: JSON.parse(JSON.stringify(this.gTablesUnknown))
     })
   }
 
   onButtonOutClicked() {
-    let tablesKnown = JSON.parse(JSON.stringify(this.state.tablesKnown));
-    let tablesUnknown = JSON.parse(JSON.stringify(this.state.tablesUnknown));
-
-    this.gTableKnownSelected.forEach(function (item) {
-      tablesUnknown.push(item);
-      for (let i = 0; i < tablesKnown.length; i++) {
-        if (tablesKnown[i].title === item.title) {
-          tablesKnown.splice(i, 1);
+    this.gTableUnknownSelected.forEach((item) => {
+      for (let i = this.gTablesUnknown.length - 1; i >= 0; i--) {
+        if (this.gTablesUnknown[i].title === item.title) {
+          this.gTablesUnknown.splice(i, 1);
           break
         }
       }
     })
 
     this.setState({
-      tablesKnown: tablesKnown,
-      tablesUnknown: tablesUnknown
+      tablesUnknown: JSON.parse(JSON.stringify(this.gTablesUnknown))
     })
   }
 
+  /**
+   *
+   * 对比只针对数据库用户下所有表的导出才提供，自定义选的，只提供所选项目和历史对比
+   * 表数据内容会变
+   * 字段会变（字段增多，减少，字段类型改变，字段长度改变 export_table_column_publish
+   * 索引会变 tad_table_index_publish
+   * 分区会变 tad_table_partition_publish
+   */
+  onButtonExportClicked() {
+    let timePublish = moment().format('yyyy-MM-DD HH:mm:ss');
+
+    for(let i = 0; i < this.gTablesUnknown.length; i++) {
+      let tableName = this.gTablesUnknown[i].title;
+      for(let j = 0; j < this.gTablesUnknown[i].children.length; j++) {
+        let columnName = this.gTablesUnknown[i].children[j].title;
+        let sqlTable = "insert into tad_table_column_publish(table_name, column_name, publish_time) values('" +
+          tableName + "', '" +
+          columnName + "', '" +
+          timePublish + "')";
+        axios.post("http://" + this.context.serviceIp + ":8090/rest/mysql/execute",
+          {sql: sqlTable, pageRows: 0, pageNum: 0, tag: ""},
+          {headers: {'Content-Type': 'application/json'}}
+        ).then((response) => {
+          let data = response.data;
+          if (data.code !== 200) {
+            console.log("error! code = " + data.code);
+          }
+        });
+      }
+    }
+    console.log("导出入库指令已经下发完成， 时间戳：" + timePublish);
+  }
+
+  onButtonSqlGeneratedClicked() {
+    let style = {
+      display: "grid",
+      width: this.gRefDomMain.current.offsetWidth,
+      height: this.gRefDomMain.current.offsetHeight,
+      left: this.gRefDomMain.current.offsetLeft,
+      top: this.gRefDomMain.current.offsetTop
+    }
+
+    this.setState({
+      styleDialogSqlGenerated: style
+    });
+
+    let strSql = "";
+    for(let i = 0; i < this.gTablesUnknown.length; i++) {
+      let tableName = this.gTablesUnknown[i].title;
+      strSql += "create table " + tableName + "(\n";
+      for(let j = 0; j < this.gTablesUnknown[i].children.length; j++) {
+        let columnName = this.gTablesUnknown[i].children[j].title;
+        strSql += "\t" + columnName + ",\n";
+      }
+      strSql = strSql.substr(0, strSql.length -2);
+      strSql += ");\n\n"
+    }
+    this.setState({
+      sqlGenerated: strSql
+    });
+  }
+
+  onButtonCloseDialogDynamicSqlGeneratedClicked() {
+    let style = {
+      display: "none"
+    }
+
+    this.setState({
+      styleDialogSqlGenerated: style
+    })
+
+  }
+
+  onButtonCloseDialogDynamicHistoryCompareClicked() {
+    let style = {
+      display: "none"
+    }
+
+    this.setState({
+      styleDialogHistoryCompare: style
+    })
+
+  }
+
+  onButtonHistoryCompareClicked() {
+    let style = {
+      display: "grid",
+      width: this.gRefDomMain.current.offsetWidth,
+      height: this.gRefDomMain.current.offsetHeight,
+      left: this.gRefDomMain.current.offsetLeft,
+      top: this.gRefDomMain.current.offsetTop
+    }
+
+    this.setState({
+      styleDialogHistoryCompare: style
+    });
+
+  }
+
   render() {
-    return <div className="DatabaseImport">
+    return <div ref={this.gRefDomMain} className="DatabaseExport">
       <div className={"BoxProductsInfo"}>
         <div className={"BoxLabel"}>产品线产品信息：</div>
         <div className={"BoxTree"}>
@@ -686,10 +736,21 @@ export default class DatabaseImport extends React.Component {
       <div className={"BoxButtons"}>
         <Button onClick={this.onButtonInClicked}>移入</Button>
         <Button onClick={this.onButtonOutClicked}>移出</Button>
+        <Button onClick={this.onButtonHistoryCompareClicked}>历史对比</Button>
+        <Button onClick={this.onButtonSqlGeneratedClicked}>查看脚本</Button>
+        <Button onClick={this.onButtonExportClicked}>执行导出</Button>
       </div>
       <div className={"BoxUnknown"}>
-        <div className={"BoxLabel"}>待归档数据库表：</div>
-        <div className={"BoxToolbar"}>...</div>
+        <div className={"BoxLabel"}>目标数据库类型：</div>
+        <div className={"BoxList"}>
+          <Tree
+            blockNode={true}
+            onSelect={this.onSelect}
+            treeData={this.state.dbTypeTreeData}
+          />
+        </div>
+        <div className={"BoxLabel"}>待导出数据库表：</div>
+        <div className={"BoxToolbar"}>buttons</div>
         <div className={"BoxTree"}>
           <Tree
             checkable
@@ -701,6 +762,57 @@ export default class DatabaseImport extends React.Component {
             onCheck={this.onTableUnknownChecked}
             treeData={this.state.tablesUnknown}
           />
+        </div>
+      </div>
+      <div className="DialogDynamicSqlGenerated" style={this.state.styleDialogSqlGenerated}>
+        <div className={"Box"}>
+          <div className="BoxHeader">
+            <div className={"BoxLabel"}>导出库结构创建脚本</div>
+            <Button onClick={this.onButtonCloseDialogDynamicSqlGeneratedClicked}>关闭</Button>
+          </div>
+          <div className={"BoxContent"}>
+            <div className={"BoxCode"}>
+            <pre>
+              {this.state.sqlGenerated}
+            </pre>
+            </div>
+          </div>
+          </div>
+      </div>
+      <div className="DialogDynamicHistoryCompare" style={this.state.styleDialogHistoryCompare}>
+        <div className={"Box"}>
+          <div className="BoxHeader">
+            <div className={"BoxLabel"}>历史导出库结构对比</div>
+            <Button onClick={this.onButtonCloseDialogDynamicHistoryCompareClicked}>关闭</Button>
+          </div>
+          <div className={"BoxContent"}>
+            <div className={"BoxTree"}>
+              <Select defaultValue={"1"}>
+                <Select.Option key={"1"}>当前选中库表</Select.Option>
+              </Select>
+              <Tree
+                blockNode={true}
+                showLine={true}
+                showIcon={true}
+                switcherIcon={<CaretDownOutlined/>}
+                onSelect={this.onSelect}
+                treeData={this.state.tablesUnknown}
+              />
+            </div>
+            <div className={"BoxTree"}>
+              <Select defaultValue={"1"}>
+                <Select.Option key={"1"}>全库表</Select.Option>
+              </Select>
+              <Tree
+                blockNode={true}
+                showLine={true}
+                showIcon={true}
+                switcherIcon={<CaretDownOutlined/>}
+                onSelect={this.onSelect}
+                treeData={this.state.tablesKnown}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>

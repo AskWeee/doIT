@@ -102,6 +102,9 @@ class App extends React.Component{
       case 'menu_database_import':
         this.ComContent.showComponentDatabaseImport();
         break
+      case 'menu_database_export':
+        this.ComContent.showComponentDatabaseExport();
+        break
       default:
         break
     }
