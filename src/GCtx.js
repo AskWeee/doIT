@@ -3,7 +3,7 @@ import React from "react";
 const GCtx = React.createContext({
   author: '管理员',
   message: "message from global context",
-  serviceIp: "10.50.10.15",
+  serviceIp: "10.50.10.7",
   reactElementKey: 0,
   mapMenus: new Map(),
   menus: [

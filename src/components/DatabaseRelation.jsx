@@ -2,10 +2,10 @@ import React from 'react'
 import './DatabaseRelation.scss'
 import axios from "axios";
 import GCtx from "../GCtx";
-import {Button, Select, Tree} from 'antd'
+import {Button, Tree} from 'antd'
 import {CaretDownOutlined, TagOutlined} from '@ant-design/icons'
 import moment from 'moment';
-import ReactDom from 'react-dom'
+import KToyDiv from "./KToyDiv";
 
 export default class DatabaseRelation extends React.Component {
   static contextType = GCtx;
@@ -61,8 +61,6 @@ export default class DatabaseRelation extends React.Component {
     this.onButtonCloseDialogDynamicHistoryCompareClicked = this.onButtonCloseDialogDynamicHistoryCompareClicked.bind(this);
     this.onButtonTestClicked = this.onButtonTestClicked.bind(this);
     this.onDivToyClick = this.onDivToyClick.bind(this);
-    this.onDivToyDrag = this.onDivToyDrag.bind(this);
-    this.onDivToyMove = this.onDivToyMove.bind(this);
   }
 
   test(s) {
@@ -703,68 +701,22 @@ export default class DatabaseRelation extends React.Component {
   }
 
   onDivToyClick(e) {
-    // eslint-disable-next-line no-undef
-    jQuery("#" + e.target.id).css("background", "red");
 
-    console.log(e.target.id);
-    this.gMapDivToyRefs.get(e.target.id).isMouseDown = !this.gMapDivToyRefs.get(e.target.id).isMouseDown;
-    // let {styles} = this.state;
-    // styles.get(e.target.id, {
-    //   marginLeft: Math.ceil(Math.random()*100),
-    //   marginTop: Math.ceil(Math.random()*100)
-    // });
-    console.log(this.gMapDivToyRefs.get(e.target.id).element);
-    // this.gMapDivToyRefs.get(e.target.id).element = {
-    //   marginLeft: "100px"
-    // }
-    // let a = [];
-    // this.gMapDivToyRefs.forEach(function (value, key) {
-    //   a.push(value.element);
-    // });
-    //
-    // console.log(a);
-    //
-    // this.setState({
-    //   divToys: a
-    // })
-  }
-
-  onDivToyDrag(e) {
-    console.log(e.target.id);
-  }
-
-  onDivToyMove(e) {
-
-    if (this.gMapDivToyRefs.get(e.target.id).isMouseDown) {
-      this.gMapDivToyRefs.get(e.target.id).ref.current.background = "green";
-      // eslint-disable-next-line no-undef
-      //jQuery("#" + e.target.id).css("margin-left", "100px");
-    //   console.log(this.gMapDivToyRefs.get(e.target.id).ref);
-    //   this.gMapDivToyRefs.get(e.target.id).ref.current.style.marginLeft += 1;
-    }
   }
 
   onButtonTestClicked() {
     this.gCounter++;
     let ref = React.createRef();
     let id = "divToy_" + this.gCounter;
-    let element = <div
+    let element = <KToyDiv
         id={id}
         key={id}
         ref={ref}
-        style={{}}
-        className={"DivToy"}
-        onClick={this.onDivToyClick}
-        onDrag={this.onDivToyDrag}
-        onMouseMove={this.onDivToyMove}>
-      TEST-{this.gCounter}
-    </div>
+        // className={"DivToy"}
+        onClick={this.onDivToyClick}/>
+
     this.gMapDivToyRefs.set(id, {
-      ref: ref,
-      isMouseDown: false,
-      isMouseUp: false,
-      isMoving: false,
-      element: element
+      ref: ref
     });
 
     let {divToys} = this.state;

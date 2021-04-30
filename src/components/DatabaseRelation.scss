@@ -46,14 +46,15 @@
     background: rgba(0,0,0,0.5);
     border: 1px solid black;
     overflow: auto;
+    position: relative;
 
-    .DivToy {
-      position: absolute;
-      background: rgba(55, 175, 225, 0.75);
-      border: 1px solid rgba(55, 175, 225, 1);
-      width: 200px;
-      height: 300px;
-    }
+    //.DivToy {
+    //  position: absolute;
+    //  background: rgba(55, 175, 225, 0.75);
+    //  border: 1px solid rgba(55, 175, 225, 1);
+    //  width: 200px;
+    //  height: 300px;
+    //}
   }
 
   .BoxKnown {

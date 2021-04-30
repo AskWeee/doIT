@@ -1,0 +1,14 @@
+.KToyDiv {
+  position: absolute;
+  background: rgba(255, 0, 0, 0.5);
+  border: 1px solid rgba(255, 0, 0, 1);
+  width: 200px;
+  height: 300px;
+  display: grid;
+  grid-template-rows: 30px 1fr;
+
+  .BoxHeader {
+    background: rgba(255, 255, 0, 0.5);
+    border: 1px solid rgba(255, 0, 0, 1);
+  }
+}
