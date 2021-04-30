@@ -2,8 +2,10 @@ import React from 'react'
 import './KToyDiv.scss'
 import {Button, Tree} from 'antd'
 import {CaretDownOutlined, MoreOutlined} from '@ant-design/icons';
+import GCtx from "../GCtx";
 
 export default class KToyDiv extends React.Component {
+  static contextType = GCtx;
 
   refHeader = React.createRef();
   gPosition = {
@@ -56,7 +58,8 @@ export default class KToyDiv extends React.Component {
       value: '',
       styles: {
         left: "100px",
-        top: "100px"
+        top: "100px",
+        zIndex: 9
       },
       isMouseDown: false
     }
@@ -66,8 +69,12 @@ export default class KToyDiv extends React.Component {
     this.onHeaderMouseDown = this.onHeaderMouseDown.bind(this);
     this.onHeaderMouseUp = this.onHeaderMouseUp.bind(this);
     this.onHeaderMouseMove = this.onHeaderMouseMove.bind(this);
+    this.changePosition = this.changePosition.bind(this);
   }
 
+  changePosition() {
+
+  }
   componentDidUpdate() {
 
   }
@@ -87,17 +94,38 @@ export default class KToyDiv extends React.Component {
   }
 
   onHeaderClick() {
-    console.log(this.refHeader);
+    //console.log(this.refHeader);
+    //this.context.gRefLine.current.changePosition(100, 100);
   }
 
   onHeaderMouseDown(e) {
     this.setState({isMouseDown: true});
     this.gPosition.x = e.clientX;
     this.gPosition.y = e.clientY;
+
+    const {styles} = this.state;
+    let s = {
+      left: styles.left,
+      top: styles.top,
+      zIndex: 9999
+    }
+    this.setState({
+        styles: s
+    })
   }
 
   onHeaderMouseUp() {
     this.setState({isMouseDown: false});
+
+    const {styles} = this.state;
+    let s = {
+      left: styles.left,
+      top: styles.top,
+      zIndex: 1
+    }
+    this.setState({
+      styles: s
+    })
   }
 
   onHeaderMouseMove(e) {
@@ -108,7 +136,9 @@ export default class KToyDiv extends React.Component {
       let stylesNew = {
         left: mLeft + e.clientX - this.gPosition.x + "px",
         top: mTop + e.clientY - this.gPosition.y + "px",
+        zIndex: 9999
       };
+
 
       this.setState({
         styles: stylesNew
@@ -117,6 +147,7 @@ export default class KToyDiv extends React.Component {
       this.gPosition.x = e.clientX;
       this.gPosition.y = e.clientY;
 
+      this.context.gRefLine.current.changePosition(stylesNew.left, stylesNew.top);
     }
   }
 

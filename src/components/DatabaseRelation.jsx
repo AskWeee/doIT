@@ -6,7 +6,7 @@ import {Button, Tree} from 'antd'
 import {CaretDownOutlined, TagOutlined} from '@ant-design/icons'
 import moment from 'moment';
 import KToyDiv from "./KToyDiv";
-import Snap from 'imports-loader?this=>window,fix=>module.exports=0!snapsvg/dist/snap.svg.js';
+import KToySvgLine from "./KToySvgLine";
 
 export default class DatabaseRelation extends React.Component {
   static contextType = GCtx;
@@ -21,6 +21,7 @@ export default class DatabaseRelation extends React.Component {
   gTablesKnown = [];
   gTablesUnknown = [];
   gRefDomMain = React.createRef();
+
   gMapDivToyRefs = new Map();
   gDivToys = [];
 
@@ -39,6 +40,7 @@ export default class DatabaseRelation extends React.Component {
       styleDialogHistoryCompare: {display: "none"},
       sqlGenerated: "",
       divToys: [],
+      svgLineToys: [],
       styles: new Map(),
     }
 
@@ -712,24 +714,34 @@ export default class DatabaseRelation extends React.Component {
     let element = <KToyDiv
         id={id}
         key={id}
-        ref={ref}
+        ref={this.context.gRefDivToy}
         // className={"DivToy"}
         onClick={this.onDivToyClick}/>
+    let line = <KToySvgLine ref={this.context.gRefLine}/>
 
     this.gMapDivToyRefs.set(id, {
       ref: ref
     });
 
-    let {divToys} = this.state;
+    let {divToys, svgLineToys} = this.state;
 
     divToys.push(element);
+    svgLineToys.push(line);
     this.setState((prevState) => {
       delete prevState.divToys
+      delete prevState.svgLineToys
       return prevState
     })
     this.setState({
-      divToys: divToys
+      divToys: divToys,
+      svgLineToys: svgLineToys
     })
+
+    setTimeout(() => {
+      //console.log();
+      //this.gRefLine.current.changePosition(this.gRefLine.current.changePosition);
+
+    }, 2000)
   }
 
   render() {
@@ -766,17 +778,22 @@ export default class DatabaseRelation extends React.Component {
         </div>
       </div>
       <div id={"BoxCanvas"} className={"BoxCanvas"}>
+        <svg style={{position: 'absolute', left: 0, top: 0, width: "100%", height: "100%"}}>
+          {this.state.svgLineToys.map((item) => {
+            return item
+          })}
+        </svg>
         <Button onClick={this.onButtonTestClicked}>Test</Button>
         {this.state.divToys.map((item) => {
           return item
         })}
 
-        <svg width="500px"
-             height="500px"
-             viewBox="0 0 100 100">
-          {/*<circle cx={50} cy={50} r={30} fill="red"/>*/}
-          <line x1={100} y1={100} x2={200} y2={200} stroke="red"/>
-        </svg>
+        {/*<svg style={{position: 'absolute', width: "100%", height: "100%", overflow: "auto"}}>*/}
+        {/*  <rect width="300" height="100" x="100" y="100"*/}
+        {/*        style={{fill:'rgb(0,0,255)', strokeWidth:1, stroke:'rgb(0,0,0)'}}/>*/}
+        {/*  /!*<circle cx={50} cy={50} r={10} fill="rgba(255, 0, 0, 0.5)"/>*!/*/}
+        {/*  /!*<rect x="0" y="0" width="100%" height="100%"/>*!/*/}
+        {/*</svg>*/}
       </div>
     </div>
   }

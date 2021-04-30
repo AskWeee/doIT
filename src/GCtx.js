@@ -6,6 +6,8 @@ const GCtx = React.createContext({
   serviceIp: "10.50.10.7",
   reactElementKey: 0,
   mapMenus: new Map(),
+  gRefLine: React.createRef(),
+  gRefDivToy: React.createRef(),
   menus: [
     {id: 'menu_database', label: '数据库管理', desc: '数据库管理', ref: null, children: [
         {id: 'menu_database_struct', label: '库表结构维护', desc: '库表结构维护', ref: null},
