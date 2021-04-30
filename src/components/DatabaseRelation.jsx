@@ -6,6 +6,7 @@ import {Button, Tree} from 'antd'
 import {CaretDownOutlined, TagOutlined} from '@ant-design/icons'
 import moment from 'moment';
 import KToyDiv from "./KToyDiv";
+import Snap from 'imports-loader?this=>window,fix=>module.exports=0!snapsvg/dist/snap.svg.js';
 
 export default class DatabaseRelation extends React.Component {
   static contextType = GCtx;
@@ -769,6 +770,13 @@ export default class DatabaseRelation extends React.Component {
         {this.state.divToys.map((item) => {
           return item
         })}
+
+        <svg width="500px"
+             height="500px"
+             viewBox="0 0 100 100">
+          {/*<circle cx={50} cy={50} r={30} fill="red"/>*/}
+          <line x1={100} y1={100} x2={200} y2={200} stroke="red"/>
+        </svg>
       </div>
     </div>
   }

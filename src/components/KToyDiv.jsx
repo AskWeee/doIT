@@ -1,5 +1,7 @@
 import React from 'react'
 import './KToyDiv.scss'
+import {Button, Tree} from 'antd'
+import {CaretDownOutlined, MoreOutlined} from '@ant-design/icons';
 
 export default class KToyDiv extends React.Component {
 
@@ -14,7 +16,43 @@ export default class KToyDiv extends React.Component {
 
     this.state = {
       counter: 10,
-      data: [],
+      data: [{
+        title: "test-01",
+        key: "test-01",
+        children: [{
+          title: "test-01-01",
+          key: "test-01-01",
+          children: []},
+          {
+            title: "test-01-02",
+            key: "test-01-02",
+            children: []}]
+      },
+        {
+          title: "test-02",
+          key: "test-02",
+          children: [{
+            title: "test-02-01",
+            key: "test-02-01",
+            children: []},
+            {
+              title: "test-02-02",
+              key: "test-02-02",
+              children: []}]
+        },
+        {
+          title: "test-03",
+          key: "test-03",
+          children: [{
+            title: "test-03-01",
+            key: "test-03-01",
+            children: []},
+            {
+              title: "test-03-02",
+              key: "test-03-02",
+              children: []}]
+        }
+      ],
       value: '',
       styles: {
         left: "100px",
@@ -88,8 +126,21 @@ export default class KToyDiv extends React.Component {
            onClick={this.onHeaderClick}
            onMouseDown={this.onHeaderMouseDown}
            onMouseUp={this.onHeaderMouseUp}
-           onMouseMove={this.onHeaderMouseMove}
-      >title</div>
+           onMouseMove={this.onHeaderMouseMove}>
+        <div className={"BoxTitle"}>Title</div>
+        <div className={"BoxToolbar"}>
+          <Button type="primary" icon={<MoreOutlined />} size={"small"}/>
+        </div>
+      </div>
+      <div className={"BoxTree"}>
+        <Tree
+          blockNode={true}
+          showLine={true}
+          showIcon={true}
+          switcherIcon={<CaretDownOutlined/>}
+        treeData={this.state.data}
+        />
+      </div>
     </div>
   }
 }

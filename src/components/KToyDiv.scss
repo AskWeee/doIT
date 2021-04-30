@@ -1,14 +1,36 @@
 .KToyDiv {
   position: absolute;
-  background: rgba(255, 0, 0, 0.5);
-  border: 1px solid rgba(255, 0, 0, 1);
+  background: rgba(55, 125, 225, 1);
+  border: 1px solid rgba(75, 175, 255, 1);
   width: 200px;
   height: 300px;
   display: grid;
   grid-template-rows: 30px 1fr;
 
   .BoxHeader {
-    background: rgba(255, 255, 0, 0.5);
-    border: 1px solid rgba(255, 0, 0, 1);
+    background: rgba(75, 175, 255, 1);
+    //border: 1px solid rgba(255, 0, 0, 1);
+    user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-user-select: none;
+    display: grid;
+    grid-template-columns: 1fr auto;
+
+    .BoxTitle {
+      display: grid;
+      padding-left: 10px;
+      align-content: center;
+    }
+
+    .BoxToolbar {
+      display: grid;
+      padding-right: 3px;
+      align-content: center;
+    }
+  }
+
+  .BoxTree {
+    display: grid;
   }
 }
