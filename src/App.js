@@ -99,6 +99,9 @@ class App extends React.Component{
       case 'menu_lowcode_single_table':
         this.ComContent.showComponentLowcodeSingleTable();
         break
+      case 'menu_database_struct':
+        this.ComContent.showComponentDatabaseStruct();
+        break
       case 'menu_database_relation':
         this.ComContent.showComponentDatabaseRelation();
         break

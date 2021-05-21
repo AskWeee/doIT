@@ -1,0 +1,211 @@
+.DatabaseStruct {
+    display: grid;
+    background: rgba(55, 175, 255, 0.2);
+    grid-template-columns: 1fr 1fr 3fr;
+    grid-gap: 5px;
+    margin: 5px;
+    border: 1px solid rgba(55, 55, 55, 1);
+    padding: 5px;
+    overflow: hidden;
+
+    .DivTest {
+        background: rgba(255, 0, 0, 0.2);
+        margin: 5px;
+    }
+
+    .BoxProductsInfo {
+        display: grid;
+        //background: rgba(55,175, 255, 0.2);
+        //border: 1px solid rgba(55,55,55,1);
+        grid-template-rows: 1fr 160px;
+        grid-gap: 5px;
+
+        .BoxTree {
+            background: rgba(55, 175, 255, 0.2);
+            //border: 1px solid rgba(55,55,55,1);
+            display: grid;
+            overflow: auto;
+        }
+
+        .BoxDescription {
+            background: rgba(255, 255, 255, 1);
+            //border: 1px solid rgba(55,55,55,1);
+        }
+    }
+
+    .BoxTables {
+        display: grid;
+        grid-template-rows: auto auto 1fr;
+        grid-gap: 5px;
+
+        .BoxLabel {
+            display: grid;
+            align-content: end;
+            margin-left: 5px;
+        }
+
+        .BoxSelect {
+            display: grid;
+        }
+
+        .BoxToolbar {
+            background: rgba(255, 255, 255, 1);
+            padding: 5px;
+        }
+
+        .BoxTreeAndTable {
+            display: grid;
+            grid-template-rows: 1fr auto auto;
+
+            .BoxTree {
+                background: green;
+                display: grid;
+            }
+
+            .HLine {
+                display: grid;
+                height: 5px;
+            }
+
+            .BoxTable {
+                background: yellow;
+                display: grid;
+                height: 200px;
+            }
+        }
+    }
+
+    .BoxPropertiesBorder {
+        border: 1px solid gray;
+        background: lightgray;
+        display: grid;
+        grid-template-rows: 5px 1fr 5px;
+        grid-template-columns: 5px 1fr 5px;
+        overflow: hidden;
+        color: black;
+
+        .BoxProperties {
+            display: grid;
+            grid-template-rows: auto 1fr 260px;
+            grid-gap: 5px;
+
+            .BoxTableProperties {
+                padding-right: 5px;
+                display: grid;
+                grid-template-columns: 1fr auto auto;
+                grid-gap: 5px;
+            }
+
+            .BoxOtherProperties {
+                border: 1px solid red;
+                display: grid;
+                overflow: hidden;
+
+                .BoxTableColumnProperties {
+                    margin: 5px;
+                    display: grid;
+                    grid-template-rows: auto 1fr;
+                    grid-gap: 5px;
+
+                    .BoxToolbar {
+                        display: grid;
+                        grid-template-columns: 1fr auto auto auto;
+                        grid-gap: 5px;
+
+                        .BoxLabel {
+                            display: grid;
+                            align-content: end;
+                        }
+                    }
+                    .BoxDetail {
+                        display: grid;
+                    }
+                }
+
+                .BoxTableIndexProperties {
+                    padding-right: 5px;
+                    margin-top: 5px;
+                    display: grid;
+                    grid-template-rows: auto auto;
+                    grid-gap: 3px;
+
+                    .BoxToolbar {
+                        display: grid;
+                        grid-template-columns: 1fr auto auto auto;
+                        grid-gap: 5px;
+
+                        .BoxLabel {
+                            display: grid;
+                            align-content: end;
+                        }
+                    }
+                    .BoxDetail {
+                        display: grid;
+                    }
+
+                }
+
+                .BoxTablePartitionProperties {
+                    padding-right: 5px;
+                    margin-top: 5px;
+                    display: grid;
+                    grid-template-rows: auto auto;
+                    grid-gap: 3px;
+
+                    .BoxToolbar {
+                        display: grid;
+
+                        .BoxLabel {
+                            display: grid;
+                            align-content: end;
+                        }
+
+                    }
+                    .BoxDetail {
+                        display: grid;
+                        grid-template-rows: auto 60px;
+                        grid-gap: 5px;
+
+                        .BoxSqlParams {
+                            display: grid;
+                            grid-template-columns: auto auto 1fr;
+                            grid-gap: 5px;
+                        }
+
+                        .BoxSql {
+                            display: grid;
+                        }
+                    }
+                }
+
+                .BoxTableRelationProperties {
+                    padding-right: 5px;
+                    margin-top: 5px;
+                    display: grid;
+                    grid-template-rows: auto auto;
+                    grid-gap: 3px;
+
+                    .BoxToolbar {
+                        display: grid;
+                        grid-template-columns: 1fr auto auto auto;
+                        grid-gap: 5px;
+
+                        .BoxLabel {
+                            display: grid;
+                            align-content: end;
+                        }
+                    }
+                    .BoxDetail {
+                        display: grid;
+                    }
+                }
+            }
+
+            .BoxData {
+                display: grid;
+                border: 1px solid red;
+            }
+
+        }
+    }
+}

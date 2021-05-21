@@ -5,6 +5,7 @@ import DatabaseImport from "./DatabaseImport";
 import DatabaseExport from "./DatabaseExport";
 import LowcodeSingleTable from "./LowcodeSingleTable";
 import DatabaseRelation from "./DatabaseRelation";
+import DatabaseStruct from "./DatabaseStruct";
 
 class Content extends React.Component {
   static contextType = GCtx;
@@ -17,6 +18,15 @@ class Content extends React.Component {
     }
 
     this.props.onRef(this);
+  }
+
+  showComponentDatabaseStruct() {
+    let children = [];
+    children.push(<DatabaseStruct key="menu_database_struct"/>);
+
+    this.setState({
+      children: children
+    })
   }
 
   showComponentDatabaseRelation() {

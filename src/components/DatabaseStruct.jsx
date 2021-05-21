@@ -1,13 +1,15 @@
 import React from 'react'
-import './DatabaseImport.scss'
+import './DatabaseStruct.scss'
 import axios from "axios";
 import GCtx from "../GCtx";
-import {Button, Select, Tree, Checkbox, Radio, Table} from 'antd'
+import {Button, Select, Tree, Checkbox, Radio, Table, Input, Tabs} from 'antd'
 import {CaretDownOutlined} from '@ant-design/icons'
 import TadTable from '../entity/TadTable'
 import TadTableColumn from '../entity/TadTableColumn'
 
-export default class DatabaseImport extends React.Component {
+const { TabPane } = Tabs;
+
+export default class DatabaseStruct extends React.Component {
     static contextType = GCtx;
 
     gUi = {};
@@ -450,16 +452,16 @@ export default class DatabaseImport extends React.Component {
                         children: []
                     }
                     tablesKnownTreeData.push(nodeTable);
-                    this.gMap.tables.get(tId).columns.forEach((itemColumn) => {
-                        let tcId = itemColumn;
-                        let column = this.gMap.columns.get(tcId);
-                        let nodeColumn = {
-                            key: tId + "_" + tcId,
-                            title: column.column_name + " : " + column.column_type_id,
-                            children: []
-                        }
-                        nodeTable.children.push(nodeColumn);
-                    })
+                    // this.gMap.tables.get(tId).columns.forEach((itemColumn) => {
+                    //     let tcId = itemColumn;
+                    //     let column = this.gMap.columns.get(tcId);
+                    //     let nodeColumn = {
+                    //         key: tId + "_" + tcId,
+                    //         title: column.column_name + " : " + column.column_type_id,
+                    //         children: []
+                    //     }
+                    //     nodeTable.children.push(nodeColumn);
+                    // })
                 }
             });
             this.setState({
@@ -786,9 +788,9 @@ export default class DatabaseImport extends React.Component {
             {label: '已归档', value: 1},
         ];
 
-        return <div className="DatabaseImport">
+        return <div className="DatabaseStruct">
+            {/*1-1*/}
             <div className={"BoxProductsInfo"}>
-                <div className={"BoxLabel"}>产品线产品信息：</div>
                 <div className={"BoxTree"}>
                     <Tree
                         blockNode={true}
@@ -801,8 +803,8 @@ export default class DatabaseImport extends React.Component {
                 </div>
                 <div className={"BoxDescription"}>information</div>
             </div>
-            <div className={"BoxKnown"}>
-                <div className={"BoxLabel"}>数据库用户：</div>
+            {/*1-2*/}
+            <div className={"BoxTables"}>
                 <div className={"BoxSelect"}>
                     <Select ref={this.refSelectDbUsers}
                             onChange={this.onSelectDbUsersChanged}
@@ -811,18 +813,17 @@ export default class DatabaseImport extends React.Component {
                 </div>
                 <div className={"BoxToolbar"}>
                     <Checkbox>分组显示</Checkbox>
-                    <Checkbox onChange={this.onCheckboxKnownTableDisplayChanged}>显示数据</Checkbox>
                 </div>
                 <div className={"BoxTreeAndTable"}>
                     <div className={"BoxTree"}>
                         <Tree
-                            checkable
+                            // checkable
                             blockNode={true}
-                            showLine={true}
+                            // showLine={true}
                             showIcon={true}
-                            switcherIcon={<CaretDownOutlined/>}
+                            // switcherIcon={<CaretDownOutlined/>}
                             // onSelect={this.onSelect}
-                            onCheck={this.onTableKnownChecked}
+                            // onCheck={this.onTableKnownChecked}
                             treeData={this.state.tablesKnownTreeData}
                         />
                     </div>
@@ -832,58 +833,112 @@ export default class DatabaseImport extends React.Component {
                     </div>
                 </div>
             </div>
-            <div className={"BoxButtons"}>
-                <Button onClick={this.onButtonIsTempClicked}>无需归类</Button>
-                <Button onClick={this.onButtonInClicked}>导入结构</Button>
-                <Button onClick={this.onButtonImportClicked}>导入数据</Button>
-                <Button onClick={this.onButtonOutClicked}>移除结构</Button>
-                <Button onClick={this.onButtonDeleteClicked}>移除数据</Button>
-            </div>
-            <div className={"BoxUnknown"}>
-                <div className={"BoxLabel"}>待归档数据库表：</div>
-                <Select onChange={this.onSelectConnectionsChanged} defaultValue={-1}
-                        options={this.state.connectionsSelectOptions}/>
-                <div className={"BoxToolbar"}>
-                    <Checkbox>分组显示</Checkbox>
-                    <Checkbox onChange={this.onCheckboxUnknownTableDisplayChanged}>显示数据</Checkbox>
-                    <div className={"BoxTabs"}>
-                        <Radio.Group
-                            options={options}
-                            onChange={this.onRadioUnknownChanged}
-                            value={this.state.uiRadioUnknownSelected}
-                        />
+            {/*1-3*/}
+            <div className={"BoxPropertiesBorder"}>
+                <div>&nbsp;</div>
+                <div>&nbsp;</div>
+                <div>&nbsp;</div>
+                <div>&nbsp;</div>
+                <div className={"BoxProperties"}>
+                    <div className={"BoxTableProperties"}>
+                        <Input placeholder="请输该表用途的简单描述"/>
+                        <Select ref={this.refSelectDbUsers}
+                                onChange={this.onSelectDbUsersChanged}
+                                defaultValue={this.state.dbUserSelected}
+                                options={this.state.dbUsersSelectOptions}/>
+                        <Select ref={this.refSelectDbUsers}
+                                onChange={this.onSelectDbUsersChanged}
+                                defaultValue={this.state.dbUserSelected}
+                                options={this.state.dbUsersSelectOptions}/>
+                    </div>
+                    <div className={"BoxOtherProperties"}>
+                        <Tabs defaultActiveKey="1" type="card">
+                            <TabPane tab="表字段" key="1">
+                                <div className={"BoxTableColumnProperties"}>
+                                    <div className={"BoxToolbar"}>
+                                        <div className={"BoxLabel"}>&nbsp;</div>
+                                        <Button>新增</Button>
+                                        <Button>修改</Button>
+                                        <Button>删除</Button>
+                                    </div>
+                                    <div className={"BoxDetail"}>
+                                        <Table/>
+                                    </div>
+                                </div>
+                            </TabPane>
+                            <TabPane tab="表索引" key="2">
+                                <div className={"BoxTableIndexProperties"}>
+                                    <div className={"BoxToolbar"}>
+                                        <div className={"BoxLabel"}>&nbsp;</div>
+                                        <Button>新增</Button>
+                                        <Button>修改</Button>
+                                        <Button>删除</Button>
+                                    </div>
+                                    <div className={"BoxDetail"}>
+                                        <Table/>
+                                    </div>
+                                </div>
+                            </TabPane>
+                            <TabPane tab="表分区" key="3">
+                                <div className={"BoxTablePartitionProperties"}>
+                                    <div className={"BoxToolbar"}>
+                                        <div className={"BoxLabel"}>&nbsp;</div>
+                                    </div>
+                                    <div className={"BoxDetail"}>
+                                        <div className={"BoxSqlParams"}>
+                                            <Select ref={this.refSelectDbUsers}
+                                                    onChange={this.onSelectDbUsersChanged}
+                                                    defaultValue={this.state.dbUserSelected}
+                                                    options={this.state.dbUsersSelectOptions}/>
+                                            <Select ref={this.refSelectDbUsers}
+                                                    onChange={this.onSelectDbUsersChanged}
+                                                    defaultValue={this.state.dbUserSelected}
+                                                    options={this.state.dbUsersSelectOptions}/>
+                                            <Input placeholder="分区参数"/>
+                                        </div>
+                                        <div className={"BoxSql"}>
+                                            <Input placeholder="SQL语句"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </TabPane>
+                            <TabPane tab="表关联" key="4">
+                                <div className={"BoxTableRelationProperties"}>
+                                    <div className={"BoxToolbar"}>
+                                        <div className={"BoxLabel"}>&nbsp;</div>
+                                        <Button>新增</Button>
+                                        <Button>修改</Button>
+                                        <Button>删除</Button>
+                                    </div>
+                                    <div className={"BoxDetail"}>
+                                        <Table/>
+                                    </div>
+                                </div>
+                            </TabPane>
+                            <TabPane tab="表DDL" key="5">
+                                <div className={"BoxTableRelationProperties"}>
+                                    <div className={"BoxToolbar"}>
+                                        <div className={"BoxLabel"}>&nbsp;;</div>
+                                        <Button>新增</Button>
+                                        <Button>修改</Button>
+                                        <Button>删除</Button>
+                                    </div>
+                                    <div className={"BoxDetail"}>
+                                        <Table/>
+                                    </div>
+                                </div>
+                            </TabPane>
+                        </Tabs>
+                    </div>
+                    <div className={"BoxData"}>
+                        <Table />
                     </div>
                 </div>
-                <div className={"BoxTreeAndTable"}>
-                    <div className={"BoxList"}>
-                        <Tree className={"TreeLetters"}
-                              blockNode={true}
-                              showLine={false}
-                              showIcon={false}
-                            // switcherIcon={<CaretDownOutlined/>}
-                              onSelect={this.onTreeLettersSelected}
-                            //onCheck={this.onTableUnknownChecked}
-                              treeData={this.state.lettersTreeData}
-                        />
-                    </div>
-                    <div className={"BoxTree"}>
-                        <div className={"BoxTree2"}>
-                            <Tree className={"TreeUnknown"}
-                                  checkable
-                                  blockNode={true}
-                                  showLine={true}
-                                  showIcon={true}
-                                  switcherIcon={<CaretDownOutlined/>}
-                                // onSelect={this.onSelect}
-                                  onCheck={this.onTableUnknownChecked}
-                                  treeData={this.state.tablesUnknownTreeData}
-                            /></div>
-                        <div className={"HLine"} style={{display: this.state.uiTableUnknownDisplay}}>&nbsp;</div>
-                        <div className={"BoxTable"} style={{display: this.state.uiTableUnknownDisplay}}>
-                            <Table></Table>
-                        </div>
-                    </div>
-                </div>
+
+                <div>&nbsp;</div>
+                <div>&nbsp;</div>
+                <div>&nbsp;</div>
+                <div>&nbsp;</div>
             </div>
         </div>
     }
