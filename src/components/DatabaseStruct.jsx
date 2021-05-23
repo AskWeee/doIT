@@ -6,8 +6,9 @@ import {Button, Select, Tree, Checkbox, Radio, Table, Input, Tabs} from 'antd'
 import {CaretDownOutlined} from '@ant-design/icons'
 import TadTable from '../entity/TadTable'
 import TadTableColumn from '../entity/TadTableColumn'
+import Mock from 'mockjs'
 
-const { TabPane } = Tabs;
+const {TabPane} = Tabs;
 
 export default class DatabaseStruct extends React.Component {
     static contextType = GCtx;
@@ -16,7 +17,6 @@ export default class DatabaseStruct extends React.Component {
     gMap = {};
     gData = {};
     gCurrent = {};
-    refSelectDbUsers = React.createRef();
 
     gTableUnknownSelected = [];
     gTableKnownSelected = [];
@@ -41,7 +41,9 @@ export default class DatabaseStruct extends React.Component {
             tablesAll: [],
             tablesUnknown: [],
             tablesKnown: [],
-            letters: ["a", "b"]
+            letters: ["a", "b"],
+            tableTableColumnsDataSource: [],
+            tableTableColumnsColumns: []
         }
 
 
@@ -62,13 +64,17 @@ export default class DatabaseStruct extends React.Component {
         this.doNewGetDbConnections = this.doNewGetDbConnections.bind(this);
         this.doGetSchemas = this.doGetSchemas.bind(this);
         this.doGetTablesByLetter = this.doGetTablesByLetter.bind(this);
-
+        this.doMock = this.doMock.bind(this);
         this.onTreeLettersSelected = this.onTreeLettersSelected.bind(this);
 
         this.onTreeProductsSelected = this.onTreeProductsSelected.bind(this);
+        this.onTreeTablesSelected = this.onTreeTablesSelected.bind(this);
+
         this.onSelectDbUsersChanged = this.onSelectDbUsersChanged.bind(this);
         this.onSelectConnectionsChanged = this.onSelectConnectionsChanged.bind(this);
+
         this.onRadioUnknownChanged = this.onRadioUnknownChanged.bind(this);
+
         this.onCheckboxKnownTableDisplayChanged = this.onCheckboxKnownTableDisplayChanged.bind(this);
         this.onCheckboxUnknownTableDisplayChanged = this.onCheckboxUnknownTableDisplayChanged.bind(this);
 
@@ -85,7 +91,145 @@ export default class DatabaseStruct extends React.Component {
     }
 
     componentDidMount() {
+        this.doMock();
         this.doNewGetAll();
+    }
+
+    doMock() {
+        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_product_relations", {
+            code: "200-200",
+            success: true,
+            "data": [{
+                "product_rel_id": 1,
+                "product_line_id": 1,
+                "product_id": 1,
+                "product_manager_id": 1
+            }]
+        });
+        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_product_lines", {
+            code: "200-200",
+            success: true,
+            "data": [{
+                "product_line_id": 1,
+                "product_line_name": "OSS",
+                "product_line_desc": "",
+            }]
+        });
+        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_products", {
+            code: "200-200",
+            success: true,
+            "data": [{
+                "product_id": 1,
+                "product_name": "OLC",
+                "product_desc": "",
+            }]
+        });
+        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_users", {
+            code: "200-200",
+            success: true,
+            "data": [{
+                "uer_id": 1,
+                "product_line_id": 1,
+                "user_name": "nrmdb",
+                "user_desc": "",
+            }]
+        });
+        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_modules", {
+            code: "200-200",
+            success: true,
+            "data": [{
+                "module_id": 1,
+                "product_id": 1,
+                "module_name": "USER",
+                "module_leader": "K",
+                "module_desc": "",
+            }]
+        });
+        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_tables", {
+            code: "200-200",
+            success: true,
+            "data": [{
+                "table_id": 1,
+                "db_user_id": 1,
+                "module_id": 1,
+                "table_name": "tad_dict",
+                "table_desc": ""
+            }]
+        });
+        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_columns", {
+            code: "200-200",
+            success: true,
+            "data": [{
+                "column_id": 1,
+                "table_id": 1,
+                "column_name": "id",
+                "column_type_id": 2,
+                "column_desc": "",
+            },
+                {
+                    "column_id": 2,
+                    "table_id": 1,
+                    "column_name": "type",
+                    "column_type_id": 3,
+                    "column_desc": "",
+                },
+                {
+                    "column_id": 3,
+                    "table_id": 1,
+                    "column_name": "name",
+                    "column_type_id": 3,
+                    "column_desc": "",
+                }]
+        });
+        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_product_managers", {
+            code: "200-200",
+            success: true,
+            "data": [{
+                "product_manager_id": 1,
+                "product_manager_name": "TESTER",
+                "tel_no": "",
+                "email_addr": "",
+                "work_addr": "",
+            }]
+        });
+        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_types", {
+            code: "200-200",
+            success: true,
+            "data": [{
+                "id": 1,
+                "type": "table_type",
+                "name": "DICT",
+            },
+                {
+                    "id": 2,
+                    "type": "data_type",
+                    "name": "number",
+                }, {
+                    "id": 3,
+                    "type": "table_type",
+                    "name": "string",
+                }]
+        });
+        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_product_versions", {
+            code: "200-200",
+            success: true,
+            "data": [{
+                "version_id": 1,
+                "product_id": 1,
+                "version_name": "3.0",
+            }]
+        });
+        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_connections", {
+            code: "200-200",
+            success: true,
+            "data": [{
+                "mtime": "@datetime",//随机生成日期时间
+                "score|1-800": 800,//随机生成1-800的数字
+                "rank|1-100": 100,//随机生成1-100的数字
+                "stars|1-5": 5,//随机生成1-5的数字
+                "nickname": "@cname",//随机生成中文名字
+            }]
+        });
     }
 
     doInit() {
@@ -182,6 +326,8 @@ export default class DatabaseStruct extends React.Component {
             this.gData.types = types.data.data;
             this.gData.connections = connections.data.data;
 
+            console.log(this.gData);
+
             productLines.data.data.forEach(function (item) {
                 let myKey = item.product_line_id;
                 if (!mapProductLines.has(myKey)) {
@@ -195,6 +341,7 @@ export default class DatabaseStruct extends React.Component {
                 }
             });
 
+            console.log(dbUsers.data.data);
             dbUsers.data.data.forEach(function (item) {
                 let myKey = item.user_id;
                 if (!mapDbUsers.has(myKey)) {
@@ -438,10 +585,11 @@ export default class DatabaseStruct extends React.Component {
     }
 
     doGetSpecialTables() {
+        console.log("XXXXXXXXXXXXXXXXXXX", this.gCurrent);
         if ((this.gCurrent.nodeSelectedType === "module") && (this.gCurrent.dbUserId !== -1)) {
             let tablesKnownTreeData = [];
             this.gData.tables.forEach((itemTable) => {
-                console.log()
+                console.log(itemTable)
                 let uId = itemTable.db_user_id;
                 let mId = itemTable.module_id;
                 if ((mId === this.gCurrent.moduleId) && (uId === this.gCurrent.dbUserId)) {
@@ -452,16 +600,6 @@ export default class DatabaseStruct extends React.Component {
                         children: []
                     }
                     tablesKnownTreeData.push(nodeTable);
-                    // this.gMap.tables.get(tId).columns.forEach((itemColumn) => {
-                    //     let tcId = itemColumn;
-                    //     let column = this.gMap.columns.get(tcId);
-                    //     let nodeColumn = {
-                    //         key: tId + "_" + tcId,
-                    //         title: column.column_name + " : " + column.column_type_id,
-                    //         children: []
-                    //     }
-                    //     nodeTable.children.push(nodeColumn);
-                    // })
                 }
             });
             this.setState({
@@ -516,8 +654,47 @@ export default class DatabaseStruct extends React.Component {
         }
     };
 
+    onTreeTablesSelected(selectedKeys, info) {
+        if (selectedKeys[0] === undefined) return;
+
+        let nodeType = info.node.nodeType;
+        this.gCurrent.nodeSelectedType = nodeType;
+
+        // switch (nodeType) {
+        //     case "table":
+        this.gCurrent.tableId = parseInt(selectedKeys[0]);
+        // todo:: show tables info
+        let tableTableColumnsDataSource = [];
+        this.gMap.tables.get(this.gCurrent.tableId).columns.forEach((itemColumn) => {
+            let tcId = itemColumn;
+            let column = this.gMap.columns.get(tcId);
+            console.log(this.gMap.types);
+            let columnType = this.gMap.types.get(column.column_type_id).name;
+            let nodeColumn = {
+                key: this.gCurrent.tableId + "_" + tcId,
+                column_name: column.column_name + " : " + columnType,
+                data_type: columnType,
+                data_length: 0
+            }
+            tableTableColumnsDataSource.push(nodeColumn);
+        })
+
+
+        this.setState({
+            tableTableColumnsDataSource: tableTableColumnsDataSource,
+        })
+        //         break
+        //     case "column":
+        //         this.gCurrent.columnId = parseInt(selectedKeys[0].split("_")[1]);
+        //         break
+        //     default:
+        //         break
+        // }
+    };
+
     onSelectDbUsersChanged(value, option) {
         this.gCurrent.dbUserId = value;
+        console.log(".................");
         this.doGetSpecialTables();
     }
 
@@ -787,7 +964,25 @@ export default class DatabaseStruct extends React.Component {
             {label: '未归档', value: 0},
             {label: '已归档', value: 1},
         ];
-
+        const tableTableColumnsColumns = [
+            {
+                title: '字段名称',
+                dataIndex: 'column_name',
+                key: 'column_name',
+            },
+            {
+                title: '数据类型',
+                dataIndex: 'data_type',
+                key: 'data_type',
+            },
+            {
+                title: '数据长度',
+                dataIndex: 'data_length',
+                key: 'data_length',
+            },];
+        const styleTabs = {
+            border: "1px solid red",
+        }
         return <div className="DatabaseStruct">
             {/*1-1*/}
             <div className={"BoxProductsInfo"}>
@@ -806,10 +1001,11 @@ export default class DatabaseStruct extends React.Component {
             {/*1-2*/}
             <div className={"BoxTables"}>
                 <div className={"BoxSelect"}>
-                    <Select ref={this.refSelectDbUsers}
-                            onChange={this.onSelectDbUsersChanged}
-                            defaultValue={this.state.dbUserSelected}
-                            options={this.state.dbUsersSelectOptions}/>
+                    <Select
+                        onChange={this.onSelectDbUsersChanged}>
+                        <Select.Option value={-1}>-1</Select.Option>
+                        <Select.Option value={1}>NRMDB</Select.Option>
+                    </Select>
                 </div>
                 <div className={"BoxToolbar"}>
                     <Checkbox>分组显示</Checkbox>
@@ -822,14 +1018,10 @@ export default class DatabaseStruct extends React.Component {
                             // showLine={true}
                             showIcon={true}
                             // switcherIcon={<CaretDownOutlined/>}
-                            // onSelect={this.onSelect}
+                            onSelect={this.onTreeTablesSelected}
                             // onCheck={this.onTableKnownChecked}
                             treeData={this.state.tablesKnownTreeData}
                         />
-                    </div>
-                    <div className={"HLine"} style={{display: this.state.uiTableKnownDisplay}}>&nbsp;</div>
-                    <div className={"BoxTable"} style={{display: this.state.uiTableKnownDisplay}}>
-                        <Table></Table>
                     </div>
                 </div>
             </div>
@@ -842,18 +1034,12 @@ export default class DatabaseStruct extends React.Component {
                 <div className={"BoxProperties"}>
                     <div className={"BoxTableProperties"}>
                         <Input placeholder="请输该表用途的简单描述"/>
-                        <Select ref={this.refSelectDbUsers}
-                                onChange={this.onSelectDbUsersChanged}
-                                defaultValue={this.state.dbUserSelected}
-                                options={this.state.dbUsersSelectOptions}/>
-                        <Select ref={this.refSelectDbUsers}
-                                onChange={this.onSelectDbUsersChanged}
-                                defaultValue={this.state.dbUserSelected}
-                                options={this.state.dbUsersSelectOptions}/>
+                        <Select/>
+                        <Select/>
                     </div>
                     <div className={"BoxOtherProperties"}>
-                        <Tabs defaultActiveKey="1" type="card">
-                            <TabPane tab="表字段" key="1">
+                        <Tabs defaultActiveKey="1" type="card" tabBarGutter={5} animated={false}>
+                            <TabPane tab="表字段" key="1" className={"BoxTabPane"}>
                                 <div className={"BoxTableColumnProperties"}>
                                     <div className={"BoxToolbar"}>
                                         <div className={"BoxLabel"}>&nbsp;</div>
@@ -862,7 +1048,9 @@ export default class DatabaseStruct extends React.Component {
                                         <Button>删除</Button>
                                     </div>
                                     <div className={"BoxDetail"}>
-                                        <Table/>
+                                        <Table
+                                            dataSource={this.state.tableTableColumnsDataSource}
+                                            columns={tableTableColumnsColumns}/>
                                     </div>
                                 </div>
                             </TabPane>
@@ -886,14 +1074,8 @@ export default class DatabaseStruct extends React.Component {
                                     </div>
                                     <div className={"BoxDetail"}>
                                         <div className={"BoxSqlParams"}>
-                                            <Select ref={this.refSelectDbUsers}
-                                                    onChange={this.onSelectDbUsersChanged}
-                                                    defaultValue={this.state.dbUserSelected}
-                                                    options={this.state.dbUsersSelectOptions}/>
-                                            <Select ref={this.refSelectDbUsers}
-                                                    onChange={this.onSelectDbUsersChanged}
-                                                    defaultValue={this.state.dbUserSelected}
-                                                    options={this.state.dbUsersSelectOptions}/>
+                                            <Select/>
+                                            <Select/>
                                             <Input placeholder="分区参数"/>
                                         </div>
                                         <div className={"BoxSql"}>
@@ -915,7 +1097,20 @@ export default class DatabaseStruct extends React.Component {
                                     </div>
                                 </div>
                             </TabPane>
-                            <TabPane tab="表DDL" key="5">
+                            <TabPane tab="表数据" key="5">
+                                <div className={"BoxTableRelationProperties"}>
+                                    <div className={"BoxToolbar"}>
+                                        <div className={"BoxLabel"}>&nbsp;;</div>
+                                        <Button>新增</Button>
+                                        <Button>修改</Button>
+                                        <Button>删除</Button>
+                                    </div>
+                                    <div className={"BoxDetail"}>
+                                        <Table/>
+                                    </div>
+                                </div>
+                            </TabPane>
+                            <TabPane tab="表DDL" key="6">
                                 <div className={"BoxTableRelationProperties"}>
                                     <div className={"BoxToolbar"}>
                                         <div className={"BoxLabel"}>&nbsp;;</div>
@@ -930,15 +1125,7 @@ export default class DatabaseStruct extends React.Component {
                             </TabPane>
                         </Tabs>
                     </div>
-                    <div className={"BoxData"}>
-                        <Table />
-                    </div>
                 </div>
-
-                <div>&nbsp;</div>
-                <div>&nbsp;</div>
-                <div>&nbsp;</div>
-                <div>&nbsp;</div>
             </div>
         </div>
     }

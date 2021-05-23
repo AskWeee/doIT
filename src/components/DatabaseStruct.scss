@@ -1,3 +1,6 @@
+
+$tabs-border-color: rgb(225,225,225);
+
 .DatabaseStruct {
     display: grid;
     background: rgba(55, 175, 255, 0.2);
@@ -86,7 +89,7 @@
 
         .BoxProperties {
             display: grid;
-            grid-template-rows: auto 1fr 260px;
+            grid-template-rows: auto 1fr;
             grid-gap: 5px;
 
             .BoxTableProperties {
@@ -97,9 +100,64 @@
             }
 
             .BoxOtherProperties {
-                border: 1px solid red;
                 display: grid;
                 overflow: hidden;
+
+                .ant-tabs {
+                    margin: 0;
+                    padding: 0;
+                    display: grid;
+                    grid-template-rows: auto 1fr;
+
+                    .ant-tabs-nav {
+                        margin: 0;
+                        padding: 0;
+
+                        &:before {
+                            border-bottom: 1px solid $tabs-border-color;
+                        }
+                        .ant-tabs-tab {
+                            border: {
+                                width: 1px;
+                                style: solid;
+                                color: $tabs-border-color;
+                            }
+                            background: $tabs-border-color;
+
+                        }
+                        .ant-tabs-tab-active {
+                            border: {
+                                width: 1px 1px 0 1px;
+                                style: solid;
+                                color: $tabs-border-color;
+                            }
+                            background: white;
+                        }
+                    }
+
+                    .ant-tabs-content-holder {
+                        display: grid;
+
+                        .ant-tabs-content {
+                            margin: 0;
+                            padding: 0;
+                            border: {
+                                width: 0 1px 1px 1px;
+                                style: solid;
+                                color: $tabs-border-color;
+                            }
+                            background: white;
+                            display: grid;
+
+                            .ant-tabs-tabpane {
+                                display: grid;
+                                margin: 0;
+                                padding: 0;
+                                //border: 1px solid green;
+                            }
+                        }
+                    }
+                }
 
                 .BoxTableColumnProperties {
                     margin: 5px;
@@ -201,11 +259,42 @@
                 }
             }
 
-            .BoxData {
-                display: grid;
-                border: 1px solid red;
-            }
-
+            //.BoxOtherProperties > .ant-tabs-card > .ant-tabs-nav::before {
+            //    //display: none;
+            //}
+            //.BoxOtherProperties > .ant-tabs-card .ant-tabs-tab,
+            //[data-theme='compact'] .card-container > .ant-tabs-card .ant-tabs-tab {
+            //    background: transparent;
+            //    border-color: transparent;
+            //}
+            //.card-container > .ant-tabs-card .ant-tabs-tab-active,
+            //[data-theme='compact'] .card-container > .ant-tabs-card .ant-tabs-tab-active {
+            //    background: #fff;
+            //    border-color: #fff;
+            //}
+            //#components-tabs-demo-card-top .code-box-demo {
+            //    padding: 24px;
+            //    overflow: hidden;
+            //    background: #f5f5f5;
+            //}
+            //[data-theme='compact'] .card-container > .ant-tabs-card .ant-tabs-content {
+            //    height: 120px;
+            //    margin-top: -8px;
+            //}
+            //[data-theme='dark'] .card-container > .ant-tabs-card .ant-tabs-tab {
+            //    background: transparent;
+            //    border-color: transparent;
+            //}
+            //[data-theme='dark'] #components-tabs-demo-card-top .code-box-demo {
+            //    background: #000;
+            //}
+            //[data-theme='dark'] .card-container > .ant-tabs-card .ant-tabs-content > .ant-tabs-tabpane {
+            //    background: #141414;
+            //}
+            //[data-theme='dark'] .card-container > .ant-tabs-card .ant-tabs-tab-active {
+            //    background: #141414;
+            //    border-color: #141414;
+            //}
         }
     }
 }
