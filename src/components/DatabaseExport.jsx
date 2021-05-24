@@ -2,58 +2,89 @@ import React from 'react'
 import './DatabaseExport.scss'
 import axios from "axios";
 import GCtx from "../GCtx";
-import {Button, Select, Tree} from 'antd'
-import {CaretDownOutlined, TagOutlined} from '@ant-design/icons'
-import moment from 'moment';
+import {Button, Select, Tree, Checkbox, Radio, Table} from 'antd'
+import {CaretDownOutlined, DeleteOutlined, DoubleLeftOutlined, DoubleRightOutlined, LeftOutlined, RightOutlined,
+  SearchOutlined,
+  ShareAltOutlined} from '@ant-design/icons'
+import TadTable from '../entity/TadTable'
+import TadTableColumn from '../entity/TadTableColumn'
+import TadTableIgnore from '../entity/TadTableIgnore'
 
 export default class DatabaseExport extends React.Component {
   static contextType = GCtx;
 
-  gMapTablesInfo = new Map();
-  gMapKnownTablesInfo = new Map();
+  gUi = {};
+  gMap = {};
+  gData = {};
+  gCurrent = {};
+  refSelectDbUsers = React.createRef();
+
   gTableUnknownSelected = [];
   gTableKnownSelected = [];
-  gMapFlags = new Map();
-  gMapFlagTimers = new Map();
-  gCounter = 0;
-  gTablesKnown = [];
   gTablesUnknown = [];
-  gRefDomMain = React.createRef();
 
   constructor(props) {
     super(props);
 
     this.state = {
+      productsTreeData: [],
+      tablesKnownTreeData: [],
+      tablesUnknownTreeData: [],
+      dbUsersSelectOptions: [{value: -1, label: "请选择"}],
+      connectionsSelectOptions: [{value: -1, label: "请选择"}],
+      dbUserSelected: -1,
+      showKnownTable: false,
+      showUnknownTable: false,
+      uiRadioUnknownSelected: 0,
+      uiTableKnownDisplay: "none",
+      uiTableUnknownDisplay: "none",
       message: '',
       tablesAll: [],
       tablesUnknown: [],
       tablesKnown: [],
-      dbUsersTreeData: [],
-      productsTreeData: [],
-      dbTypeTreeData: [],
-      styleDialogSqlGenerated: {display: "none"},
-      styleDialogHistoryCompare: {display: "none"},
-      sqlGenerated: ""
+      letters: ["a", "b"]
     }
 
+
     this.test = this.test.bind(this);
-    this.doGetProducts = this.doGetProducts.bind(this);
-    this.doGetSchemaKnown = this.doGetSchemaKnown.bind(this);
-    this.doGetSchemaAll = this.doGetSchemaAll.bind(this);
+
+    this.doInit = this.doInit.bind(this);
+    this.doNewGetAll = this.doNewGetAll.bind(this);
+    this.doGetProductRelations = this.doGetProductRelations.bind(this);
+    this.doNewGetProductLines = this.doNewGetProductLines.bind(this);
+    this.doNewGetProductLineDbUsers = this.doNewGetProductLineDbUsers.bind(this);
+    this.doNewGetProducts = this.doNewGetProducts.bind(this);
+    this.doNewGetProductModules = this.doNewGetProductModules.bind(this);
+    this.doNewGetProductVersions = this.doNewGetProductVersions.bind(this);
+    this.doNewGetProductManagers = this.doNewGetProductManagers.bind(this);
+    this.doNewGetTables = this.doNewGetTables.bind(this);
+    this.doNewGetTableColumns = this.doNewGetTableColumns.bind(this);
+    this.doNewGetTypes = this.doNewGetTypes.bind(this);
+    this.doNewGetDbConnections = this.doNewGetDbConnections.bind(this);
+    this.doGetTablesIgnore = this.doGetTablesIgnore.bind(this);
+
+    this.doGetSchemas = this.doGetSchemas.bind(this);
+    this.doGetTablesByLetter = this.doGetTablesByLetter.bind(this);
+
+    this.onTreeLettersSelected = this.onTreeLettersSelected.bind(this);
+    this.onTreeProductsSelected = this.onTreeProductsSelected.bind(this);
+    this.onTreeProductsChecked = this.onTreeProductsChecked.bind(this);
+
+    this.onSelectDbUsersChanged = this.onSelectDbUsersChanged.bind(this);
+    this.onSelectConnectionsChanged = this.onSelectConnectionsChanged.bind(this);
+    this.onRadioUnknownChanged = this.onRadioUnknownChanged.bind(this);
+    this.onCheckboxKnownTableDisplayChanged = this.onCheckboxKnownTableDisplayChanged.bind(this);
+    this.onCheckboxUnknownTableDisplayChanged = this.onCheckboxUnknownTableDisplayChanged.bind(this);
+
     this.onSelect = this.onSelect.bind(this);
     this.onTableUnknownChecked = this.onTableUnknownChecked.bind(this);
     this.onTableKnownChecked = this.onTableKnownChecked.bind(this);
     this.doTablesCompare = this.doTablesCompare.bind(this);
+
+    this.onButtonIsTempClicked = this.onButtonIsTempClicked.bind(this);
     this.onButtonInClicked = this.onButtonInClicked.bind(this);
     this.onButtonOutClicked = this.onButtonOutClicked.bind(this);
-    this.doGetProductInfo = this.doGetProductInfo.bind(this);
-    this.doGetProductLineInfo = this.doGetProductLineInfo.bind(this);
-    this.doGetTableRecords = this.doGetTableRecords.bind(this);
     this.onButtonExportClicked = this.onButtonExportClicked.bind(this);
-    this.onButtonSqlGeneratedClicked = this.onButtonSqlGeneratedClicked.bind(this);
-    this.onButtonHistoryCompareClicked = this.onButtonHistoryCompareClicked.bind(this);
-    this.onButtonCloseDialogDynamicSqlGeneratedClicked = this.onButtonCloseDialogDynamicSqlGeneratedClicked.bind(this);
-    this.onButtonCloseDialogDynamicHistoryCompareClicked = this.onButtonCloseDialogDynamicHistoryCompareClicked.bind(this);
   }
 
   test(s) {
@@ -61,468 +92,605 @@ export default class DatabaseExport extends React.Component {
   }
 
   componentDidMount() {
-    this.doGetProducts();
-    this.doGetSchemaKnown();
-    this.doGetSchemaAll();
+    this.doNewGetAll();
   }
 
-  doGetTableRecords(sql) {
-    return axios.post("http://" + this.context.serviceIp + ":8090/rest/mysql/select", {
-        sql: sql,
-        pageRows: 0,
-        pageNum: 0,
-        tag: "test by K"
-      },
-      {
-        headers: {  //头部参数
-          'Content-Type': 'application/json'
+  doInit() {
+    this.gCurrent.productLineId = undefined;
+    this.gCurrent.productId = undefined;
+    this.gCurrent.moduleId = undefined;
+    this.gCurrent.dbUserId = -1;
+
+    let dataTreeProducts = [];
+    this.gMap.productLines.forEach((valuePl, key) => {
+      let plId = valuePl.product_line_id;
+      let nodeProductLine = {
+        key: plId,
+        title: valuePl.product_line_name,
+        children: [],
+        nodeType: "product_line",
+      }
+      dataTreeProducts.push(nodeProductLine);
+      valuePl.products.forEach(item => {
+        let pId = item;
+        let nodeProduct = {
+          key: plId + "_" + pId,
+          title: this.gMap.products.get(pId).product_name,
+          children: [],
+          nodeType: "product",
         }
+        nodeProductLine.children.push(nodeProduct);
+        this.gMap.products.get(item).modules.forEach(item => {
+          let mId = item;
+          let nodeModule = {
+            key: plId + "_" + pId + "_" + mId,
+            title: this.gMap.modules.get(mId).module_name,
+            children: [],
+            nodeType: "module"
+          }
+          nodeProduct.children.push(nodeModule);
+          this.gMap.dbUsers.forEach((value, key) => {
+            let nodeDbUser = {
+              key: plId + "_" + pId + "_" + mId + "_" + key,
+              title: value.user_name,
+              children: [],
+              nodeType: "dbuser"
+            }
+            nodeModule.children.push(nodeDbUser);
+          })
+        })
       })
+    });
+
+    this.gUi.treeProductsData = dataTreeProducts;
+
+    let connectionsSelectOptions = [{value: -1, label: "请选择"}];
+    this.gData.connections.forEach((item) => {
+      let option = {
+        value: item.connection_id,
+        label: item.connection_name
+      }
+      connectionsSelectOptions.push(option);
+    })
+
+    this.setState({
+      productsTreeData: this.gUi.treeProductsData,
+      connectionsSelectOptions: connectionsSelectOptions
+    })
   }
 
-  doSqlExecuteMySql(sql) {
-    return axios.post("http://" + this.context.serviceIp + ":8090/rest/mysql/execute", {
-        sql: sql,
-        pageRows: 0,
-        pageNum: 0,
-        tag: "test by K"
-      },
-      {
-        headers: {  //头部参数
-          'Content-Type': 'application/json'
-        }
-      })
-  }
-
-  doGetProductInfo() {
-    let strSql = "select * from tad_product_info"
-    return axios.post("http://" + this.context.serviceIp + ":8090/rest/mysql/select", {
-        sql: strSql,
-        pageRows: 0,
-        pageNum: 0,
-        tag: "test by K"
-      },
-      {
-        headers: {  //头部参数
-          'Content-Type': 'application/json'
-        }
-      })
-  }
-
-  doGetProductLineInfo() {
-    let strSql = "select * from tad_product_line_info"
-    return axios.post("http://" + this.context.serviceIp + ":8090/rest/mysql/select", {
-        sql: strSql,
-        pageRows: 0,
-        pageNum: 0,
-        tag: "test by K"
-      },
-      {
-        headers: {  //头部参数
-          'Content-Type': 'application/json'
-        }
-      })
-  }
-
-  doGetProducts() {
-    let productsTreeData = [];
-
-    let sqlProductInfo = "select" +
-      " product_id, product_name, product_desc, product_create_time" +
-      " from tad_product_info";
-    let sqlProductLineInfo = "select" +
-      " product_line_id, product_line_name, product_line_desc" +
-      " from tad_product_line_info";
-    let strProductRel = "select" +
-      " product_line_id, product_id " +
-      " from tad_product_rel";
-    let sqlModuleInfo = "select" +
-      " module_id, module_name, module_leader, product_id, module_desc" +
-      " from tad_module_info";
-    let sqlDbUserInfo = "select" +
-      " user_id, user_name, product_line_id, user_desc" +
-      " from tad_db_user";
-    let sqlDbTypeInfo = "select" +
-      " db_id, db_name" +
-      " from tad_db_type_info";
-
-    let mapProductInfo = new Map();
-    let mapProductLineInfo = new Map();
-    let mapProductRel = new Map();
-    let mapDbUserInfo = new Map();
-    let mapDbTypeInfo = new Map();
-    let mapModuleInfo = new Map();
-    let arrProductLineInfo = [];
-    let dbUsersTreeData = [];
-    let dbTypeTreeData = [];
-
+  doNewGetAll() {
     axios.all([
-      this.doGetTableRecords(sqlProductInfo),
-      this.doGetTableRecords(sqlProductLineInfo),
-      this.doGetTableRecords(strProductRel),
-      this.doGetTableRecords(sqlModuleInfo),
-      this.doGetTableRecords(sqlDbUserInfo),
-      this.doGetTableRecords(sqlDbTypeInfo)
-    ])
-      .then(axios.spread((
-        productInfo,
-        productLineInfo,
-        productRel,
-        moduleInfo,
-        dbUserInfo,
-        dbTypeInfo) => {
+      this.doGetProductRelations(),
+      this.doNewGetProductLines(),
+      this.doNewGetProductLineDbUsers(),
+      this.doNewGetProducts(),
+      this.doNewGetProductModules(),
+      this.doNewGetProductVersions(),
+      this.doNewGetProductManagers(),
+      this.doNewGetTables(),
+      this.doNewGetTableColumns(),
+      this.doNewGetTypes(),
+      this.doNewGetDbConnections(),
+      this.doGetTablesIgnore(),
+    ]).then(axios.spread((
+        productRelations,
+        productLines,
+        dbUsers,
+        products,
+        modules,
+        versions,
+        managers,
+        tables,
+        columns,
+        types,
+        connections,
+        tablesIgnore) => {
+      let mapProductRelations = new Map();
+      let mapProductLines = new Map();
+      let mapDbUsers = new Map();
+      let mapProducts = new Map();
+      let mapModules = new Map();
+      let mapVersions = new Map();
+      let mapManagers = new Map();
+      let mapTables = new Map();
+      let mapTablesByName = new Map();
+      let mapColumns = new Map();
+      let mapTypes = new Map();
+      let mapConnections = new Map();
+      let mapTablesIgnore = new Map();
 
-        dbTypeInfo.data.records.forEach(function (item) {
-          let dbId = item.fieldValues[0];
-          if (!mapDbTypeInfo.has(dbId)) {
-            mapDbTypeInfo.set(dbId, {
-              dbName: item.fieldValues[1]
-            });
+      this.gData.productRelations = productRelations.data.data;
+      this.gData.productLines = productLines.data.data;
+      this.gData.dbUsers = dbUsers.data.data;
+      this.gData.products = products.data.data;
+      this.gData.modules = modules.data.data;
+      this.gData.versions = versions.data.data;
+      this.gData.managers = managers.data.data;
+      this.gData.tables = tables.data.data;
+      this.gData.columns = columns.data.data;
+      this.gData.types = types.data.data;
+      this.gData.connections = connections.data.data;
+      this.gData.tablesIgnore = tablesIgnore.data.data;
 
-            dbTypeTreeData.push({
-              title: item.fieldValues[1],
-              key: dbId,
-              children: []
-            })
-          }
-        })
-
-        dbUserInfo.data.records.forEach(function (item) {
-          let userId = item.fieldValues[0];
-          if (!mapDbUserInfo.has(userId)) {
-            mapDbUserInfo.set(userId, {
-              userName: item.fieldValues[1],
-              productLineId: [item.fieldValues[2]],
-              userDesc: item.fieldValues[3]
-            });
-
-            dbUsersTreeData.push({
-              title: item.fieldValues[1],
-              key: userId,
-              children: []
-            })
-          } else {
-            mapDbUserInfo.get(userId).productLineId.push(item.fieldValues[2]);
-          }
-        })
-
-        moduleInfo.data.records.forEach(function (item) {
-          let moduleId = item.fieldValues[0];
-          mapModuleInfo.set(moduleId, {
-            moduleName: item.fieldValues[1],
-            moduleLeader: item.fieldValues[2],
-            productId: item.fieldValues[3],
-            moduleDesc: item.fieldValues[4]
-          })
-        })
-
-        productInfo.data.records.forEach(function (item) {
-          let productId = item.fieldValues[0];
-          mapProductInfo.set(productId, {
-            productName: item.fieldValues[1],
-            productDesc: item.fieldValues[2],
-            productCreateTime: item.fieldValues[3]
-          })
-        })
-
-        productLineInfo.data.records.forEach(function (item) {
-          let productLineId = item.fieldValues[0];
-          mapProductLineInfo.set(productLineId, {
-            productLineName: item.fieldValues[1],
-            productLineDesc: item.fieldValues[2]
+      productLines.data.data.forEach(function (item) {
+        let myKey = item.product_line_id;
+        if (!mapProductLines.has(myKey)) {
+          mapProductLines.set(myKey, {
+            product_line_id: myKey,
+            product_line_name: item.product_line_name,
+            product_line_desc: item.product_line_desc,
+            products: [],
+            dbUsers: []
           });
-          arrProductLineInfo.push({
-            name: item.fieldValues[1],
-            id: item.fieldValues[0]
+        }
+      });
+
+      dbUsers.data.data.forEach(function (item) {
+        let myKey = item.user_id;
+        if (!mapDbUsers.has(myKey)) {
+          mapDbUsers.set(myKey, {
+            user_id: myKey,
+            product_line_id: item.product_line_id,
+            user_name: item.user_name,
+            user_desc: item.user_desc
           });
-        })
+        }
+        mapProductLines.get(item.product_line_id).dbUsers.push(myKey);
+      });
 
-        productRel.data.records.forEach(function (item) {
-          let productLineId = item.fieldValues[0];
-          let productId = item.fieldValues[1];
-          if (!mapProductRel.has(productLineId)) {
-            mapProductRel.set(productLineId, [{
-              productId: productId
-            }]);
-          } else {
-            mapProductRel.get(productLineId).push({
-              productId: productId
-            })
+      products.data.data.forEach(function (item) {
+        let myKey = item.product_id;
+        if (!mapProducts.has(myKey)) {
+          mapProducts.set(myKey, {
+            product_id: myKey,
+            product_name: item.product_name,
+            product_desc: item.product_desc,
+            modules: [],
+            versions: [],
+            managers: []
+          });
+        }
+      });
+
+      modules.data.data.forEach(function (item) {
+        let myKey = item.module_id;
+        if (!mapModules.has(myKey)) {
+          mapModules.set(myKey, {
+            module_id: myKey,
+            product_id: item.product_id,
+            module_name: item.module_name,
+            module_desc: item.module_desc,
+            module_leader: item.module_leader
+          });
+        }
+        mapProducts.get(item.product_id).modules.push(myKey);
+      });
+
+      versions.data.data.forEach(function (item) {
+        let myKey = item.version_id;
+        if (!mapVersions.has(myKey)) {
+          mapVersions.set(myKey, {
+            version_id: myKey,
+            product_id: item.product_id,
+            version_name: item.user_name,
+            version_desc: item.user_desc
+          });
+        }
+        mapProducts.get(item.product_id).versions.push(myKey);
+      });
+
+      managers.data.data.forEach(function (item) {
+        let myKey = item.product_manager_id;
+        if (!mapManagers.has(myKey)) {
+          mapManagers.set(myKey, {
+            product_manager_id: myKey,
+            product_manager_name: item.product_manager_name,
+            tel_no: item.tel_no,
+            email_addr: item.email_addr,
+            work_addr: item.work_addr
+          });
+        }
+      });
+
+      tables.data.data.forEach(function (item) {
+        let myKey = item.table_id;
+        if (!mapTables.has(myKey)) {
+          mapTables.set(myKey, {
+            table_id: myKey,
+            table_name: item.table_name,
+            table_desc: item.table_desc,
+            table_type_id: item.table_type_id,
+            table_label_id: item.table_label_id,
+            db_user_id: item.db_user_id,
+            module_id: item.module_id,
+            columns: []
+          });
+          mapTablesByName.set(item.table_name, {
+            table_id: myKey
+          })
+        }
+      });
+
+      columns.data.data.forEach(function (item) {
+        let myKey = item.column_id;
+        if (!mapColumns.has(myKey)) {
+          mapColumns.set(myKey, {
+            column_id: myKey,
+            table_id: item.table_id,
+            column_name: item.column_name,
+            column_desc: item.column_desc,
+            column_type_id: item.column_type_id,
+            data_type: item.data_type,
+            data_length: item.data_length,
+            data_default: item.data_default,
+            is_null: item.is_null,
+            primary_flag: item.primary_flag,
+            split_flag: item.split_flag,
+            repeat_flag: item.repeat_flag
+          });
+        }
+        if (mapTables.has(item.table_id)) {
+          mapTables.get(item.table_id).columns.push(myKey);
+        }
+      });
+
+      types.data.data.forEach(function (item) {
+        let myKey = item.id;
+        if (!mapTypes.has(myKey)) {
+          mapTypes.set(myKey, {
+            id: myKey,
+            type: item.type,
+            name: item.name,
+            desc: item.desc
+          });
+        }
+      });
+
+      productRelations.data.data.forEach(function (item) {
+        let myKey = item.product_rel_id;
+        if (!mapProductRelations.has(myKey)) {
+          mapProductRelations.set(myKey, {
+            product_rel_id: myKey,
+            product_line_id: item.product_line_id,
+            product_id: item.product_id,
+            product_manager_id: item.product_manager_id
+          });
+
+          mapProductLines.get(item.product_line_id).products.push(item.product_id);
+          mapProducts.get(item.product_id).managers.push(item.product_manager_id)
+        } else {
+          if (!mapProductLines.get(item.product_line_id).products.find(element => element === item.product_id)) {
+            mapProductLines.get(item.product_line_id).products.push(item.product_id);
           }
-        });
+          if (!mapProducts.get(item.product_id).managers.find(element => element === item.product_manager_id)) {
+            mapProducts.get(item.product_id).managers.push(item.product_manager_id);
+          }
+        }
+      });
 
-        arrProductLineInfo.forEach(function (itemProductLine) {
-          let nodeProductLine = {
-            title: itemProductLine.name,
-            key: itemProductLine.id,
+      connections.data.data.forEach(function (item) {
+        let myKey = item.connection_id;
+        if (!mapConnections.has(myKey)) {
+          mapConnections.set(myKey, {
+            connection_id: myKey,
+            connection_name: item.connection_name,
+            db_host: item.db_host,
+            db_port: item.db_port,
+            db_sid: item.db_sid,
+            db_username: item.db_username,
+            db_password: item.db_password,
+            db_type: item.db_type
+          });
+        }
+      });
+
+      tablesIgnore.data.data.forEach((item) => {
+        let myKey = item.table_name;
+        if (!mapTablesIgnore.has(myKey)) {
+          mapTablesIgnore.set(myKey, {
+            table_name: myKey,
+            desc: item.desc
+          });
+        }
+      });
+
+      this.gMap.productRelations = mapProductRelations;
+      this.gMap.productLines = mapProductLines;
+      this.gMap.dbUsers = mapDbUsers;
+      this.gMap.products = mapProducts;
+      this.gMap.modules = mapModules;
+      this.gMap.versions = mapVersions;
+      this.gMap.managers = mapManagers;
+      this.gMap.tables = mapTables;
+      this.gMap.tablesByName = mapTablesByName;
+      this.gMap.columns = mapColumns;
+      this.gMap.types = mapTypes;
+      this.gMap.connections = mapConnections;
+      this.gMap.tablesIgnore = mapTablesIgnore;
+
+    })).then(() => {
+      this.doInit();
+    });
+  }
+
+  doGetProductRelations() {
+    let params = {};
+    return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_product_relations", params,
+        {headers: {'Content-Type': 'application/json'}})
+  }
+
+  doNewGetProductLines() {
+    let params = {};
+    return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_product_lines", params,
+        {headers: {'Content-Type': 'application/json'}})
+  }
+
+  doNewGetProductLineDbUsers() {
+    let params = {};
+    return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_users", params,
+        {headers: {'Content-Type': 'application/json'}})
+  }
+
+  doNewGetProducts() {
+    let params = {};
+    return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_products", params,
+        {headers: {'Content-Type': 'application/json'}})
+  }
+
+  doNewGetProductModules() {
+    let params = {};
+    return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_modules", params,
+        {headers: {'Content-Type': 'application/json'}})
+  }
+
+  doNewGetProductVersions() {
+    let params = {};
+    return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_product_versions", params,
+        {headers: {'Content-Type': 'application/json'}})
+  }
+
+  doNewGetProductManagers() {
+    let params = {};
+    return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_product_managers", params,
+        {headers: {'Content-Type': 'application/json'}})
+  }
+
+  doNewGetTables() {
+    let params = {};
+    return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_tables", params,
+        {headers: {'Content-Type': 'application/json'}})
+  }
+
+  doNewGetTableColumns() {
+    let params = {};
+    return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_columns", params,
+        {headers: {'Content-Type': 'application/json'}})
+  }
+
+  doNewGetTypes() {
+    let params = {};
+    return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_types", params,
+        {headers: {'Content-Type': 'application/json'}})
+  }
+
+  doNewGetDbConnections() {
+    let params = {};
+    return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_connections", params,
+        {headers: {'Content-Type': 'application/json'}})
+  }
+
+  doGetTablesIgnore() {
+    let params = {};
+    return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_ignores", params,
+        {headers: {'Content-Type': 'application/json'}})
+  }
+
+  // 获取当前产品线-产品-模块-用户，所归属的库表
+  doGetSpecialTables() {
+    let tablesKnownTreeData = [];
+    if (this.gCurrent.nodeSelectedType === "module") {
+
+      this.gData.tables.forEach((itemTable) => {
+        //let uId = itemTable.db_user_id;
+        let mId = itemTable.module_id;
+        if (mId === this.gCurrent.moduleId) {
+          let tId = itemTable.table_id;
+          let nodeTable = {
+            key: tId,
+            title: itemTable.table_name,
             children: []
           }
-
-          let arrProductIds = mapProductRel.get(itemProductLine.id);
-          arrProductIds.forEach(function (itemProductId) {
-            nodeProductLine.children.push({
-              title: mapProductInfo.get(itemProductId.productId).productName,
-              key: itemProductLine.id + "-" + itemProductId.productId,
+          tablesKnownTreeData.push(nodeTable);
+          this.gMap.tables.get(tId).columns.forEach((itemColumn) => {
+            let tcId = itemColumn;
+            let column = this.gMap.columns.get(tcId);
+            let nodeColumn = {
+              key: tId + "_" + tcId,
+              title: column.column_name + " : " + column.column_type_id,
               children: []
-            });
-
-            mapModuleInfo.forEach(function (value, key) {
-              if (value.productId === itemProductId.productId) {
-                nodeProductLine.children[nodeProductLine.children.length - 1].children.push({
-                  title: value.moduleName,
-                  key: itemProductLine.id + "-" + itemProductId.productId + "-" + key,
-                  children: []
-                })
-              }
-            })
+            }
+            nodeTable.children.push(nodeColumn);
           })
+        }
+      });
+    } else if (this.gCurrent.nodeSelectedType === "dbuser") {
+      console.log(".............");
+      let currMId = parseInt(this.gCurrent.dbUserId.split("_")[2]);
+      let currUId = parseInt(this.gCurrent.dbUserId.split("_")[3]);
+      this.gData.tables.forEach((itemTable) => {
+        let uId = itemTable.db_user_id;
+        let mId = itemTable.module_id;
+        if ((mId === currMId) && (uId === currUId)) {
+          let tId = itemTable.table_id;
+          let nodeTable = {
+            key: tId,
+            title: itemTable.table_name,
+            children: []
+          }
+          tablesKnownTreeData.push(nodeTable);
+          this.gMap.tables.get(tId).columns.forEach((itemColumn) => {
+            let tcId = itemColumn;
+            let column = this.gMap.columns.get(tcId);
+            let nodeColumn = {
+              key: tId + "_" + tcId,
+              title: column.column_name + " : " + column.column_type_id,
+              children: []
+            }
+            nodeTable.children.push(nodeColumn);
+          })
+        }
+      });
 
-          productsTreeData.push(nodeProductLine);
-        })
+    }
+
+    this.setState({
+      tablesKnownTreeData: tablesKnownTreeData
+    })
+  }
+
+  onTreeProductsChecked(checkedKeys, info) {
+      //console.log('onCheck', checkedKeys, info);
+      this.gCurrent.treeProductCheckedKeys = checkedKeys;
+  }
+
+  onTreeProductsSelected(selectedKeys, info) {
+    if (selectedKeys[0] === undefined) return;
+
+    this.setState({
+      tablesKnownTreeData: []
+    })
+
+    let nodeType = info.node.nodeType;
+    this.gCurrent.nodeSelectedType = nodeType;
+
+    switch (nodeType) {
+      case "product_line":
+        this.gCurrent.productLineId = selectedKeys[0];
+
+        let dbUsersSelectOptions = [{value: -1, label: "请选择"}];
+
+        this.gData.dbUsers.forEach((item) => {
+          if (item.product_line_id === this.gCurrent.productLineId) {
+            let option = {
+              value: item.user_id,
+              label: item.user_name
+            }
+            dbUsersSelectOptions.push(option);
+          }
+        });
 
         this.setState({
-          dbTypeTreeData: dbTypeTreeData,
-          dbUsersTreeData: dbUsersTreeData,
-          productsTreeData: productsTreeData
-        });
-      }));
+          dbUserSelected: -1,
+          dbUsersSelectOptions: dbUsersSelectOptions
+        })
+
+        break
+      case "product":
+        this.gCurrent.productId = parseInt(selectedKeys[0].split("_")[1]);
+        break
+      case "module":
+        this.gCurrent.moduleId = parseInt(selectedKeys[0].split("_")[2]);
+        this.doGetSpecialTables();
+        break
+      case "dbuser":
+        this.gCurrent.dbUserId = selectedKeys[0];
+        this.doGetSpecialTables();
+        break
+      default:
+        break
+    }
+  };
+
+  onSelectDbUsersChanged(value, option) {
+    this.gCurrent.dbUserId = value;
+    this.doGetSpecialTables();
   }
 
-  doGetSchemaKnown() {
-    let strSql = "select" +
-      " t.table_name table_name, " +
-      " c.column_name field_name" +
-      " from tad_table t, tad_table_column c" +
-      " where t.table_name = c.table_name"
-    axios.post(
-      "http://" + this.context.serviceIp + ":8090/rest/mysql/select",
-      {
-        sql: strSql,
-        pageRows: 0,
-        pageNum: 0,
-        tag: "do get schema"
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }).then((response) => {
-      let data = response.data;
-      //let columns = [];
-      let tableInfo = {
-        table_name: {index: 0},
-        field_name: {index: 1},
-        field_key: {index: 0},
-        field_type: {index: 0},
-        field_length: {index: 0},
-        field_nullable: {index: 0}
-      }
-
-      for (let i = 0; i < data.records.length; i++) {
-        //let v = {key: i};
-        let tName = data.records[i].fieldValues[tableInfo.table_name.index].toLowerCase();
-        let fName = data.records[i].fieldValues[tableInfo.field_name.index].toLowerCase();
-        let fKey = ""; //data.records[i].fieldValues[tableInfo.field_key.index].toLowerCase();
-        let fType = ""; //data.records[i].fieldValues[tableInfo.field_type.index].toLowerCase();
-        let fLength = 0; //data.records[i].fieldValues[tableInfo.field_length.index];
-        let fNullable = ""; //data.records[i].fieldValues[tableInfo.field_nullable.index].toLowerCase();
-        let fWritable = "yes";
-        if (!this.gMapKnownTablesInfo.has(tName)) {
-          this.gMapKnownTablesInfo.set(tName, {fields: new Map()});
-          this.gMapKnownTablesInfo.get(tName).fields.set(fName, {
-            "isPrimaryKey": fKey === "pri",
-            "type": fType,
-            "length": fLength,
-            "isNullable": fNullable === "yes",
-            "isWritable": fWritable === "yes"
-          });
-        } else {
-          this.gMapKnownTablesInfo.get(tName).fields.set(fName, {
-            "isPrimaryKey": fKey === "pri",
-            "type": fType,
-            "length": fLength,
-            "isNullable": fNullable === "yes",
-            "isWritable": fWritable === "yes"
-          });
-        }
-
-        if (this.gMapKnownTablesInfo.get(tName).fields.get(fName).isPrimaryKey)
-          this.gMapKnownTablesInfo.get(tName).fields.get(fName).isWritable = false;
-
-        // for (let j = 0; j < columns.length; j++) {
-        //   Object.defineProperty(v, columns[j],
-        //     {value: data.records[i].fieldValues[j], enumerable: true, writable: true});
-        // }
-      }
-
-      this.gMapKnownTablesInfo.forEach((value1, key1) => {
-        let tables = {
-          title: key1,
-          key: key1,
-          children: []
-        }
-
-        value1.fields.forEach(function (value2, key2) {
-          let fields = {
-            title: key2,
-            key: key1 + "__" + key2,
-            children: [],
-            checkable: false
-          }
-          tables.children.push(fields);
-
-          Object.keys(value2).forEach(function (item) {
-            fields.children.push({
-              title: item + " : " + value2[item],
-              key: key1 + "__" + key2 + "__" + item,
-              children: [],
-              checkable: false,
-              //isLeaf: true,
-              icon: <TagOutlined/>
-            })
-          })
-        });
-
-        this.gTablesKnown.push(tables);
-      });
-
-      this.setState({
-        tablesKnown: this.gTablesKnown
-      })
-
-    }).catch(function (error) {
-      console.log(error);
-    });
+  // 选择目标数据源，并获取目标数据库结构信息
+  onSelectConnectionsChanged(value, option) {
+    this.gCurrent.dbTypeId = value;
   }
 
-  doGetSchemaAll() {
-    axios.post(
-      "http://" + this.context.serviceIp + ":8090/rest/mysql/schema",
-      {
-        sql: "",
-        pageRows: 0,
-        pageNum: 0,
-        tag: "do get schema"
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }).then((response) => {
-      let data = response.data;
-      let columns = [];
-      let tableInfo = {
-        table_name: {columnIndex: 0},
-        field_name: {columnIndex: 0},
-        field_key: {columnIndex: 0},
-        field_type: {columnIndex: 0},
-        field_length: {columnIndex: 0},
-        field_nullable: {columnIndex: 0}
-      }
-      for (let i = 0; i < data.table.tableFields.length; i++) {
-        let fieldName = data.table.tableFields[i].fieldName;
-        columns.push(fieldName);
+  onCheckboxKnownTableDisplayChanged(e) {
 
-        switch (fieldName) {
-          case "table_name":
-            tableInfo.table_name.columnIndex = i;
-            break
-          case "field_name":
-            tableInfo.field_name.columnIndex = i;
-            break
-          case "field_key":
-            tableInfo.field_key.columnIndex = i;
-            break
-          case "field_type":
-            tableInfo.field_type.columnIndex = i;
-            break
-          case "field_length":
-            tableInfo.field_length.columnIndex = i;
-            break
-          case "field_nullable":
-            tableInfo.field_nullable.columnIndex = i;
-            break
-          default:
-            break
-        }
-      }
+    let display = "none";
+    if (e.target.checked) {
+      display = "block";
+    }
+    this.setState({
+      showKnownTable: e.target.checked,
+      uiTableKnownDisplay: display
+    })
+  }
 
-      for (let i = 0; i < data.records.length; i++) {
-        let v = {key: i};
-        let tName = data.records[i].fieldValues[tableInfo.table_name.columnIndex].toLowerCase();
-        let fName = data.records[i].fieldValues[tableInfo.field_name.columnIndex].toLowerCase();
-        let fKey = data.records[i].fieldValues[tableInfo.field_key.columnIndex].toLowerCase();
-        let fType = data.records[i].fieldValues[tableInfo.field_type.columnIndex].toLowerCase();
-        let fLength = data.records[i].fieldValues[tableInfo.field_length.columnIndex];
-        let fNullable = data.records[i].fieldValues[tableInfo.field_nullable.columnIndex].toLowerCase();
-        let fWritable = "yes";
-        if (!this.gMapTablesInfo.has(tName)) {
-          this.gMapTablesInfo.set(tName, {fields: new Map()});
-          this.gMapTablesInfo.get(tName).fields.set(fName, {
-            "isPrimaryKey": fKey === "pri",
-            "type": fType,
-            "length": fLength,
-            "isNullable": fNullable === "yes",
-            "isWritable": fWritable === "yes"
-          });
-        } else {
-          this.gMapTablesInfo.get(tName).fields.set(fName, {
-            "isPrimaryKey": fKey === "pri",
-            "type": fType,
-            "length": fLength,
-            "isNullable": fNullable === "yes",
-            "isWritable": fWritable === "yes"
-          });
-        }
+  onCheckboxUnknownTableDisplayChanged(e) {
 
-        if (this.gMapTablesInfo.get(tName).fields.get(fName).isPrimaryKey) this.gMapTablesInfo.get(tName).fields.get(fName).isWritable = false;
+    let display = "none";
+    if (e.target.checked) {
+      display = "block";
+    }
+    this.setState({
+      showUnknownTable: e.target.checked,
+      uiTableUnknownDisplay: display
+    })
+  }
 
-        for (let j = 0; j < columns.length; j++) {
-          Object.defineProperty(v, columns[j],
-            {value: data.records[i].fieldValues[j], enumerable: true, writable: true});
-        }
+  onRadioUnknownChanged(e) {
+
+    this.setState({
+      uiRadioUnknownSelected: e.target.value
+    })
+  }
+
+  // 获取某字母开头的表
+  doGetTablesByLetter(letter) {
+
+    let myResult = [];
+
+    if (letter === undefined) return myResult;
+    if (!this.gMap.mapTablesbyLetter.has(letter)) return  myResult;
+
+    this.gMap.mapTablesbyLetter.get(letter).tables.forEach((value, key) => {
+      let tableName = key;
+
+      //if (!this.gMap.tablesByName.has(tableName)) {
+      let nodeTable = {
+        key: tableName,
+        title: tableName,
+        children: [],
+        olc: {
+          nodeType: "table"
+        },
       }
 
-      let tablesAll = [];
-      this.gMapTablesInfo.forEach(function (value1, key1) {
-        let tables = {
-          title: key1,
-          key: key1,
-          children: []
+      value.columns.forEach((item) => {
+        let nodeColumn = {
+          key: tableName + "." + item.name,
+          title: item.name + " : " + item.type,
+          children: [],
+          olc: {
+            nodeType: "table_column",
+            dataType: item.type,
+            dataLength: item.length
+          },
         }
-
-        value1.fields.forEach(function (value2, key2) {
-          let fields = {
-            title: key2,
-            key: key1 + "__" + key2,
-            children: [],
-            checkable: false
-          }
-          tables.children.push(fields);
-
-          Object.keys(value2).forEach(function (item) {
-            fields.children.push({
-              title: item + " : " + value2[item],
-              key: key1 + "__" + key2 + "__" + item,
-              children: [],
-              checkable: false,
-              //isLeaf: true,
-              icon: <TagOutlined/>
-            })
-          })
-        });
-
-        tablesAll.push(tables);
-      });
-
-      //todo:: this.doGetConfig();
-
-      this.setState({
-        tablesAll: tablesAll
+        nodeTable.children.push(nodeColumn);
       })
-    }).catch(function (error) {
-      console.log(error);
+      myResult.push(nodeTable);
+      //}
     });
+
+    return myResult;
+  }
+
+  onTreeLettersSelected(selectedKeys) {
+    if (selectedKeys[0] === undefined) return;
+
+    let tablesUnknownTreeData = this.doGetTablesByLetter(selectedKeys[0]);
+    this.setState({
+      tablesUnknownTreeData: tablesUnknownTreeData
+    })
   }
 
   onSelect(selectedKeys, info) {
@@ -530,17 +698,16 @@ export default class DatabaseExport extends React.Component {
   };
 
   onTableUnknownChecked(checkedKeys, info) {
-    console.log('onCheck', checkedKeys, info);
+
     this.gTableUnknownSelected = info.checkedNodes;
   };
 
   onTableKnownChecked(checkedKeys, info) {
-    console.log('onCheck', checkedKeys, info);
+
     this.gTableKnownSelected = info.checkedNodes;
   };
 
   doTablesCompare() {
-    //let tablesUnknown = JSON.parse(JSON.stringify(this.state.tablesUnknown));
     const {tablesKnown, tablesAll} = this.state;
     for (let i = 0; i < tablesAll.length; i++) {
       let isFound = false;
@@ -560,258 +727,243 @@ export default class DatabaseExport extends React.Component {
     })
   }
 
+  onButtonIsTempClicked() {
+    for (let i = 0; i < this.gTableUnknownSelected.length; i++) {
+      if (this.gTableUnknownSelected[i].olc.nodeType === "table_column") continue
+
+      let tableName = this.gTableUnknownSelected[i].title;
+
+      let myObject = new TadTableIgnore();
+      myObject.table_name = tableName;
+      axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_ignore",
+          myObject,
+          {headers: {'Content-Type': 'application/json'}}
+      ).then((response) => {
+        let data = response.data;
+
+        if (data.success) {
+          // const {tablesUnknownTreeData} = this.state;
+          let tablesUnknownTreeData = JSON.parse(JSON.stringify(this.state.tablesUnknownTreeData));
+          tablesUnknownTreeData.forEach((item, index) => {
+            if (item.key === data.data.table_name) {
+              tablesUnknownTreeData.splice(index, 1)
+            }
+          })
+          this.setState({
+            tablesUnknownTreeData: tablesUnknownTreeData
+          })
+        }
+      });
+    }
+  }
+
+  getColumnDataType(name) {
+  }
+
+  // 导入结构
   onButtonInClicked() {
-    for (let i = 0; i < this.gTableKnownSelected.length; i++) {
-      let isFound = false;
-      for (let j = this.gTablesUnknown.length - 1; j >= 0; j--) {
-        if (this.gTablesUnknown[j].title === this.gTableKnownSelected[i].title) {
-          isFound = true;
-          break
+
+    let tablesUnknownTreeData = [];
+
+    let mapNodes = new Map();
+    this.gCurrent.treeProductCheckedKeys.forEach((item) => {
+      let ids = item.split("_");
+      if (ids.length === 4) {
+        let plId = parseInt(ids[0]);
+        let pId = parseInt(ids[1]);
+        let mId = parseInt(ids[2]);
+        let uId = parseInt(ids[3]);
+        if (!mapNodes.has(plId)) {
+          mapNodes.set(plId, new Map());
+        }
+        if (!mapNodes.get(plId).has(pId)) {
+          mapNodes.get(plId).set(pId, new Map());
+        }
+        if (!mapNodes.get(plId).get(pId).has(mId)) {
+          mapNodes.get(plId).get(pId).set(mId, new Map());
+        }
+        if (!mapNodes.get(plId).get(pId).get(mId).has(uId)) {
+          mapNodes.get(plId).get(pId).get(mId).set(uId, {});
         }
       }
-      if (!isFound) {
-        this.gTablesUnknown.push(this.gTableKnownSelected[i]);
+    });
+    console.log(mapNodes);
+
+    console.log(this.gMap);
+    mapNodes.forEach((productLines, key1) => {
+      let nodeProductLine = {
+        key: key1,
+        title: this.gMap.productLines.get(key1).product_line_name,
+        children: []
       }
-    }
+      productLines.forEach((products, key2) => {
+        let nodeProduct = {
+          key: key1 + "_" + key2,
+          title: this.gMap.products.get(key2).product_name,
+          children: []
+        }
+        nodeProductLine.children.push(nodeProduct);
+        products.forEach((modules, key3) => {
+          let nodeModule = {
+            key: key1 + "_" + key2 + "_" + key3,
+            title: this.gMap.modules.get(key3).module_name,
+            children: []
+          }
+          nodeProduct.children.push(nodeModule);
+          modules.forEach((users, key4) => {
+            let nodeUser = {
+              key: key1 + "_" + key2 + "_" + key3 + "_" + key4,
+              title: this.gMap.dbUsers.get(key4).user_name,
+              children: []
+            }
+            nodeModule.children.push(nodeUser);
+          })
+        })
+      })
+      tablesUnknownTreeData.push(nodeProductLine);
+    })
+
 
     this.setState({
-      tablesUnknown: JSON.parse(JSON.stringify(this.gTablesUnknown))
+      tablesUnknownTreeData: tablesUnknownTreeData
     })
   }
 
   onButtonOutClicked() {
-    this.gTableUnknownSelected.forEach((item) => {
-      for (let i = this.gTablesUnknown.length - 1; i >= 0; i--) {
-        if (this.gTablesUnknown[i].title === item.title) {
-          this.gTablesUnknown.splice(i, 1);
-          break
+
+    /*
+    let tablesKnown = JSON.parse(JSON.stringify(this.state.tablesKnown));
+    let tablesUnknown = JSON.parse(JSON.stringify(this.state.tablesUnknown));
+
+    this.gTableKnownSelected.forEach(function (item) {
+        tablesUnknown.push(item);
+        for (let i = 0; i < tablesKnown.length; i++) {
+            if (tablesKnown[i].title === item.title) {
+                tablesKnown.splice(i, 1);
+                break
+            }
         }
-      }
     })
 
     this.setState({
-      tablesUnknown: JSON.parse(JSON.stringify(this.gTablesUnknown))
+        tablesKnown: tablesKnown,
+        tablesUnknown: tablesUnknown
     })
+
+     */
   }
 
-  /**
-   *
-   * 对比只针对数据库用户下所有表的导出才提供，自定义选的，只提供所选项目和历史对比
-   * 表数据内容会变
-   * 字段会变（字段增多，减少，字段类型改变，字段长度改变 export_table_column_publish
-   * 索引会变 tad_table_index_publish
-   * 分区会变 tad_table_partition_publish
-   */
   onButtonExportClicked() {
-    let timePublish = moment().format('yyyy-MM-DD HH:mm:ss');
+    let tablesUnknownTreeData = this.state.tablesUnknownTreeData;
+    console.log(tablesUnknownTreeData);
+    let strSqlss = "";
+    tablesUnknownTreeData.forEach((productLines) => {
+      productLines.children.forEach((products) => {
+        products.children.forEach((modules) => {
+          modules.children.forEach((users) => {
+            let ids = users.key.split("_");
+            let plId = parseInt(ids[0]);
+            let pId = parseInt(ids[1]);
+            let mId = parseInt(ids[2]);
+            let uId = parseInt(ids[3]);
 
-    for(let i = 0; i < this.gTablesUnknown.length; i++) {
-      let tableName = this.gTablesUnknown[i].title;
-      for(let j = 0; j < this.gTablesUnknown[i].children.length; j++) {
-        let columnName = this.gTablesUnknown[i].children[j].title;
-        let sqlTable = "insert into tad_table_column_publish(table_name, column_name, publish_time) values('" +
-          tableName + "', '" +
-          columnName + "', '" +
-          timePublish + "')";
-        axios.post("http://" + this.context.serviceIp + ":8090/rest/mysql/execute",
-          {sql: sqlTable, pageRows: 0, pageNum: 0, tag: ""},
-          {headers: {'Content-Type': 'application/json'}}
-        ).then((response) => {
-          let data = response.data;
-          if (data.code !== 200) {
-            console.log("error! code = " + data.code);
-          }
-        });
-      }
-    }
-    console.log("导出入库指令已经下发完成， 时间戳：" + timePublish);
-  }
+            let strSqls = "";
+            this.gMap.tables.forEach((item) => {
+              console.log(item);
+              if ((item.module_id === mId) && (item.db_user_id == uId)) {
+                let strSql = "create table " + item.table_name + "(\n";
+                item.columns.forEach((column) => {
+                  let myColumn = this.gMap.columns.get(column);
+                  strSql += myColumn.column_name + " varchar(32),\n";
+                });
+                strSql += ");\n"
+                strSqls += strSql;
+              }
+            })
+            strSqlss += strSqls;
+          })
 
-  onButtonSqlGeneratedClicked() {
-    let style = {
-      display: "grid",
-      width: this.gRefDomMain.current.offsetWidth,
-      height: this.gRefDomMain.current.offsetHeight,
-      left: this.gRefDomMain.current.offsetLeft,
-      top: this.gRefDomMain.current.offsetTop
-    }
-
-    this.setState({
-      styleDialogSqlGenerated: style
-    });
-
-    let strSql = "";
-    for(let i = 0; i < this.gTablesUnknown.length; i++) {
-      let tableName = this.gTablesUnknown[i].title;
-      strSql += "create table " + tableName + "(\n";
-      for(let j = 0; j < this.gTablesUnknown[i].children.length; j++) {
-        let columnName = this.gTablesUnknown[i].children[j].title;
-        strSql += "\t" + columnName + ",\n";
-      }
-      strSql = strSql.substr(0, strSql.length -2);
-      strSql += ");\n\n"
-    }
-    this.setState({
-      sqlGenerated: strSql
-    });
-  }
-
-  onButtonCloseDialogDynamicSqlGeneratedClicked() {
-    let style = {
-      display: "none"
-    }
-
-    this.setState({
-      styleDialogSqlGenerated: style
+        })
+      })
     })
+    console.log(strSqlss);
 
   }
 
-  onButtonCloseDialogDynamicHistoryCompareClicked() {
-    let style = {
-      display: "none"
-    }
-
-    this.setState({
-      styleDialogHistoryCompare: style
-    })
-
-  }
-
-  onButtonHistoryCompareClicked() {
-    let style = {
-      display: "grid",
-      width: this.gRefDomMain.current.offsetWidth,
-      height: this.gRefDomMain.current.offsetHeight,
-      left: this.gRefDomMain.current.offsetLeft,
-      top: this.gRefDomMain.current.offsetTop
-    }
-
-    this.setState({
-      styleDialogHistoryCompare: style
+  doGetSchemas(params) {
+    return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_connection", params,
+        {headers: {'Content-Type': 'application/json'}}).then((response) => {
     });
-
   }
 
   render() {
-    return <div ref={this.gRefDomMain} className="DatabaseExport">
+    const optionsDbTypes = [
+      { value: -1, label: "请选择目标数据库类型" },
+      { value: 1, label: "oracle" },
+      { value: 2, label: "mysql" },
+    ];
+
+    return <div className="DatabaseExport">
       <div className={"BoxProductsInfo"}>
-        <div className={"BoxLabel"}>产品线产品信息：</div>
         <div className={"BoxTree"}>
           <Tree
-            blockNode={true}
-            showLine={true}
-            showIcon={true}
-            switcherIcon={<CaretDownOutlined/>}
-            onSelect={this.onSelect}
-            treeData={this.state.productsTreeData}
+              checkable
+              blockNode={true}
+              showLine={true}
+              showIcon={true}
+              switcherIcon={<CaretDownOutlined/>}
+              onCheck={this.onTreeProductsChecked}
+              onSelect={this.onTreeProductsSelected}
+              treeData={this.state.productsTreeData}
           />
         </div>
         <div className={"BoxDescription"}>information</div>
       </div>
       <div className={"BoxKnown"}>
-        <div className={"BoxLabel"}>数据库用户：</div>
-        <div className={"BoxList"}>
-          <Tree
-            blockNode={true}
-            onSelect={this.onSelect}
-            treeData={this.state.dbUsersTreeData}
-          />
+        <div className={"BoxToolbar"}>
+          <Checkbox>分组显示</Checkbox>
+          <Checkbox onChange={this.onCheckboxKnownTableDisplayChanged}>包含数据</Checkbox>
         </div>
-        <div className={"BoxLabel"}>数据库表：</div>
-        <div className={"BoxToolbar"}>buttons</div>
-        <div className={"BoxTree"}>
-          <Tree
-            checkable
-            blockNode={true}
-            showLine={true}
-            showIcon={true}
-            switcherIcon={<CaretDownOutlined/>}
-            onSelect={this.onSelect}
-            onCheck={this.onTableKnownChecked}
-            treeData={this.state.tablesKnown}
-          />
+        <div className={"BoxTreeAndTable"}>
+          <div className={"BoxTree"}>
+            <Tree
+                checkable
+                blockNode={true}
+                showLine={true}
+                showIcon={true}
+                switcherIcon={<CaretDownOutlined/>}
+                // onSelect={this.onSelect}
+                onCheck={this.onTableKnownChecked}
+                treeData={this.state.tablesKnownTreeData}
+            />
+          </div>
+          <div className={"HLine"}>&nbsp;</div>
+          <div className={"BoxTable"}>
+            <Table></Table>
+          </div>
         </div>
       </div>
       <div className={"BoxButtons"}>
-        <Button onClick={this.onButtonInClicked}>移入</Button>
-        <Button onClick={this.onButtonOutClicked}>移出</Button>
-        <Button onClick={this.onButtonHistoryCompareClicked}>历史对比</Button>
-        <Button onClick={this.onButtonSqlGeneratedClicked}>查看脚本</Button>
-        <Button onClick={this.onButtonExportClicked}>执行导出</Button>
+        <Button onClick={this.onButtonInClicked} icon={<RightOutlined />}>准备导出</Button>
+        <Button icon={<LeftOutlined />}>取消导出</Button>
+        <Button onClick={this.onButtonExportClicked}  icon={<ShareAltOutlined />}>导出脚本</Button>
       </div>
       <div className={"BoxUnknown"}>
-        <div className={"BoxLabel"}>目标数据库类型：</div>
-        <div className={"BoxList"}>
-          <Tree
-            blockNode={true}
-            onSelect={this.onSelect}
-            treeData={this.state.dbTypeTreeData}
-          />
-        </div>
-        <div className={"BoxLabel"}>待导出数据库表：</div>
-        <div className={"BoxToolbar"}>buttons</div>
-        <div className={"BoxTree"}>
-          <Tree
-            checkable
-            blockNode={true}
-            showLine={true}
-            showIcon={true}
-            switcherIcon={<CaretDownOutlined/>}
-            onSelect={this.onSelect}
-            onCheck={this.onTableUnknownChecked}
-            treeData={this.state.tablesUnknown}
-          />
-        </div>
-      </div>
-      <div className="DialogDynamicSqlGenerated" style={this.state.styleDialogSqlGenerated}>
-        <div className={"Box"}>
-          <div className="BoxHeader">
-            <div className={"BoxLabel"}>导出库结构创建脚本</div>
-            <Button onClick={this.onButtonCloseDialogDynamicSqlGeneratedClicked}>关闭</Button>
-          </div>
-          <div className={"BoxContent"}>
-            <div className={"BoxCode"}>
-            <pre>
-              {this.state.sqlGenerated}
-            </pre>
-            </div>
-          </div>
-          </div>
-      </div>
-      <div className="DialogDynamicHistoryCompare" style={this.state.styleDialogHistoryCompare}>
-        <div className={"Box"}>
-          <div className="BoxHeader">
-            <div className={"BoxLabel"}>历史导出库结构对比</div>
-            <Button onClick={this.onButtonCloseDialogDynamicHistoryCompareClicked}>关闭</Button>
-          </div>
-          <div className={"BoxContent"}>
-            <div className={"BoxTree"}>
-              <Select defaultValue={"1"}>
-                <Select.Option key={"1"}>当前选中库表</Select.Option>
-              </Select>
-              <Tree
-                blockNode={true}
-                showLine={true}
-                showIcon={true}
-                switcherIcon={<CaretDownOutlined/>}
-                onSelect={this.onSelect}
-                treeData={this.state.tablesUnknown}
-              />
-            </div>
-            <div className={"BoxTree"}>
-              <Select defaultValue={"1"}>
-                <Select.Option key={"1"}>全库表</Select.Option>
-              </Select>
-              <Tree
-                blockNode={true}
-                showLine={true}
-                showIcon={true}
-                switcherIcon={<CaretDownOutlined/>}
-                onSelect={this.onSelect}
-                treeData={this.state.tablesKnown}
-              />
-            </div>
+        <Select onChange={this.onSelectConnectionsChanged} defaultValue={-1}
+                options={optionsDbTypes}/>
+        <div className={"BoxTreeAndTable"}>
+          <div className={"BoxTree"}>
+            <div className={"BoxTree2"}>
+              <Tree className={"TreeUnknown"}
+                    checkable
+                    blockNode={true}
+                    showLine={true}
+                    showIcon={true}
+                    switcherIcon={<CaretDownOutlined/>}
+                  // onSelect={this.onSelect}
+                  //   onCheck={this.onTableUnknownChecked}
+                    treeData={this.state.tablesUnknownTreeData}
+              /></div>
           </div>
         </div>
       </div>

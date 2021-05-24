@@ -3,9 +3,10 @@ import './DatabaseImport.scss'
 import axios from "axios";
 import GCtx from "../GCtx";
 import {Button, Select, Tree, Checkbox, Radio, Table} from 'antd'
-import {CaretDownOutlined} from '@ant-design/icons'
+import {CaretDownOutlined, DeleteOutlined, DoubleLeftOutlined, DoubleRightOutlined, LeftOutlined, RightOutlined} from '@ant-design/icons'
 import TadTable from '../entity/TadTable'
 import TadTableColumn from '../entity/TadTableColumn'
+import TadTableIgnore from '../entity/TadTableIgnore'
 
 export default class DatabaseImport extends React.Component {
     static contextType = GCtx;
@@ -58,6 +59,8 @@ export default class DatabaseImport extends React.Component {
         this.doNewGetTableColumns = this.doNewGetTableColumns.bind(this);
         this.doNewGetTypes = this.doNewGetTypes.bind(this);
         this.doNewGetDbConnections = this.doNewGetDbConnections.bind(this);
+        this.doGetTablesIgnore = this.doGetTablesIgnore.bind(this);
+
         this.doGetSchemas = this.doGetSchemas.bind(this);
         this.doGetTablesByLetter = this.doGetTablesByLetter.bind(this);
 
@@ -74,6 +77,8 @@ export default class DatabaseImport extends React.Component {
         this.onTableUnknownChecked = this.onTableUnknownChecked.bind(this);
         this.onTableKnownChecked = this.onTableKnownChecked.bind(this);
         this.doTablesCompare = this.doTablesCompare.bind(this);
+
+        this.onButtonIsTempClicked = this.onButtonIsTempClicked.bind(this);
         this.onButtonInClicked = this.onButtonInClicked.bind(this);
         this.onButtonOutClicked = this.onButtonOutClicked.bind(this);
     }
@@ -154,7 +159,20 @@ export default class DatabaseImport extends React.Component {
             this.doNewGetTableColumns(),
             this.doNewGetTypes(),
             this.doNewGetDbConnections(),
-        ]).then(axios.spread((productRelations, productLines, dbUsers, products, modules, versions, managers, tables, columns, types, connections) => {
+            this.doGetTablesIgnore(),
+        ]).then(axios.spread((
+            productRelations,
+            productLines,
+            dbUsers,
+            products,
+            modules,
+            versions,
+            managers,
+            tables,
+            columns,
+            types,
+            connections,
+            tablesIgnore) => {
             let mapProductRelations = new Map();
             let mapProductLines = new Map();
             let mapDbUsers = new Map();
@@ -167,6 +185,7 @@ export default class DatabaseImport extends React.Component {
             let mapColumns = new Map();
             let mapTypes = new Map();
             let mapConnections = new Map();
+            let mapTablesIgnore = new Map();
 
             this.gData.productRelations = productRelations.data.data;
             this.gData.productLines = productLines.data.data;
@@ -179,6 +198,7 @@ export default class DatabaseImport extends React.Component {
             this.gData.columns = columns.data.data;
             this.gData.types = types.data.data;
             this.gData.connections = connections.data.data;
+            this.gData.tablesIgnore = tablesIgnore.data.data;
 
             productLines.data.data.forEach(function (item) {
                 let myKey = item.product_line_id;
@@ -288,8 +308,9 @@ export default class DatabaseImport extends React.Component {
                         column_name: item.column_name,
                         column_desc: item.column_desc,
                         column_type_id: item.column_type_id,
+                        data_type: item.data_type,
                         data_length: item.data_length,
-                        default_value: item.default_value,
+                        data_default: item.data_default,
                         is_null: item.is_null,
                         primary_flag: item.primary_flag,
                         split_flag: item.split_flag,
@@ -351,6 +372,16 @@ export default class DatabaseImport extends React.Component {
                 }
             });
 
+            tablesIgnore.data.data.forEach((item) => {
+                let myKey = item.table_name;
+                if (!mapTablesIgnore.has(myKey)) {
+                    mapTablesIgnore.set(myKey, {
+                        table_name: myKey,
+                        desc: item.desc
+                    });
+                }
+            });
+
             this.gMap.productRelations = mapProductRelations;
             this.gMap.productLines = mapProductLines;
             this.gMap.dbUsers = mapDbUsers;
@@ -363,6 +394,7 @@ export default class DatabaseImport extends React.Component {
             this.gMap.columns = mapColumns;
             this.gMap.types = mapTypes;
             this.gMap.connections = mapConnections;
+            this.gMap.tablesIgnore = mapTablesIgnore;
 
         })).then(() => {
             this.doInit();
@@ -435,11 +467,17 @@ export default class DatabaseImport extends React.Component {
             {headers: {'Content-Type': 'application/json'}})
     }
 
+    doGetTablesIgnore() {
+        let params = {};
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_ignores", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    // 获取当前产品线-产品-模块-用户，所归属的库表
     doGetSpecialTables() {
         if ((this.gCurrent.nodeSelectedType === "module") && (this.gCurrent.dbUserId !== -1)) {
             let tablesKnownTreeData = [];
             this.gData.tables.forEach((itemTable) => {
-                console.log()
                 let uId = itemTable.db_user_id;
                 let mId = itemTable.module_id;
                 if ((mId === this.gCurrent.moduleId) && (uId === this.gCurrent.dbUserId)) {
@@ -519,7 +557,7 @@ export default class DatabaseImport extends React.Component {
         this.doGetSpecialTables();
     }
 
-    // 选择目标数据源
+    // 选择目标数据源，并获取目标数据库结构信息
     onSelectConnectionsChanged(value, option) {
 
         this.gCurrent.connectionId = value;
@@ -538,7 +576,10 @@ export default class DatabaseImport extends React.Component {
                 let dataType = item[2].toLowerCase();
                 let dataLength = item[3];
 
-                if (tableName.startsWith("temp_") || tableName.endsWith("$")) continue
+                if (tableName.startsWith("temp_")
+                    || tableName.endsWith("$")
+                    || this.gMap.tablesIgnore.has(tableName)
+                    || this.gMap.tablesByName.has(tableName)) continue
 
                 let firstLetter = tableName[0];
                 setLetters.add(firstLetter);
@@ -565,7 +606,6 @@ export default class DatabaseImport extends React.Component {
                 }
             }
             this.gMap.mapTablesbyLetter = mapTablesByLetter;
-            console.log(this.gMap.mapTablesbyLetter);
 
             let letters = Array.from(setLetters);
             let lettersTreeData = [];
@@ -578,7 +618,6 @@ export default class DatabaseImport extends React.Component {
             })
 
             let tablesUnknownTreeData = this.doGetTablesByLetter(letters[0]);
-            console.log(tablesUnknownTreeData);
 
             this.setState({
                 letters: letters,
@@ -589,7 +628,7 @@ export default class DatabaseImport extends React.Component {
     }
 
     onCheckboxKnownTableDisplayChanged(e) {
-        console.log(e.target.checked);
+
         let display = "none";
         if (e.target.checked) {
             display = "block";
@@ -601,7 +640,7 @@ export default class DatabaseImport extends React.Component {
     }
 
     onCheckboxUnknownTableDisplayChanged(e) {
-        console.log(e.target.checked);
+
         let display = "none";
         if (e.target.checked) {
             display = "block";
@@ -613,7 +652,7 @@ export default class DatabaseImport extends React.Component {
     }
 
     onRadioUnknownChanged(e) {
-        console.log(e.target.value);
+
         this.setState({
             uiRadioUnknownSelected: e.target.value
         })
@@ -622,12 +661,15 @@ export default class DatabaseImport extends React.Component {
     // 获取某字母开头的表
     doGetTablesByLetter(letter) {
 
-        console.log(this.gMap.tables);
         let myResult = [];
+
+        if (letter === undefined) return myResult;
+        if (!this.gMap.mapTablesbyLetter.has(letter)) return  myResult;
+
         this.gMap.mapTablesbyLetter.get(letter).tables.forEach((value, key) => {
             let tableName = key;
 
-            if (!this.gMap.tablesByName.has(tableName)) {
+            //if (!this.gMap.tablesByName.has(tableName)) {
                 let nodeTable = {
                     key: tableName,
                     title: tableName,
@@ -643,13 +685,15 @@ export default class DatabaseImport extends React.Component {
                         title: item.name + " : " + item.type,
                         children: [],
                         olc: {
-                            nodeType: "table_column"
+                            nodeType: "table_column",
+                            dataType: item.type,
+                            dataLength: item.length
                         },
                     }
                     nodeTable.children.push(nodeColumn);
                 })
                 myResult.push(nodeTable);
-            }
+            //}
         });
 
         return myResult;
@@ -669,12 +713,12 @@ export default class DatabaseImport extends React.Component {
     };
 
     onTableUnknownChecked(checkedKeys, info) {
-        console.log('onCheck', checkedKeys, info);
+
         this.gTableUnknownSelected = info.checkedNodes;
     };
 
     onTableKnownChecked(checkedKeys, info) {
-        console.log('onCheck', checkedKeys, info);
+
         this.gTableKnownSelected = info.checkedNodes;
     };
 
@@ -699,9 +743,39 @@ export default class DatabaseImport extends React.Component {
     }
 
     onButtonIsTempClicked() {
+        for (let i = 0; i < this.gTableUnknownSelected.length; i++) {
+            if (this.gTableUnknownSelected[i].olc.nodeType === "table_column") continue
 
+            let tableName = this.gTableUnknownSelected[i].title;
+
+            let myObject = new TadTableIgnore();
+            myObject.table_name = tableName;
+            axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_ignore",
+                myObject,
+                {headers: {'Content-Type': 'application/json'}}
+            ).then((response) => {
+                let data = response.data;
+
+                if (data.success) {
+                    // const {tablesUnknownTreeData} = this.state;
+                    let tablesUnknownTreeData = JSON.parse(JSON.stringify(this.state.tablesUnknownTreeData));
+                    tablesUnknownTreeData.forEach((item, index) => {
+                        if (item.key === data.data.table_name) {
+                            tablesUnknownTreeData.splice(index, 1)
+                        }
+                    })
+                    this.setState({
+                        tablesUnknownTreeData: tablesUnknownTreeData
+                    })
+                }
+            });
+        }
     }
 
+    getColumnDataType(name) {
+    }
+
+    // 导入结构
     onButtonInClicked() {
         for (let i = 0; i < this.gTableUnknownSelected.length; i++) {
             if (this.gTableUnknownSelected[i].olc.nodeType === "table_column") continue
@@ -718,32 +792,101 @@ export default class DatabaseImport extends React.Component {
                 {headers: {'Content-Type': 'application/json'}}
             ).then((response) => {
                 let data = response.data;
-
                 if (data.success) {
+                    console.log(this.gTableUnknownSelected[i].children);
                     for (let j = 0; j < this.gTableUnknownSelected[i].children.length; j++) {
                         let tableColumnName = this.gTableUnknownSelected[i].children[j].key.split(".")[1];
+                        let tableColumnDataType = this.gTableUnknownSelected[i].children[j].olc.dataType;
+                        let tableColumnDataLength = this.gTableUnknownSelected[i].children[j].olc.dataLength;
 
                         let myTableColumn = new TadTableColumn();
                         myTableColumn.table_id = data.data.table_id;
                         myTableColumn.column_name = tableColumnName;
+                        myTableColumn.data_type = tableColumnDataType;
+                        myTableColumn.data_length = tableColumnDataLength;
 
                         axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_column",
                             myTableColumn,
                             {headers: {'Content-Type': 'application/json'}}
                         ).then((response2) => {
                             let data2 = response2.data;
+                            console.log(data2);
                             if (data2.success) {
-                                console.log("add column success");
+                                this.gData.columns.push(data2.data);
+                                this.gMap.columns.set(data2.data.column_id, {
+                                    column_id: data2.data.column_id,
+                                    table_id: data2.data.table_id,
+                                    column_name: data2.data.column_name,
+                                    column_desc: data2.data.column_desc,
+                                    column_type_id: data2.data.column_type_id,
+                                    data_type: data2.data.data_type,
+                                    data_length: data2.data.data_length,
+                                    data_default: data2.data.data_default,
+                                    is_null: data2.data.is_null,
+                                    primary_flag: data2.data.primary_flag,
+                                    split_flag: data2.data.split_flag,
+                                    repeat_flag: data2.data.repeat_flag
+                                });
+                                // 界面添加字段：
+                                let tablesKnownTreeData = JSON.parse(JSON.stringify(this.state.tablesKnownTreeData));
+                                let nodeTableColumn = {
+                                    key: data2.data.table_id + "_" + data2.data.column_id,
+                                    title: data2.data.column_name,
+                                    children: []
+                                }
+                                tablesKnownTreeData.forEach((item) => {
+                                    if (item.key === data2.data.table_id) {
+                                        item.children.push(nodeTableColumn);
+                                    }
+                                });
+                                this.setState({
+                                    tablesKnownTreeData: tablesKnownTreeData
+                                })
+
+                                // 全局数据添加字段
+                                this.gMap.tables.get(data2.data.table_id).columns.push(data2.data.column_id);
                             }
                         });
                     }
+
+                    // 从界面移除
+                    let tablesUnknownTreeData = JSON.parse(JSON.stringify(this.state.tablesUnknownTreeData));
+                    tablesUnknownTreeData.forEach((item, index) => {
+                        if (item.key === data.data.table_name) {
+                            tablesUnknownTreeData.splice(index, 1)
+                        }
+                    })
+                    // 界面添加表
+                    let tablesKnownTreeData = JSON.parse(JSON.stringify(this.state.tablesKnownTreeData));
+                    let nodeTable = {
+                        key: data.data.table_id,
+                        title: data.data.table_name,
+                        children: []
+                    }
+                    tablesKnownTreeData.push(nodeTable);
+
+                    // 全局数据添加表
+                    this.gData.tables.push(data.data);
+                    this.gMap.tables.set(data.data.table_id, {
+                        table_id: data.data.table_id,
+                        table_name: data.data.table_name,
+                        table_desc: data.data.table_desc,
+                        table_type_id: data.data.table_type_id,
+                        table_label_id: data.data.table_label_id,
+                        db_user_id: data.data.db_user_id,
+                        module_id: data.data.module_id,
+                        columns: []});
+                    this.setState({
+                        tablesKnownTreeData: tablesKnownTreeData,
+                        tablesUnknownTreeData: tablesUnknownTreeData
+                    })
                 }
             });
         }
     }
 
     onButtonOutClicked() {
-        console.log(this.gCurrent);
+
         /*
         let tablesKnown = JSON.parse(JSON.stringify(this.state.tablesKnown));
         let tablesUnknown = JSON.parse(JSON.stringify(this.state.tablesUnknown));
@@ -784,6 +927,7 @@ export default class DatabaseImport extends React.Component {
         const options = [
             {label: '未归档', value: 0},
             {label: '已归档', value: 1},
+            {label: '已忽略', value: 2},
         ];
 
         return <div className="DatabaseImport">
@@ -833,11 +977,11 @@ export default class DatabaseImport extends React.Component {
                 </div>
             </div>
             <div className={"BoxButtons"}>
-                <Button onClick={this.onButtonIsTempClicked}>无需归类</Button>
-                <Button onClick={this.onButtonInClicked}>导入结构</Button>
-                <Button onClick={this.onButtonImportClicked}>导入数据</Button>
-                <Button onClick={this.onButtonOutClicked}>移除结构</Button>
-                <Button onClick={this.onButtonDeleteClicked}>移除数据</Button>
+                <Button onClick={this.onButtonIsTempClicked} icon={<DeleteOutlined />}>无需归类</Button>
+                <Button onClick={this.onButtonInClicked} icon={<LeftOutlined />}>导入结构</Button>
+                <Button onClick={this.onButtonImportClicked} icon={<DoubleLeftOutlined />}>导入数据</Button>
+                <Button onClick={this.onButtonOutClicked} icon={<RightOutlined />}>移除结构</Button>
+                <Button onClick={this.onButtonDeleteClicked} icon={<DoubleRightOutlined />}>移除数据</Button>
             </div>
             <div className={"BoxUnknown"}>
                 <div className={"BoxLabel"}>待归档数据库表：</div>

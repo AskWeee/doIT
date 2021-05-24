@@ -29,7 +29,7 @@ export default class DatabaseStruct extends React.Component {
             productsTreeData: [],
             tablesKnownTreeData: [],
             tablesUnknownTreeData: [],
-            dbUsersSelectOptions: [{value: -1, label: "请选择"}],
+            optionsDbUsers: [{value: -1, label: "请选择"}],
             connectionsSelectOptions: [{value: -1, label: "请选择"}],
             dbUserSelected: -1,
             showKnownTable: false,
@@ -43,7 +43,9 @@ export default class DatabaseStruct extends React.Component {
             tablesKnown: [],
             letters: ["a", "b"],
             tableTableColumnsDataSource: [],
-            tableTableColumnsColumns: []
+            tableTableColumnsColumns: [],
+            pageSizeTableColumns: 50,
+
         }
 
 
@@ -91,7 +93,7 @@ export default class DatabaseStruct extends React.Component {
     }
 
     componentDidMount() {
-        this.doMock();
+        // this.doMock();
         this.doNewGetAll();
     }
 
@@ -326,8 +328,6 @@ export default class DatabaseStruct extends React.Component {
             this.gData.types = types.data.data;
             this.gData.connections = connections.data.data;
 
-            console.log(this.gData);
-
             productLines.data.data.forEach(function (item) {
                 let myKey = item.product_line_id;
                 if (!mapProductLines.has(myKey)) {
@@ -341,7 +341,6 @@ export default class DatabaseStruct extends React.Component {
                 }
             });
 
-            console.log(dbUsers.data.data);
             dbUsers.data.data.forEach(function (item) {
                 let myKey = item.user_id;
                 if (!mapDbUsers.has(myKey)) {
@@ -437,8 +436,9 @@ export default class DatabaseStruct extends React.Component {
                         column_name: item.column_name,
                         column_desc: item.column_desc,
                         column_type_id: item.column_type_id,
+                        data_type: item.data_type,
                         data_length: item.data_length,
-                        default_value: item.default_value,
+                        data_default: item.data_default,
                         is_null: item.is_null,
                         primary_flag: item.primary_flag,
                         split_flag: item.split_flag,
@@ -585,7 +585,7 @@ export default class DatabaseStruct extends React.Component {
     }
 
     doGetSpecialTables() {
-        console.log("XXXXXXXXXXXXXXXXXXX", this.gCurrent);
+
         if ((this.gCurrent.nodeSelectedType === "module") && (this.gCurrent.dbUserId !== -1)) {
             let tablesKnownTreeData = [];
             this.gData.tables.forEach((itemTable) => {
@@ -624,7 +624,7 @@ export default class DatabaseStruct extends React.Component {
             case "product_line":
                 this.gCurrent.productLineId = selectedKeys[0];
 
-                let dbUsersSelectOptions = [{value: -1, label: "请选择"}];
+                let optionsDbUsers = [{value: -1, label: "请选择"}];
 
                 this.gData.dbUsers.forEach((item) => {
                     if (item.product_line_id === this.gCurrent.productLineId) {
@@ -632,13 +632,13 @@ export default class DatabaseStruct extends React.Component {
                             value: item.user_id,
                             label: item.user_name
                         }
-                        dbUsersSelectOptions.push(option);
+                        optionsDbUsers.push(option);
                     }
                 });
 
                 this.setState({
                     dbUserSelected: -1,
-                    dbUsersSelectOptions: dbUsersSelectOptions
+                    optionsDbUsers: optionsDbUsers
                 })
 
                 break
@@ -660,36 +660,27 @@ export default class DatabaseStruct extends React.Component {
         let nodeType = info.node.nodeType;
         this.gCurrent.nodeSelectedType = nodeType;
 
-        // switch (nodeType) {
-        //     case "table":
         this.gCurrent.tableId = parseInt(selectedKeys[0]);
-        // todo:: show tables info
+
         let tableTableColumnsDataSource = [];
+        let nColumns = 0;
         this.gMap.tables.get(this.gCurrent.tableId).columns.forEach((itemColumn) => {
             let tcId = itemColumn;
             let column = this.gMap.columns.get(tcId);
-            console.log(this.gMap.types);
-            let columnType = this.gMap.types.get(column.column_type_id).name;
             let nodeColumn = {
                 key: this.gCurrent.tableId + "_" + tcId,
-                column_name: column.column_name + " : " + columnType,
-                data_type: columnType,
-                data_length: 0
+                column_name: column.column_name,
+                data_type: column.data_type,
+                data_length: column.data_length
             }
             tableTableColumnsDataSource.push(nodeColumn);
+            nColumns++;
         })
-
 
         this.setState({
+            pageSizeTableColumns: nColumns,
             tableTableColumnsDataSource: tableTableColumnsDataSource,
         })
-        //         break
-        //     case "column":
-        //         this.gCurrent.columnId = parseInt(selectedKeys[0].split("_")[1]);
-        //         break
-        //     default:
-        //         break
-        // }
     };
 
     onSelectDbUsersChanged(value, option) {
@@ -960,10 +951,6 @@ export default class DatabaseStruct extends React.Component {
     }
 
     render() {
-        const options = [
-            {label: '未归档', value: 0},
-            {label: '已归档', value: 1},
-        ];
         const tableTableColumnsColumns = [
             {
                 title: '字段名称',
@@ -980,9 +967,7 @@ export default class DatabaseStruct extends React.Component {
                 dataIndex: 'data_length',
                 key: 'data_length',
             },];
-        const styleTabs = {
-            border: "1px solid red",
-        }
+
         return <div className="DatabaseStruct">
             {/*1-1*/}
             <div className={"BoxProductsInfo"}>
@@ -1002,9 +987,9 @@ export default class DatabaseStruct extends React.Component {
             <div className={"BoxTables"}>
                 <div className={"BoxSelect"}>
                     <Select
-                        onChange={this.onSelectDbUsersChanged}>
-                        <Select.Option value={-1}>-1</Select.Option>
-                        <Select.Option value={1}>NRMDB</Select.Option>
+                        defaultValue={-1}
+                        onChange={this.onSelectDbUsersChanged}
+                        options={this.state.optionsDbUsers}>
                     </Select>
                 </div>
                 <div className={"BoxToolbar"}>
@@ -1049,6 +1034,12 @@ export default class DatabaseStruct extends React.Component {
                                     </div>
                                     <div className={"BoxDetail"}>
                                         <Table
+                                            bordered={true}
+                                            size={"small"}
+                                            // pagination={{ pageSize: 50 }}
+                                            // pagination={{disabled: true, position: ["none", "none"] }}
+                                            pagination={{pageSize: this.state.pageSizeTableColumns, position: ["none", "none"]}}
+                                            scroll={{ y: 400 }}
                                             dataSource={this.state.tableTableColumnsDataSource}
                                             columns={tableTableColumnsColumns}/>
                                     </div>
@@ -1126,6 +1117,10 @@ export default class DatabaseStruct extends React.Component {
                         </Tabs>
                     </div>
                 </div>
+                <div>&nbsp;</div>
+                <div>&nbsp;</div>
+                <div>&nbsp;</div>
+                <div>&nbsp;</div>
             </div>
         </div>
     }

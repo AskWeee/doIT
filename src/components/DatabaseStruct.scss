@@ -84,13 +84,14 @@ $tabs-border-color: rgb(225,225,225);
         display: grid;
         grid-template-rows: 5px 1fr 5px;
         grid-template-columns: 5px 1fr 5px;
-        overflow: hidden;
         color: black;
+        overflow: hidden;
 
         .BoxProperties {
             display: grid;
             grid-template-rows: auto 1fr;
             grid-gap: 5px;
+            overflow: hidden;
 
             .BoxTableProperties {
                 padding-right: 5px;
@@ -102,6 +103,7 @@ $tabs-border-color: rgb(225,225,225);
             .BoxOtherProperties {
                 display: grid;
                 overflow: hidden;
+
 
                 .ant-tabs {
                     margin: 0;
@@ -137,6 +139,7 @@ $tabs-border-color: rgb(225,225,225);
 
                     .ant-tabs-content-holder {
                         display: grid;
+                        overflow: hidden;
 
                         .ant-tabs-content {
                             margin: 0;
@@ -148,12 +151,13 @@ $tabs-border-color: rgb(225,225,225);
                             }
                             background: white;
                             display: grid;
+                            overflow: hidden;
 
                             .ant-tabs-tabpane {
                                 display: grid;
                                 margin: 0;
                                 padding: 0;
-                                //border: 1px solid green;
+                                overflow: hidden;
                             }
                         }
                     }
@@ -164,6 +168,7 @@ $tabs-border-color: rgb(225,225,225);
                     display: grid;
                     grid-template-rows: auto 1fr;
                     grid-gap: 5px;
+                    overflow: hidden;
 
                     .BoxToolbar {
                         display: grid;
@@ -177,6 +182,8 @@ $tabs-border-color: rgb(225,225,225);
                     }
                     .BoxDetail {
                         display: grid;
+                        overflow: auto;
+
                     }
                 }
 
