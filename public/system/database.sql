@@ -146,7 +146,7 @@ create table tad_publish_table_column
     column_type   varchar(64) null,
     data_length   int         null,
     primary_flag  int         null,
-    is_null       varchar(64) null,
+    nullable_flag       varchar(64) null,
     split_flag    varchar(64) null,
     repeat_flag   varchar(64) null,
     default_value varchar(64) null
@@ -181,7 +181,7 @@ create table tad_table_column
     column_type   varchar(64) null,
     data_length   int         null,
     primary_flag  int         null,
-    is_null       varchar(64) null,
+    nullable_flag       varchar(64) null,
     split_flag    varchar(64) null,
     repeat_flag   varchar(64) null,
     default_value varchar(64) null

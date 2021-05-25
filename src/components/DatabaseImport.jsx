@@ -311,7 +311,7 @@ export default class DatabaseImport extends React.Component {
                         data_type: item.data_type,
                         data_length: item.data_length,
                         data_default: item.data_default,
-                        is_null: item.is_null,
+                        nullable_flag: item.nullable_flag,
                         primary_flag: item.primary_flag,
                         split_flag: item.split_flag,
                         repeat_flag: item.repeat_flag
@@ -822,7 +822,7 @@ export default class DatabaseImport extends React.Component {
                                     data_type: data2.data.data_type,
                                     data_length: data2.data.data_length,
                                     data_default: data2.data.data_default,
-                                    is_null: data2.data.is_null,
+                                    nullable_flag: data2.data.nullable_flag,
                                     primary_flag: data2.data.primary_flag,
                                     split_flag: data2.data.split_flag,
                                     repeat_flag: data2.data.repeat_flag

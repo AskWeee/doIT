@@ -42,10 +42,11 @@ export default class DatabaseMaintain extends React.Component {
             tablesUnknown: [],
             tablesKnown: [],
             letters: ["a", "b"],
-            tableTableColumnsDataSource: [],
             tableTableColumnsColumns: [],
             pageSizeTableColumns: 50,
-
+            pageSizeTableIndexes: 0,
+            dsTableColumns: [],
+            dsTablePropertyIndexes: [],
         }
 
 
@@ -439,7 +440,7 @@ export default class DatabaseMaintain extends React.Component {
                         data_type: item.data_type,
                         data_length: item.data_length,
                         data_default: item.data_default,
-                        is_null: item.is_null,
+                        nullable_flag: item.nullable_flag,
                         primary_flag: item.primary_flag,
                         split_flag: item.split_flag,
                         repeat_flag: item.repeat_flag
@@ -662,7 +663,7 @@ export default class DatabaseMaintain extends React.Component {
 
         this.gCurrent.tableId = parseInt(selectedKeys[0]);
 
-        let tableTableColumnsDataSource = [];
+        let dsTableColumns = [];
         let nColumns = 0;
         this.gMap.tables.get(this.gCurrent.tableId).columns.forEach((itemColumn) => {
             let tcId = itemColumn;
@@ -673,13 +674,13 @@ export default class DatabaseMaintain extends React.Component {
                 data_type: column.data_type,
                 data_length: column.data_length
             }
-            tableTableColumnsDataSource.push(nodeColumn);
+            dsTableColumns.push(nodeColumn);
             nColumns++;
         })
 
         this.setState({
             pageSizeTableColumns: nColumns,
-            tableTableColumnsDataSource: tableTableColumnsDataSource,
+            dsTableColumns: dsTableColumns,
         })
     };
 
@@ -966,7 +967,50 @@ export default class DatabaseMaintain extends React.Component {
                 title: '数据长度',
                 dataIndex: 'data_length',
                 key: 'data_length',
-            },];
+            },
+            {
+                title: '是否为主键',
+                dataIndex: 'primary_flag',
+                key: 'primary_flag',
+            },
+            {
+                title: '是否可为空',
+                dataIndex: 'nullable_flag',
+                key: 'nullable_flag',
+            },
+            {
+                title: '缺省值',
+                dataIndex: 'data_default',
+                key: 'data_default',
+            },
+            {
+                title: '数值分隔符',
+                dataIndex: 'split_flag',
+                key: 'split_flag',
+            },
+            {
+                title: '重复标识符',
+                dataIndex: 'repeat_flag',
+                key: 'repeat_flag',
+            },
+        ];
+        const columnsIndex = [
+            {
+                title: '索引名称',
+                dataIndex: 'index_name',
+                key: 'index_name',
+            },
+            {
+                title: '索引类型',
+                dataIndex: 'index_type',
+                key: 'index_type',
+            },
+            {
+                title: '索引字段',
+                dataIndex: 'index_columns',
+                key: 'index_columns',
+            },
+        ]
 
         return <div className="DatabaseMaintain">
             {/*1-1*/}
@@ -1040,7 +1084,7 @@ export default class DatabaseMaintain extends React.Component {
                                             // pagination={{disabled: true, position: ["none", "none"] }}
                                             pagination={{pageSize: this.state.pageSizeTableColumns, position: ["none", "none"]}}
                                             scroll={{ y: 400 }}
-                                            dataSource={this.state.tableTableColumnsDataSource}
+                                            dataSource={this.state.dsTableColumns}
                                             columns={tableTableColumnsColumns}/>
                                     </div>
                                 </div>
@@ -1054,7 +1098,14 @@ export default class DatabaseMaintain extends React.Component {
                                         <Button>删除</Button>
                                     </div>
                                     <div className={"BoxDetail"}>
-                                        <Table/>
+                                        <Table
+                                            dataSource={this.state.dsTablePropertyIndexes}
+                                            columns={columnsIndex}
+                                            scroll={{ y: 400 }}
+                                            bordered={true}
+                                            size={"small"}
+                                            pagination={{pageSize: this.state.pageSizeTableIndexes, position: ["none", "none"]}}
+                                        />
                                     </div>
                                 </div>
                             </TabPane>

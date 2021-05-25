@@ -328,7 +328,7 @@ export default class DatabaseExport extends React.Component {
                         data_type: item.data_type,
                         data_length: item.data_length,
                         data_default: item.data_default,
-                        is_null: item.is_null,
+                        nullable_flag: item.nullable_flag,
                         primary_flag: item.primary_flag,
                         split_flag: item.split_flag,
                         repeat_flag: item.repeat_flag
