@@ -2,16 +2,12 @@ import React from 'react'
 import './DatabaseExport.scss'
 import axios from "axios";
 import GCtx from "../GCtx";
-import {Button, Select, Tree, Checkbox, Radio, Table, Typography, Space} from 'antd'
+import {Button, Select, Tree, Checkbox, Table} from 'antd'
 import {
-    UndoOutlined,
     CloseOutlined,
-    CaretDownOutlined, DeleteOutlined, DoubleLeftOutlined, DoubleRightOutlined, LeftOutlined, RightOutlined,
-    SearchOutlined,
+    CaretDownOutlined, LeftOutlined, RightOutlined,
     ShareAltOutlined
 } from '@ant-design/icons'
-import TadTable from '../entity/TadTable'
-import TadTableColumn from '../entity/TadTableColumn'
 import TadTableIgnore from '../entity/TadTableIgnore'
 
 export default class DatabaseExport extends React.Component {
@@ -873,15 +869,15 @@ export default class DatabaseExport extends React.Component {
                 products.children.forEach((modules) => {
                     modules.children.forEach((users) => {
                         let ids = users.key.split("_");
-                        let plId = parseInt(ids[0]);
-                        let pId = parseInt(ids[1]);
+                        // let plId = parseInt(ids[0]);
+                        // let pId = parseInt(ids[1]);
                         let mId = parseInt(ids[2]);
                         let uId = parseInt(ids[3]);
 
                         let strSqls = "";
                         this.gMap.tables.forEach((item) => {
                             console.log(item);
-                            if ((item.module_id === mId) && (item.db_user_id == uId)) {
+                            if ((item.module_id === mId) && (item.db_user_id === uId)) {
                                 let strSql = "create table " + item.table_name + "(\n";
                                 item.columns.forEach((column) => {
                                     let myColumn = this.gMap.columns.get(column);
@@ -896,7 +892,7 @@ export default class DatabaseExport extends React.Component {
                                     }
                                     strSql += "\t" + myColumn.column_name + " " + dataType + ",\n";
                                 });
-                                strSql += ");" + "\n" + "\n";
+                                strSql += ");\n\n";
                                 strSqls += strSql;
                             }
                         })

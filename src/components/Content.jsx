@@ -5,6 +5,7 @@ import DatabaseImport from "./DatabaseImport";
 import DatabaseMaintain from "./DatabaseMaintain";
 import DatabaseCompare from "./DatabaseCompare";
 import DatabaseExport from "./DatabaseExport";
+import DatabaseConfig from "./DatabaseConfig";
 import LowcodeSingleTable from "./LowcodeSingleTable";
 
 class Content extends React.Component {
@@ -58,7 +59,7 @@ class Content extends React.Component {
 
   showComponentDatabaseConfig() {
     let children = [];
-    children.push(<DatabaseExport key="menu_database_export"/>);
+    children.push(<DatabaseConfig key="menu_database_config"/>);
 
     this.setState({
       children: children

@@ -2,8 +2,10 @@ import React from 'react'
 import './DatabaseConfig.scss'
 import axios from "axios";
 import GCtx from "../GCtx";
-import {Button, Select, Tree, Checkbox, Radio, Table} from 'antd'
-import {CaretDownOutlined, DeleteOutlined, DoubleLeftOutlined, DoubleRightOutlined, LeftOutlined, RightOutlined} from '@ant-design/icons'
+import {Button, Select, Tree, Table, Input} from 'antd'
+import {
+    CaretDownOutlined,
+} from '@ant-design/icons'
 import TadTable from '../entity/TadTable'
 import TadTableColumn from '../entity/TadTableColumn'
 import TadTableIgnore from '../entity/TadTableIgnore'
@@ -40,7 +42,10 @@ export default class DatabaseConfig extends React.Component {
             tablesAll: [],
             tablesUnknown: [],
             tablesKnown: [],
-            letters: ["a", "b"]
+            letters: ["a", "b"],
+            isShownProductLineProperties: "grid",
+            isShownProductProperties: "none",
+            isShownModuleProperties: "none"
         }
 
 
@@ -81,6 +86,10 @@ export default class DatabaseConfig extends React.Component {
         this.onButtonIsTempClicked = this.onButtonIsTempClicked.bind(this);
         this.onButtonInClicked = this.onButtonInClicked.bind(this);
         this.onButtonOutClicked = this.onButtonOutClicked.bind(this);
+        this.onButtonAddProductLineClicked = this.onButtonAddProductLineClicked.bind(this);
+        this.onButtonAddProductClicked = this.onButtonAddProductClicked.bind(this);
+        this.onButtonAddModuleClicked = this.onButtonAddModuleClicked.bind(this);
+        this.onButtonDeleteClicked = this.onButtonDeleteClicked.bind(this);
     }
 
     test(s) {
@@ -518,8 +527,14 @@ export default class DatabaseConfig extends React.Component {
         let nodeType = info.node.nodeType;
         this.gCurrent.nodeSelectedType = nodeType;
 
+
         switch (nodeType) {
             case "product_line":
+                this.setState({
+                    isShownProductLineProperties: "grid",
+                    isShownProductProperties: "none",
+                    isShownModuleProperties: "none"
+                })
                 this.gCurrent.productLineId = selectedKeys[0];
 
                 let dbUsersSelectOptions = [{value: -1, label: "请选择"}];
@@ -541,13 +556,28 @@ export default class DatabaseConfig extends React.Component {
 
                 break
             case "product":
+                this.setState({
+                    isShownProductLineProperties: "none",
+                    isShownProductProperties: "grid",
+                    isShownModuleProperties: "none"
+                })
                 this.gCurrent.productId = parseInt(selectedKeys[0].split("_")[1]);
                 break
             case "module":
+                this.setState({
+                    isShownProductLineProperties: "none",
+                    isShownProductProperties: "none",
+                    isShownModuleProperties: "grid"
+                })
                 this.gCurrent.moduleId = parseInt(selectedKeys[0].split("_")[2]);
                 this.doGetSpecialTables();
                 break
             default:
+                this.setState({
+                    isShownProductLineProperties: "grid",
+                    isShownProductProperties: "none",
+                    isShownModuleProperties: "none"
+                })
                 break
         }
     };
@@ -664,35 +694,35 @@ export default class DatabaseConfig extends React.Component {
         let myResult = [];
 
         if (letter === undefined) return myResult;
-        if (!this.gMap.mapTablesbyLetter.has(letter)) return  myResult;
+        if (!this.gMap.mapTablesbyLetter.has(letter)) return myResult;
 
         this.gMap.mapTablesbyLetter.get(letter).tables.forEach((value, key) => {
             let tableName = key;
 
             //if (!this.gMap.tablesByName.has(tableName)) {
-                let nodeTable = {
-                    key: tableName,
-                    title: tableName,
+            let nodeTable = {
+                key: tableName,
+                title: tableName,
+                children: [],
+                olc: {
+                    nodeType: "table"
+                },
+            }
+
+            value.columns.forEach((item) => {
+                let nodeColumn = {
+                    key: tableName + "." + item.name,
+                    title: item.name + " : " + item.type,
                     children: [],
                     olc: {
-                        nodeType: "table"
+                        nodeType: "table_column",
+                        dataType: item.type,
+                        dataLength: item.length
                     },
                 }
-
-                value.columns.forEach((item) => {
-                    let nodeColumn = {
-                        key: tableName + "." + item.name,
-                        title: item.name + " : " + item.type,
-                        children: [],
-                        olc: {
-                            nodeType: "table_column",
-                            dataType: item.type,
-                            dataLength: item.length
-                        },
-                    }
-                    nodeTable.children.push(nodeColumn);
-                })
-                myResult.push(nodeTable);
+                nodeTable.children.push(nodeColumn);
+            })
+            myResult.push(nodeTable);
             //}
         });
 
@@ -875,7 +905,8 @@ export default class DatabaseConfig extends React.Component {
                         table_label_id: data.data.table_label_id,
                         db_user_id: data.data.db_user_id,
                         module_id: data.data.module_id,
-                        columns: []});
+                        columns: []
+                    });
                     this.setState({
                         tablesKnownTreeData: tablesKnownTreeData,
                         tablesUnknownTreeData: tablesUnknownTreeData
@@ -913,7 +944,22 @@ export default class DatabaseConfig extends React.Component {
 
     }
 
+    onButtonAddProductLineClicked() {
+        console.log(this.gCurrent);
+    }
+
+    onButtonAddProductClicked() {
+        console.log(this.gCurrent);
+
+    }
+
+    onButtonAddModuleClicked() {
+        console.log(this.gCurrent);
+
+    }
+
     onButtonDeleteClicked() {
+        console.log(this.gCurrent);
 
     }
 
@@ -924,111 +970,170 @@ export default class DatabaseConfig extends React.Component {
     }
 
     render() {
-        const options = [
-            {label: '未归档', value: 0},
-            {label: '已归档', value: 1},
-            {label: '已忽略', value: 2},
+        const managers = [
+            {
+                key: 1,
+                name: "赵钱孙李",
+                tel_no: "13801381380",
+                work_addr: "北京"
+            }
+        ];
+        // const dbUsers = [
+        //     {
+        //         key: 1,
+        //         name: "nrmdb",
+        //         desc: "资源管理相关产品使用该用户"
+        //     }
+        // ]
+        const columnsManager = [
+            {
+                title: '姓名',
+                dataIndex: 'name',
+                key: 'name',
+            },
+            {
+                title: '电话',
+                dataIndex: 'tel_no',
+                key: 'tel_no',
+            },
+            {
+                title: '办公地点',
+                dataIndex: 'work_addr',
+                key: 'work_addr',
+            },
+        ];
+        const columnsDbUser = [
+            {
+                title: '姓名',
+                dataIndex: 'name',
+                key: 'name',
+            },
+            {
+                title: '简述',
+                dataIndex: 'desc',
+                key: 'desc',
+            },
+        ];
+        const columnsVersions = [
+            {
+                title: '名称',
+                dataIndex: 'name',
+                key: 'name',
+            },
+            {
+                title: '简述',
+                dataIndex: 'desc',
+                key: 'desc',
+            },
         ];
 
-        return <div className="DatabaseConfig">
-            <div className={"BoxProductsInfo"}>
-                <div className={"BoxLabel"}>产品线产品信息：</div>
-                <div className={"BoxTree"}>
-                    <Tree
-                        blockNode={true}
-                        showLine={true}
-                        showIcon={true}
-                        switcherIcon={<CaretDownOutlined/>}
-                        onSelect={this.onTreeProductsSelected}
-                        treeData={this.state.productsTreeData}
-                    />
-                </div>
-                <div className={"BoxDescription"}>information</div>
-            </div>
-            <div className={"BoxKnown"}>
-                <div className={"BoxLabel"}>数据库用户：</div>
-                <div className={"BoxSelect"}>
-                    <Select ref={this.refSelectDbUsers}
-                            onChange={this.onSelectDbUsersChanged}
-                            defaultValue={this.state.dbUserSelected}
-                            options={this.state.dbUsersSelectOptions}/>
-                </div>
-                <div className={"BoxToolbar"}>
-                    <Checkbox>分组显示</Checkbox>
-                    <Checkbox onChange={this.onCheckboxKnownTableDisplayChanged}>显示数据</Checkbox>
-                </div>
-                <div className={"BoxTreeAndTable"}>
+        return <div className="BoxDatabaseConfig">
+            <div>&nbsp;</div>
+            <div className="DatabaseConfig">
+                <div className={"BoxProductsInfo"}>
+                    <div className={"BoxToolbar"}>
+                        <Button onClick={this.onButtonAddProductLineClicked}>添加产品线</Button>
+                        <Button onClick={this.onButtonAddProductClicked}>添加产品</Button>
+                        <Button onClick={this.onButtonAddModuleClicked}>添加模块</Button>
+                        <div className={"Right"}>
+                            <Button onClick={this.onButtonDeleteClicked}>删除</Button>
+                        </div>
+                    </div>
                     <div className={"BoxTree"}>
                         <Tree
-                            checkable
                             blockNode={true}
                             showLine={true}
                             showIcon={true}
                             switcherIcon={<CaretDownOutlined/>}
-                            // onSelect={this.onSelect}
-                            onCheck={this.onTableKnownChecked}
-                            treeData={this.state.tablesKnownTreeData}
-                        />
-                    </div>
-                    <div className={"HLine"} style={{display: this.state.uiTableKnownDisplay}}>&nbsp;</div>
-                    <div className={"BoxTable"} style={{display: this.state.uiTableKnownDisplay}}>
-                        <Table></Table>
-                    </div>
-                </div>
-            </div>
-            <div className={"BoxButtons"}>
-                <Button onClick={this.onButtonIsTempClicked} icon={<DeleteOutlined />}>无需归类</Button>
-                <Button onClick={this.onButtonInClicked} icon={<LeftOutlined />}>导入结构</Button>
-                <Button onClick={this.onButtonImportClicked} icon={<DoubleLeftOutlined />}>导入数据</Button>
-                <Button onClick={this.onButtonOutClicked} icon={<RightOutlined />}>移除结构</Button>
-                <Button onClick={this.onButtonDeleteClicked} icon={<DoubleRightOutlined />}>移除数据</Button>
-            </div>
-            <div className={"BoxUnknown"}>
-                <div className={"BoxLabel"}>待归档数据库表：</div>
-                <Select onChange={this.onSelectConnectionsChanged} defaultValue={-1}
-                        options={this.state.connectionsSelectOptions}/>
-                <div className={"BoxToolbar"}>
-                    <Checkbox>分组显示</Checkbox>
-                    <Checkbox onChange={this.onCheckboxUnknownTableDisplayChanged}>显示数据</Checkbox>
-                    <div className={"BoxTabs"}>
-                        <Radio.Group
-                            options={options}
-                            onChange={this.onRadioUnknownChanged}
-                            value={this.state.uiRadioUnknownSelected}
+                            onSelect={this.onTreeProductsSelected}
+                            treeData={this.state.productsTreeData}
                         />
                     </div>
                 </div>
-                <div className={"BoxTreeAndTable"}>
-                    <div className={"BoxList"}>
-                        <Tree className={"TreeLetters"}
-                              blockNode={true}
-                              showLine={false}
-                              showIcon={false}
-                            // switcherIcon={<CaretDownOutlined/>}
-                              onSelect={this.onTreeLettersSelected}
-                            //onCheck={this.onTableUnknownChecked}
-                              treeData={this.state.lettersTreeData}
-                        />
+                <div className={"BoxProperties"}>
+                    <div className={"BoxToolbar"}>
+                        <div className={"Title"}>属性编辑</div>
                     </div>
-                    <div className={"BoxTree"}>
-                        <div className={"BoxTree2"}>
-                            <Tree className={"TreeUnknown"}
-                                  checkable
-                                  blockNode={true}
-                                  showLine={true}
-                                  showIcon={true}
-                                  switcherIcon={<CaretDownOutlined/>}
-                                // onSelect={this.onSelect}
-                                  onCheck={this.onTableUnknownChecked}
-                                  treeData={this.state.tablesUnknownTreeData}
-                            /></div>
-                        <div className={"HLine"} style={{display: this.state.uiTableUnknownDisplay}}>&nbsp;</div>
-                        <div className={"BoxTable"} style={{display: this.state.uiTableUnknownDisplay}}>
-                            <Table></Table>
+                    <div className={"BoxProductLineProperties"} style={{display: this.state.isShownProductLineProperties}}>
+                        <div>产品线名称：</div>
+                        <Input/>
+                        <div className={"BoxToolbar"}>
+                            <div>产品线产品经理：</div>
+                            <div className={"Right"}>
+                                <Button>新增</Button>
+                                <Button>修改</Button>
+                                <Button>删除</Button>
+                            </div>
                         </div>
+                        <Table
+                            dataSource={managers}
+                            columns={columnsManager}
+                            bordered={true}
+                            size={"small"}
+                            rowSelection={{
+                                type: "radio"
+                            }}
+                            scroll={{y: 100}}
+                        />
+                        <div className={"BoxToolbar"}>
+                            <div>产品线数据库用户：</div>
+                            <div className={"Right"}>
+                                <Button>新增</Button>
+                                <Button>修改</Button>
+                                <Button>删除</Button>
+                            </div>
+                        </div>
+                        <Table
+                            dataSource={[]}
+                            columns={columnsDbUser}
+                            bordered={true}
+                            size={"small"}
+                            rowSelection={{
+                                type: "radio"
+                            }}
+                            scroll={{y: 100}}
+                        />
+                        <div>产品线简述：</div>
+                        <Input/>
+                    </div>
+                    <div className={"BoxProductProperties"} style={{display: this.state.isShownProductProperties}}>
+                        <div>产品名称：</div>
+                        <Input/>
+                        <div>产品经理：</div>
+                        <Select/>
+                        <div className={"BoxToolbar"}>
+                            <div>产品版本信息：</div>
+                            <div className={"Right"}>
+                                <Button>新增</Button>
+                                <Button>修改</Button>
+                                <Button>删除</Button>
+                            </div>
+                        </div>
+                        <Table
+                            dataSource={[]}
+                            columns={columnsVersions}
+                            bordered={true}
+                            size={"small"}
+                            rowSelection={{
+                                type: "radio"
+                            }}
+                            scroll={{y: 100}}
+                        />
+                        <div>产品简述：</div>
+                        <Input/>
+                    </div>
+                    <div className={"BoxModuleProperties"} style={{display: this.state.isShownModuleProperties}}>
+                        <div>模块名称：</div>
+                        <Input/>
+                        <div>模块负责人：</div>
+                        <Input/>
+                        <div>&nbsp;</div>
+                        <div>模块简述：</div>
+                        <Input/>
                     </div>
                 </div>
             </div>
+            <div>&nbsp;</div>
         </div>
     }
 }

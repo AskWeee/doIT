@@ -2,7 +2,7 @@ import React from 'react'
 import './DatabaseMaintain.scss'
 import axios from "axios";
 import GCtx from "../GCtx";
-import {Button, Select, Tree, Checkbox, Radio, Table, Input, Tabs} from 'antd'
+import {Button, Select, Tree, Checkbox, Table, Input, Tabs} from 'antd'
 import {CaretDownOutlined} from '@ant-design/icons'
 import TadTable from '../entity/TadTable'
 import TadTableColumn from '../entity/TadTableColumn'
