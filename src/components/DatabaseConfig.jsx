@@ -9,6 +9,10 @@ import {
 import TadTable from '../entity/TadTable'
 import TadTableColumn from '../entity/TadTableColumn'
 import TadTableIgnore from '../entity/TadTableIgnore'
+import TadProductLine from "../entity/TadProductLine";
+import TadProduct from "../entity/TadProduct";
+import TadProductRelation from "../entity/TadProductRelation";
+import TadModule from "../entity/TadModule";
 
 export default class DatabaseConfig extends React.Component {
     static contextType = GCtx;
@@ -561,6 +565,7 @@ export default class DatabaseConfig extends React.Component {
                     isShownProductProperties: "grid",
                     isShownModuleProperties: "none"
                 })
+                this.gCurrent.productLineId = parseInt(selectedKeys[0].split("_")[0]);
                 this.gCurrent.productId = parseInt(selectedKeys[0].split("_")[1]);
                 break
             case "module":
@@ -569,6 +574,8 @@ export default class DatabaseConfig extends React.Component {
                     isShownProductProperties: "none",
                     isShownModuleProperties: "grid"
                 })
+                this.gCurrent.productLineId = parseInt(selectedKeys[0].split("_")[0]);
+                this.gCurrent.productId = parseInt(selectedKeys[0].split("_")[1]);
                 this.gCurrent.moduleId = parseInt(selectedKeys[0].split("_")[2]);
                 this.doGetSpecialTables();
                 break
@@ -946,15 +953,115 @@ export default class DatabaseConfig extends React.Component {
 
     onButtonAddProductLineClicked() {
         console.log(this.gCurrent);
+
+        let myObject = new TadProductLine();
+
+        axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_product_line",
+            myObject,
+            {headers: {'Content-Type': 'application/json'}}
+        ).then((response) => {
+            let data = response.data;
+
+            if (data.success) {
+                let uiObject = {
+                key: data.data.product_line_id,
+                title: data.data.product_line_name + "-" + data.data.product_line_id,
+                children: []
+                }
+
+                let productsTreeData = JSON.parse(JSON.stringify(this.state.productsTreeData));
+                productsTreeData.push(uiObject);
+                this.setState({
+                    productsTreeData: productsTreeData
+                })
+            }
+        });
     }
 
     onButtonAddProductClicked() {
         console.log(this.gCurrent);
+        let myObject = new TadProduct();
+
+        axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_product",
+            myObject,
+            {headers: {'Content-Type': 'application/json'}}
+        ).then((response) => {
+            let data = response.data;
+
+            if (data.success) {
+                let productLineId = this.gCurrent.productLineId;
+                let productId = data.data.product_id;
+                let uiObject = {
+                    key: productLineId + "_" + productId,
+                    title: data.data.product_name + "-" + productId,
+                    children: []
+                }
+
+                let productsTreeData = JSON.parse(JSON.stringify(this.state.productsTreeData));
+
+                productsTreeData.forEach((item) => {
+                    if (item.key === productLineId) {
+                        item.children.push(uiObject);
+                    }
+                })
+                this.setState({
+                    productsTreeData: productsTreeData
+                })
+
+                let myObject2 = new TadProductRelation();
+                myObject2.product_line_id = productLineId;
+                myObject2.product_id = productId;
+                axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_product_relation",
+                    myObject2,
+                    {headers: {'Content-Type': 'application/json'}}
+                ).then((response) => {
+                    //
+                });
+            }
+        });
 
     }
 
     onButtonAddModuleClicked() {
         console.log(this.gCurrent);
+
+        let productLineId = this.gCurrent.productLineId;
+        let productId = this.gCurrent.productId;
+
+        let myObject = new TadModule();
+        myObject.product_id = productId;
+
+        axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_module",
+            myObject,
+            {headers: {'Content-Type': 'application/json'}}
+        ).then((response) => {
+            let data = response.data;
+
+            if (data.success) {
+                let moduleId = data.data.module_id;
+
+                let myModule = {
+                    key: productLineId + "_" + productId + "_" + moduleId,
+                    title: data.data.module_name + "-" + moduleId,
+                    children: []
+                }
+
+                let productsTreeData = JSON.parse(JSON.stringify(this.state.productsTreeData));
+
+                productsTreeData.forEach((item) => {
+                    if (item.key === productLineId) {
+                        item.children.forEach((item2) => {
+                            if (item2.key === productLineId + "_" + productId) {
+                                item2.children.push(myModule);
+                            }
+                        })
+                    }
+                })
+                this.setState({
+                    productsTreeData: productsTreeData
+                })
+            }
+        });
 
     }
 
