@@ -25,13 +25,13 @@ class Header extends React.Component {
       let refMenu = React.createRef();
       this.context.mapMenus.set(menu.id, {label : menu.label, desc: menu.desc, ref: refMenu, children: new Map()});
       jsxMenus.push(
-        <div key={menu.id}
-             id={menu.id}
-             ref={refMenu}
-             className="Menu"
-             onClick={(event) => {
-               this.onClickMenu(event)
-             }}>{menu.label}</div>
+          <div key={menu.id}
+               id={menu.id}
+               ref={refMenu}
+               className="Menu"
+               onClick={(event) => {
+                 this.onClickMenu(event)
+               }}>{menu.label}</div>
       );
       for(let child of menu.children) {
         this.context.mapMenus.get(menu.id).children.set(child.id, {label : child.label, desc: child.desc});

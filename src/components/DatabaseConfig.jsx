@@ -1,22 +1,21 @@
 import React from 'react'
-import './DatabaseStruct.scss'
+import './DatabaseConfig.scss'
 import axios from "axios";
 import GCtx from "../GCtx";
-import {Button, Select, Tree, Checkbox, Radio, Table, Input, Tabs} from 'antd'
-import {CaretDownOutlined} from '@ant-design/icons'
+import {Button, Select, Tree, Checkbox, Radio, Table} from 'antd'
+import {CaretDownOutlined, DeleteOutlined, DoubleLeftOutlined, DoubleRightOutlined, LeftOutlined, RightOutlined} from '@ant-design/icons'
 import TadTable from '../entity/TadTable'
 import TadTableColumn from '../entity/TadTableColumn'
-import Mock from 'mockjs'
+import TadTableIgnore from '../entity/TadTableIgnore'
 
-const {TabPane} = Tabs;
-
-export default class DatabaseStruct extends React.Component {
+export default class DatabaseConfig extends React.Component {
     static contextType = GCtx;
 
     gUi = {};
     gMap = {};
     gData = {};
     gCurrent = {};
+    refSelectDbUsers = React.createRef();
 
     gTableUnknownSelected = [];
     gTableKnownSelected = [];
@@ -29,7 +28,7 @@ export default class DatabaseStruct extends React.Component {
             productsTreeData: [],
             tablesKnownTreeData: [],
             tablesUnknownTreeData: [],
-            optionsDbUsers: [{value: -1, label: "请选择"}],
+            dbUsersSelectOptions: [{value: -1, label: "请选择"}],
             connectionsSelectOptions: [{value: -1, label: "请选择"}],
             dbUserSelected: -1,
             showKnownTable: false,
@@ -41,11 +40,7 @@ export default class DatabaseStruct extends React.Component {
             tablesAll: [],
             tablesUnknown: [],
             tablesKnown: [],
-            letters: ["a", "b"],
-            tableTableColumnsDataSource: [],
-            tableTableColumnsColumns: [],
-            pageSizeTableColumns: 50,
-
+            letters: ["a", "b"]
         }
 
 
@@ -64,19 +59,17 @@ export default class DatabaseStruct extends React.Component {
         this.doNewGetTableColumns = this.doNewGetTableColumns.bind(this);
         this.doNewGetTypes = this.doNewGetTypes.bind(this);
         this.doNewGetDbConnections = this.doNewGetDbConnections.bind(this);
+        this.doGetTablesIgnore = this.doGetTablesIgnore.bind(this);
+
         this.doGetSchemas = this.doGetSchemas.bind(this);
         this.doGetTablesByLetter = this.doGetTablesByLetter.bind(this);
-        this.doMock = this.doMock.bind(this);
+
         this.onTreeLettersSelected = this.onTreeLettersSelected.bind(this);
 
         this.onTreeProductsSelected = this.onTreeProductsSelected.bind(this);
-        this.onTreeTablesSelected = this.onTreeTablesSelected.bind(this);
-
         this.onSelectDbUsersChanged = this.onSelectDbUsersChanged.bind(this);
         this.onSelectConnectionsChanged = this.onSelectConnectionsChanged.bind(this);
-
         this.onRadioUnknownChanged = this.onRadioUnknownChanged.bind(this);
-
         this.onCheckboxKnownTableDisplayChanged = this.onCheckboxKnownTableDisplayChanged.bind(this);
         this.onCheckboxUnknownTableDisplayChanged = this.onCheckboxUnknownTableDisplayChanged.bind(this);
 
@@ -84,6 +77,8 @@ export default class DatabaseStruct extends React.Component {
         this.onTableUnknownChecked = this.onTableUnknownChecked.bind(this);
         this.onTableKnownChecked = this.onTableKnownChecked.bind(this);
         this.doTablesCompare = this.doTablesCompare.bind(this);
+
+        this.onButtonIsTempClicked = this.onButtonIsTempClicked.bind(this);
         this.onButtonInClicked = this.onButtonInClicked.bind(this);
         this.onButtonOutClicked = this.onButtonOutClicked.bind(this);
     }
@@ -93,145 +88,7 @@ export default class DatabaseStruct extends React.Component {
     }
 
     componentDidMount() {
-        // this.doMock();
         this.doNewGetAll();
-    }
-
-    doMock() {
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_product_relations", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "product_rel_id": 1,
-                "product_line_id": 1,
-                "product_id": 1,
-                "product_manager_id": 1
-            }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_product_lines", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "product_line_id": 1,
-                "product_line_name": "OSS",
-                "product_line_desc": "",
-            }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_products", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "product_id": 1,
-                "product_name": "OLC",
-                "product_desc": "",
-            }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_users", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "uer_id": 1,
-                "product_line_id": 1,
-                "user_name": "nrmdb",
-                "user_desc": "",
-            }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_modules", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "module_id": 1,
-                "product_id": 1,
-                "module_name": "USER",
-                "module_leader": "K",
-                "module_desc": "",
-            }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_tables", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "table_id": 1,
-                "db_user_id": 1,
-                "module_id": 1,
-                "table_name": "tad_dict",
-                "table_desc": ""
-            }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_columns", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "column_id": 1,
-                "table_id": 1,
-                "column_name": "id",
-                "column_type_id": 2,
-                "column_desc": "",
-            },
-                {
-                    "column_id": 2,
-                    "table_id": 1,
-                    "column_name": "type",
-                    "column_type_id": 3,
-                    "column_desc": "",
-                },
-                {
-                    "column_id": 3,
-                    "table_id": 1,
-                    "column_name": "name",
-                    "column_type_id": 3,
-                    "column_desc": "",
-                }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_product_managers", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "product_manager_id": 1,
-                "product_manager_name": "TESTER",
-                "tel_no": "",
-                "email_addr": "",
-                "work_addr": "",
-            }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_types", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "id": 1,
-                "type": "table_type",
-                "name": "DICT",
-            },
-                {
-                    "id": 2,
-                    "type": "data_type",
-                    "name": "number",
-                }, {
-                    "id": 3,
-                    "type": "table_type",
-                    "name": "string",
-                }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_product_versions", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "version_id": 1,
-                "product_id": 1,
-                "version_name": "3.0",
-            }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_connections", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "mtime": "@datetime",//随机生成日期时间
-                "score|1-800": 800,//随机生成1-800的数字
-                "rank|1-100": 100,//随机生成1-100的数字
-                "stars|1-5": 5,//随机生成1-5的数字
-                "nickname": "@cname",//随机生成中文名字
-            }]
-        });
     }
 
     doInit() {
@@ -302,7 +159,20 @@ export default class DatabaseStruct extends React.Component {
             this.doNewGetTableColumns(),
             this.doNewGetTypes(),
             this.doNewGetDbConnections(),
-        ]).then(axios.spread((productRelations, productLines, dbUsers, products, modules, versions, managers, tables, columns, types, connections) => {
+            this.doGetTablesIgnore(),
+        ]).then(axios.spread((
+            productRelations,
+            productLines,
+            dbUsers,
+            products,
+            modules,
+            versions,
+            managers,
+            tables,
+            columns,
+            types,
+            connections,
+            tablesIgnore) => {
             let mapProductRelations = new Map();
             let mapProductLines = new Map();
             let mapDbUsers = new Map();
@@ -315,6 +185,7 @@ export default class DatabaseStruct extends React.Component {
             let mapColumns = new Map();
             let mapTypes = new Map();
             let mapConnections = new Map();
+            let mapTablesIgnore = new Map();
 
             this.gData.productRelations = productRelations.data.data;
             this.gData.productLines = productLines.data.data;
@@ -327,6 +198,7 @@ export default class DatabaseStruct extends React.Component {
             this.gData.columns = columns.data.data;
             this.gData.types = types.data.data;
             this.gData.connections = connections.data.data;
+            this.gData.tablesIgnore = tablesIgnore.data.data;
 
             productLines.data.data.forEach(function (item) {
                 let myKey = item.product_line_id;
@@ -500,6 +372,16 @@ export default class DatabaseStruct extends React.Component {
                 }
             });
 
+            tablesIgnore.data.data.forEach((item) => {
+                let myKey = item.table_name;
+                if (!mapTablesIgnore.has(myKey)) {
+                    mapTablesIgnore.set(myKey, {
+                        table_name: myKey,
+                        desc: item.desc
+                    });
+                }
+            });
+
             this.gMap.productRelations = mapProductRelations;
             this.gMap.productLines = mapProductLines;
             this.gMap.dbUsers = mapDbUsers;
@@ -512,6 +394,7 @@ export default class DatabaseStruct extends React.Component {
             this.gMap.columns = mapColumns;
             this.gMap.types = mapTypes;
             this.gMap.connections = mapConnections;
+            this.gMap.tablesIgnore = mapTablesIgnore;
 
         })).then(() => {
             this.doInit();
@@ -584,12 +467,17 @@ export default class DatabaseStruct extends React.Component {
             {headers: {'Content-Type': 'application/json'}})
     }
 
-    doGetSpecialTables() {
+    doGetTablesIgnore() {
+        let params = {};
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_ignores", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
 
+    // 获取当前产品线-产品-模块-用户，所归属的库表
+    doGetSpecialTables() {
         if ((this.gCurrent.nodeSelectedType === "module") && (this.gCurrent.dbUserId !== -1)) {
             let tablesKnownTreeData = [];
             this.gData.tables.forEach((itemTable) => {
-                console.log(itemTable)
                 let uId = itemTable.db_user_id;
                 let mId = itemTable.module_id;
                 if ((mId === this.gCurrent.moduleId) && (uId === this.gCurrent.dbUserId)) {
@@ -600,6 +488,16 @@ export default class DatabaseStruct extends React.Component {
                         children: []
                     }
                     tablesKnownTreeData.push(nodeTable);
+                    this.gMap.tables.get(tId).columns.forEach((itemColumn) => {
+                        let tcId = itemColumn;
+                        let column = this.gMap.columns.get(tcId);
+                        let nodeColumn = {
+                            key: tId + "_" + tcId,
+                            title: column.column_name + " : " + column.column_type_id,
+                            children: []
+                        }
+                        nodeTable.children.push(nodeColumn);
+                    })
                 }
             });
             this.setState({
@@ -624,7 +522,7 @@ export default class DatabaseStruct extends React.Component {
             case "product_line":
                 this.gCurrent.productLineId = selectedKeys[0];
 
-                let optionsDbUsers = [{value: -1, label: "请选择"}];
+                let dbUsersSelectOptions = [{value: -1, label: "请选择"}];
 
                 this.gData.dbUsers.forEach((item) => {
                     if (item.product_line_id === this.gCurrent.productLineId) {
@@ -632,13 +530,13 @@ export default class DatabaseStruct extends React.Component {
                             value: item.user_id,
                             label: item.user_name
                         }
-                        optionsDbUsers.push(option);
+                        dbUsersSelectOptions.push(option);
                     }
                 });
 
                 this.setState({
                     dbUserSelected: -1,
-                    optionsDbUsers: optionsDbUsers
+                    dbUsersSelectOptions: dbUsersSelectOptions
                 })
 
                 break
@@ -654,42 +552,12 @@ export default class DatabaseStruct extends React.Component {
         }
     };
 
-    onTreeTablesSelected(selectedKeys, info) {
-        if (selectedKeys[0] === undefined) return;
-
-        let nodeType = info.node.nodeType;
-        this.gCurrent.nodeSelectedType = nodeType;
-
-        this.gCurrent.tableId = parseInt(selectedKeys[0]);
-
-        let tableTableColumnsDataSource = [];
-        let nColumns = 0;
-        this.gMap.tables.get(this.gCurrent.tableId).columns.forEach((itemColumn) => {
-            let tcId = itemColumn;
-            let column = this.gMap.columns.get(tcId);
-            let nodeColumn = {
-                key: this.gCurrent.tableId + "_" + tcId,
-                column_name: column.column_name,
-                data_type: column.data_type,
-                data_length: column.data_length
-            }
-            tableTableColumnsDataSource.push(nodeColumn);
-            nColumns++;
-        })
-
-        this.setState({
-            pageSizeTableColumns: nColumns,
-            tableTableColumnsDataSource: tableTableColumnsDataSource,
-        })
-    };
-
     onSelectDbUsersChanged(value, option) {
         this.gCurrent.dbUserId = value;
-        console.log(".................");
         this.doGetSpecialTables();
     }
 
-    // 选择目标数据源
+    // 选择目标数据源，并获取目标数据库结构信息
     onSelectConnectionsChanged(value, option) {
 
         this.gCurrent.connectionId = value;
@@ -708,7 +576,10 @@ export default class DatabaseStruct extends React.Component {
                 let dataType = item[2].toLowerCase();
                 let dataLength = item[3];
 
-                if (tableName.startsWith("temp_") || tableName.endsWith("$")) continue
+                if (tableName.startsWith("temp_")
+                    || tableName.endsWith("$")
+                    || this.gMap.tablesIgnore.has(tableName)
+                    || this.gMap.tablesByName.has(tableName)) continue
 
                 let firstLetter = tableName[0];
                 setLetters.add(firstLetter);
@@ -735,7 +606,6 @@ export default class DatabaseStruct extends React.Component {
                 }
             }
             this.gMap.mapTablesbyLetter = mapTablesByLetter;
-            console.log(this.gMap.mapTablesbyLetter);
 
             let letters = Array.from(setLetters);
             let lettersTreeData = [];
@@ -748,7 +618,6 @@ export default class DatabaseStruct extends React.Component {
             })
 
             let tablesUnknownTreeData = this.doGetTablesByLetter(letters[0]);
-            console.log(tablesUnknownTreeData);
 
             this.setState({
                 letters: letters,
@@ -759,7 +628,7 @@ export default class DatabaseStruct extends React.Component {
     }
 
     onCheckboxKnownTableDisplayChanged(e) {
-        console.log(e.target.checked);
+
         let display = "none";
         if (e.target.checked) {
             display = "block";
@@ -771,7 +640,7 @@ export default class DatabaseStruct extends React.Component {
     }
 
     onCheckboxUnknownTableDisplayChanged(e) {
-        console.log(e.target.checked);
+
         let display = "none";
         if (e.target.checked) {
             display = "block";
@@ -783,7 +652,7 @@ export default class DatabaseStruct extends React.Component {
     }
 
     onRadioUnknownChanged(e) {
-        console.log(e.target.value);
+
         this.setState({
             uiRadioUnknownSelected: e.target.value
         })
@@ -792,12 +661,15 @@ export default class DatabaseStruct extends React.Component {
     // 获取某字母开头的表
     doGetTablesByLetter(letter) {
 
-        console.log(this.gMap.tables);
         let myResult = [];
+
+        if (letter === undefined) return myResult;
+        if (!this.gMap.mapTablesbyLetter.has(letter)) return  myResult;
+
         this.gMap.mapTablesbyLetter.get(letter).tables.forEach((value, key) => {
             let tableName = key;
 
-            if (!this.gMap.tablesByName.has(tableName)) {
+            //if (!this.gMap.tablesByName.has(tableName)) {
                 let nodeTable = {
                     key: tableName,
                     title: tableName,
@@ -813,13 +685,15 @@ export default class DatabaseStruct extends React.Component {
                         title: item.name + " : " + item.type,
                         children: [],
                         olc: {
-                            nodeType: "table_column"
+                            nodeType: "table_column",
+                            dataType: item.type,
+                            dataLength: item.length
                         },
                     }
                     nodeTable.children.push(nodeColumn);
                 })
                 myResult.push(nodeTable);
-            }
+            //}
         });
 
         return myResult;
@@ -839,12 +713,12 @@ export default class DatabaseStruct extends React.Component {
     };
 
     onTableUnknownChecked(checkedKeys, info) {
-        console.log('onCheck', checkedKeys, info);
+
         this.gTableUnknownSelected = info.checkedNodes;
     };
 
     onTableKnownChecked(checkedKeys, info) {
-        console.log('onCheck', checkedKeys, info);
+
         this.gTableKnownSelected = info.checkedNodes;
     };
 
@@ -869,9 +743,39 @@ export default class DatabaseStruct extends React.Component {
     }
 
     onButtonIsTempClicked() {
+        for (let i = 0; i < this.gTableUnknownSelected.length; i++) {
+            if (this.gTableUnknownSelected[i].olc.nodeType === "table_column") continue
 
+            let tableName = this.gTableUnknownSelected[i].title;
+
+            let myObject = new TadTableIgnore();
+            myObject.table_name = tableName;
+            axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_ignore",
+                myObject,
+                {headers: {'Content-Type': 'application/json'}}
+            ).then((response) => {
+                let data = response.data;
+
+                if (data.success) {
+                    // const {tablesUnknownTreeData} = this.state;
+                    let tablesUnknownTreeData = JSON.parse(JSON.stringify(this.state.tablesUnknownTreeData));
+                    tablesUnknownTreeData.forEach((item, index) => {
+                        if (item.key === data.data.table_name) {
+                            tablesUnknownTreeData.splice(index, 1)
+                        }
+                    })
+                    this.setState({
+                        tablesUnknownTreeData: tablesUnknownTreeData
+                    })
+                }
+            });
+        }
     }
 
+    getColumnDataType(name) {
+    }
+
+    // 导入结构
     onButtonInClicked() {
         for (let i = 0; i < this.gTableUnknownSelected.length; i++) {
             if (this.gTableUnknownSelected[i].olc.nodeType === "table_column") continue
@@ -888,32 +792,101 @@ export default class DatabaseStruct extends React.Component {
                 {headers: {'Content-Type': 'application/json'}}
             ).then((response) => {
                 let data = response.data;
-
                 if (data.success) {
+                    console.log(this.gTableUnknownSelected[i].children);
                     for (let j = 0; j < this.gTableUnknownSelected[i].children.length; j++) {
                         let tableColumnName = this.gTableUnknownSelected[i].children[j].key.split(".")[1];
+                        let tableColumnDataType = this.gTableUnknownSelected[i].children[j].olc.dataType;
+                        let tableColumnDataLength = this.gTableUnknownSelected[i].children[j].olc.dataLength;
 
                         let myTableColumn = new TadTableColumn();
                         myTableColumn.table_id = data.data.table_id;
                         myTableColumn.column_name = tableColumnName;
+                        myTableColumn.data_type = tableColumnDataType;
+                        myTableColumn.data_length = tableColumnDataLength;
 
                         axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_column",
                             myTableColumn,
                             {headers: {'Content-Type': 'application/json'}}
                         ).then((response2) => {
                             let data2 = response2.data;
+                            console.log(data2);
                             if (data2.success) {
-                                console.log("add column success");
+                                this.gData.columns.push(data2.data);
+                                this.gMap.columns.set(data2.data.column_id, {
+                                    column_id: data2.data.column_id,
+                                    table_id: data2.data.table_id,
+                                    column_name: data2.data.column_name,
+                                    column_desc: data2.data.column_desc,
+                                    column_type_id: data2.data.column_type_id,
+                                    data_type: data2.data.data_type,
+                                    data_length: data2.data.data_length,
+                                    data_default: data2.data.data_default,
+                                    is_null: data2.data.is_null,
+                                    primary_flag: data2.data.primary_flag,
+                                    split_flag: data2.data.split_flag,
+                                    repeat_flag: data2.data.repeat_flag
+                                });
+                                // 界面添加字段：
+                                let tablesKnownTreeData = JSON.parse(JSON.stringify(this.state.tablesKnownTreeData));
+                                let nodeTableColumn = {
+                                    key: data2.data.table_id + "_" + data2.data.column_id,
+                                    title: data2.data.column_name,
+                                    children: []
+                                }
+                                tablesKnownTreeData.forEach((item) => {
+                                    if (item.key === data2.data.table_id) {
+                                        item.children.push(nodeTableColumn);
+                                    }
+                                });
+                                this.setState({
+                                    tablesKnownTreeData: tablesKnownTreeData
+                                })
+
+                                // 全局数据添加字段
+                                this.gMap.tables.get(data2.data.table_id).columns.push(data2.data.column_id);
                             }
                         });
                     }
+
+                    // 从界面移除
+                    let tablesUnknownTreeData = JSON.parse(JSON.stringify(this.state.tablesUnknownTreeData));
+                    tablesUnknownTreeData.forEach((item, index) => {
+                        if (item.key === data.data.table_name) {
+                            tablesUnknownTreeData.splice(index, 1)
+                        }
+                    })
+                    // 界面添加表
+                    let tablesKnownTreeData = JSON.parse(JSON.stringify(this.state.tablesKnownTreeData));
+                    let nodeTable = {
+                        key: data.data.table_id,
+                        title: data.data.table_name,
+                        children: []
+                    }
+                    tablesKnownTreeData.push(nodeTable);
+
+                    // 全局数据添加表
+                    this.gData.tables.push(data.data);
+                    this.gMap.tables.set(data.data.table_id, {
+                        table_id: data.data.table_id,
+                        table_name: data.data.table_name,
+                        table_desc: data.data.table_desc,
+                        table_type_id: data.data.table_type_id,
+                        table_label_id: data.data.table_label_id,
+                        db_user_id: data.data.db_user_id,
+                        module_id: data.data.module_id,
+                        columns: []});
+                    this.setState({
+                        tablesKnownTreeData: tablesKnownTreeData,
+                        tablesUnknownTreeData: tablesUnknownTreeData
+                    })
                 }
             });
         }
     }
 
     onButtonOutClicked() {
-        console.log(this.gCurrent);
+
         /*
         let tablesKnown = JSON.parse(JSON.stringify(this.state.tablesKnown));
         let tablesUnknown = JSON.parse(JSON.stringify(this.state.tablesUnknown));
@@ -951,26 +924,15 @@ export default class DatabaseStruct extends React.Component {
     }
 
     render() {
-        const tableTableColumnsColumns = [
-            {
-                title: '字段名称',
-                dataIndex: 'column_name',
-                key: 'column_name',
-            },
-            {
-                title: '数据类型',
-                dataIndex: 'data_type',
-                key: 'data_type',
-            },
-            {
-                title: '数据长度',
-                dataIndex: 'data_length',
-                key: 'data_length',
-            },];
+        const options = [
+            {label: '未归档', value: 0},
+            {label: '已归档', value: 1},
+            {label: '已忽略', value: 2},
+        ];
 
-        return <div className="DatabaseStruct">
-            {/*1-1*/}
+        return <div className="DatabaseConfig">
             <div className={"BoxProductsInfo"}>
+                <div className={"BoxLabel"}>产品线产品信息：</div>
                 <div className={"BoxTree"}>
                     <Tree
                         blockNode={true}
@@ -983,144 +945,89 @@ export default class DatabaseStruct extends React.Component {
                 </div>
                 <div className={"BoxDescription"}>information</div>
             </div>
-            {/*1-2*/}
-            <div className={"BoxTables"}>
+            <div className={"BoxKnown"}>
+                <div className={"BoxLabel"}>数据库用户：</div>
                 <div className={"BoxSelect"}>
-                    <Select
-                        defaultValue={-1}
-                        onChange={this.onSelectDbUsersChanged}
-                        options={this.state.optionsDbUsers}>
-                    </Select>
+                    <Select ref={this.refSelectDbUsers}
+                            onChange={this.onSelectDbUsersChanged}
+                            defaultValue={this.state.dbUserSelected}
+                            options={this.state.dbUsersSelectOptions}/>
                 </div>
                 <div className={"BoxToolbar"}>
                     <Checkbox>分组显示</Checkbox>
+                    <Checkbox onChange={this.onCheckboxKnownTableDisplayChanged}>显示数据</Checkbox>
                 </div>
                 <div className={"BoxTreeAndTable"}>
                     <div className={"BoxTree"}>
                         <Tree
-                            // checkable
+                            checkable
                             blockNode={true}
-                            // showLine={true}
+                            showLine={true}
                             showIcon={true}
-                            // switcherIcon={<CaretDownOutlined/>}
-                            onSelect={this.onTreeTablesSelected}
-                            // onCheck={this.onTableKnownChecked}
+                            switcherIcon={<CaretDownOutlined/>}
+                            // onSelect={this.onSelect}
+                            onCheck={this.onTableKnownChecked}
                             treeData={this.state.tablesKnownTreeData}
                         />
                     </div>
+                    <div className={"HLine"} style={{display: this.state.uiTableKnownDisplay}}>&nbsp;</div>
+                    <div className={"BoxTable"} style={{display: this.state.uiTableKnownDisplay}}>
+                        <Table></Table>
+                    </div>
                 </div>
             </div>
-            {/*1-3*/}
-            <div className={"BoxPropertiesBorder"}>
-                <div>&nbsp;</div>
-                <div>&nbsp;</div>
-                <div>&nbsp;</div>
-                <div>&nbsp;</div>
-                <div className={"BoxProperties"}>
-                    <div className={"BoxTableProperties"}>
-                        <Input placeholder="请输该表用途的简单描述"/>
-                        <Select/>
-                        <Select/>
-                    </div>
-                    <div className={"BoxOtherProperties"}>
-                        <Tabs defaultActiveKey="1" type="card" tabBarGutter={5} animated={false}>
-                            <TabPane tab="表字段" key="1" className={"BoxTabPane"}>
-                                <div className={"BoxTableColumnProperties"}>
-                                    <div className={"BoxToolbar"}>
-                                        <div className={"BoxLabel"}>&nbsp;</div>
-                                        <Button>新增</Button>
-                                        <Button>修改</Button>
-                                        <Button>删除</Button>
-                                    </div>
-                                    <div className={"BoxDetail"}>
-                                        <Table
-                                            bordered={true}
-                                            size={"small"}
-                                            // pagination={{ pageSize: 50 }}
-                                            // pagination={{disabled: true, position: ["none", "none"] }}
-                                            pagination={{pageSize: this.state.pageSizeTableColumns, position: ["none", "none"]}}
-                                            scroll={{ y: 400 }}
-                                            dataSource={this.state.tableTableColumnsDataSource}
-                                            columns={tableTableColumnsColumns}/>
-                                    </div>
-                                </div>
-                            </TabPane>
-                            <TabPane tab="表索引" key="2">
-                                <div className={"BoxTableIndexProperties"}>
-                                    <div className={"BoxToolbar"}>
-                                        <div className={"BoxLabel"}>&nbsp;</div>
-                                        <Button>新增</Button>
-                                        <Button>修改</Button>
-                                        <Button>删除</Button>
-                                    </div>
-                                    <div className={"BoxDetail"}>
-                                        <Table/>
-                                    </div>
-                                </div>
-                            </TabPane>
-                            <TabPane tab="表分区" key="3">
-                                <div className={"BoxTablePartitionProperties"}>
-                                    <div className={"BoxToolbar"}>
-                                        <div className={"BoxLabel"}>&nbsp;</div>
-                                    </div>
-                                    <div className={"BoxDetail"}>
-                                        <div className={"BoxSqlParams"}>
-                                            <Select/>
-                                            <Select/>
-                                            <Input placeholder="分区参数"/>
-                                        </div>
-                                        <div className={"BoxSql"}>
-                                            <Input placeholder="SQL语句"/>
-                                        </div>
-                                    </div>
-                                </div>
-                            </TabPane>
-                            <TabPane tab="表关联" key="4">
-                                <div className={"BoxTableRelationProperties"}>
-                                    <div className={"BoxToolbar"}>
-                                        <div className={"BoxLabel"}>&nbsp;</div>
-                                        <Button>新增</Button>
-                                        <Button>修改</Button>
-                                        <Button>删除</Button>
-                                    </div>
-                                    <div className={"BoxDetail"}>
-                                        <Table/>
-                                    </div>
-                                </div>
-                            </TabPane>
-                            <TabPane tab="表数据" key="5">
-                                <div className={"BoxTableRelationProperties"}>
-                                    <div className={"BoxToolbar"}>
-                                        <div className={"BoxLabel"}>&nbsp;;</div>
-                                        <Button>新增</Button>
-                                        <Button>修改</Button>
-                                        <Button>删除</Button>
-                                    </div>
-                                    <div className={"BoxDetail"}>
-                                        <Table/>
-                                    </div>
-                                </div>
-                            </TabPane>
-                            <TabPane tab="表DDL" key="6">
-                                <div className={"BoxTableRelationProperties"}>
-                                    <div className={"BoxToolbar"}>
-                                        <div className={"BoxLabel"}>&nbsp;;</div>
-                                        <Button>新增</Button>
-                                        <Button>修改</Button>
-                                        <Button>删除</Button>
-                                    </div>
-                                    <div className={"BoxDetail"}>
-                                        <Table/>
-                                    </div>
-                                </div>
-                            </TabPane>
-                        </Tabs>
+            <div className={"BoxButtons"}>
+                <Button onClick={this.onButtonIsTempClicked} icon={<DeleteOutlined />}>无需归类</Button>
+                <Button onClick={this.onButtonInClicked} icon={<LeftOutlined />}>导入结构</Button>
+                <Button onClick={this.onButtonImportClicked} icon={<DoubleLeftOutlined />}>导入数据</Button>
+                <Button onClick={this.onButtonOutClicked} icon={<RightOutlined />}>移除结构</Button>
+                <Button onClick={this.onButtonDeleteClicked} icon={<DoubleRightOutlined />}>移除数据</Button>
+            </div>
+            <div className={"BoxUnknown"}>
+                <div className={"BoxLabel"}>待归档数据库表：</div>
+                <Select onChange={this.onSelectConnectionsChanged} defaultValue={-1}
+                        options={this.state.connectionsSelectOptions}/>
+                <div className={"BoxToolbar"}>
+                    <Checkbox>分组显示</Checkbox>
+                    <Checkbox onChange={this.onCheckboxUnknownTableDisplayChanged}>显示数据</Checkbox>
+                    <div className={"BoxTabs"}>
+                        <Radio.Group
+                            options={options}
+                            onChange={this.onRadioUnknownChanged}
+                            value={this.state.uiRadioUnknownSelected}
+                        />
                     </div>
                 </div>
-                <div>&nbsp;</div>
-                <div>&nbsp;</div>
-                <div>&nbsp;</div>
-                <div>&nbsp;</div>
+                <div className={"BoxTreeAndTable"}>
+                    <div className={"BoxList"}>
+                        <Tree className={"TreeLetters"}
+                              blockNode={true}
+                              showLine={false}
+                              showIcon={false}
+                            // switcherIcon={<CaretDownOutlined/>}
+                              onSelect={this.onTreeLettersSelected}
+                            //onCheck={this.onTableUnknownChecked}
+                              treeData={this.state.lettersTreeData}
+                        />
+                    </div>
+                    <div className={"BoxTree"}>
+                        <div className={"BoxTree2"}>
+                            <Tree className={"TreeUnknown"}
+                                  checkable
+                                  blockNode={true}
+                                  showLine={true}
+                                  showIcon={true}
+                                  switcherIcon={<CaretDownOutlined/>}
+                                // onSelect={this.onSelect}
+                                  onCheck={this.onTableUnknownChecked}
+                                  treeData={this.state.tablesUnknownTreeData}
+                            /></div>
+                        <div className={"HLine"} style={{display: this.state.uiTableUnknownDisplay}}>&nbsp;</div>
+                        <div className={"BoxTable"} style={{display: this.state.uiTableUnknownDisplay}}>
+                            <Table></Table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     }

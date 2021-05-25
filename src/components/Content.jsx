@@ -2,10 +2,10 @@ import React from 'react';
 import './Content.scss'
 import GCtx from "../GCtx";
 import DatabaseImport from "./DatabaseImport";
+import DatabaseMaintain from "./DatabaseMaintain";
+import DatabaseCompare from "./DatabaseCompare";
 import DatabaseExport from "./DatabaseExport";
 import LowcodeSingleTable from "./LowcodeSingleTable";
-import DatabaseRelation from "./DatabaseRelation";
-import DatabaseStruct from "./DatabaseStruct";
 
 class Content extends React.Component {
   static contextType = GCtx;
@@ -20,24 +20,6 @@ class Content extends React.Component {
     this.props.onRef(this);
   }
 
-  showComponentDatabaseStruct() {
-    let children = [];
-    children.push(<DatabaseStruct key="menu_database_struct"/>);
-
-    this.setState({
-      children: children
-    })
-  }
-
-  showComponentDatabaseRelation() {
-    let children = [];
-    children.push(<DatabaseRelation key="menu_database_relation"/>);
-
-    this.setState({
-      children: children
-    })
-  }
-
   showComponentDatabaseImport() {
     let children = [];
     children.push(<DatabaseImport key="menu_database_import"/>);
@@ -47,7 +29,34 @@ class Content extends React.Component {
     })
   }
 
+  showComponentDatabaseMaintain() {
+    let children = [];
+    children.push(<DatabaseMaintain key="menu_database_maintain"/>);
+
+    this.setState({
+      children: children
+    })
+  }
+
+  showComponentDatabaseCompare() {
+    let children = [];
+    children.push(<DatabaseCompare key="menu_database_compare"/>);
+
+    this.setState({
+      children: children
+    })
+  }
+
   showComponentDatabaseExport() {
+    let children = [];
+    children.push(<DatabaseExport key="menu_database_export"/>);
+
+    this.setState({
+      children: children
+    })
+  }
+
+  showComponentDatabaseConfig() {
     let children = [];
     children.push(<DatabaseExport key="menu_database_export"/>);
 

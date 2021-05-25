@@ -79,12 +79,18 @@ class App extends React.Component{
     }
 
     for (let item of subMenus) {
-      jsxSubMenu.push(
-        <div key={item.id}
-             className={"SubMenu"}
-             onClick={(e) => {
-               this.onSubMenuClicked(e, item.id)
-             }}>{item.label}</div>);
+      let nDivider = 0;
+      if (item.id === "menu_divider") {
+        nDivider++;
+        jsxSubMenu.push(<div className={"clsMenuDivider"} key={"menu_divider+" + nDivider}>&nbsp;</div> )
+      } else {
+        jsxSubMenu.push(
+            <div key={item.id}
+                 className={"SubMenu"}
+                 onClick={(e) => {
+                   this.onSubMenuClicked(e, item.id)
+                 }}>{item.label}</div>);
+      }
     }
 
     this.setState({
@@ -99,17 +105,20 @@ class App extends React.Component{
       case 'menu_lowcode_single_table':
         this.ComContent.showComponentLowcodeSingleTable();
         break
-      case 'menu_database_struct':
-        this.ComContent.showComponentDatabaseStruct();
-        break
-      case 'menu_database_relation':
-        this.ComContent.showComponentDatabaseRelation();
-        break
       case 'menu_database_import':
         this.ComContent.showComponentDatabaseImport();
         break
+      case 'menu_database_maintain':
+        this.ComContent.showComponentDatabaseMaintain();
+        break
+      case 'menu_database_compare':
+        this.ComContent.showComponentDatabaseCompare();
+        break
       case 'menu_database_export':
         this.ComContent.showComponentDatabaseExport();
+        break
+      case 'menu_database_config':
+        this.ComContent.showComponentDatabaseConfig();
         break
       default:
         break

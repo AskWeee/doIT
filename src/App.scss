@@ -31,13 +31,23 @@ $SubMenuSelectedColor: rgb(0, 79, 160);
     }
     color: rgb(225,225,225);
 
+    .clsMenuDivider {
+      height: 0;
+      margin: 3px 5px 3px 5px;
+      border: {
+        width: 1px 0 0 0;
+        style: solid;
+        color: rgba(255,255,255, 0.5);
+      }
+    }
+
     .SubMenu {
       cursor: pointer;
       background: $SubMenuBackgroundColor;
       border: {
         style: solid;
         color: $MenuBorderColor;
-        width: 0 0 1px 0;
+        width: 0 0 0 0;
       }
       padding: 5px 20px;
 

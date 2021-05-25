@@ -12,13 +12,15 @@ const GCtx = React.createContext({
     menus: [
         {
             id: 'menu_database', label: '数据库管理', desc: '数据库管理', ref: null, children: [
-                {id: 'menu_database_struct', label: '库表结构维护', desc: '库表结构维护', ref: null},
-                {id: 'menu_database_data', label: '库表基础数据维护', desc: '库表基础数据维护', ref: null},
-                {id: 'menu_database_relation', label: '库表及字段关系维护', desc: '库表及字段关系维护', ref: null},
-                {id: 'menu_database_struct_compare', label: '库表结构对比', desc: '库表结构对比', ref: null},
-                {id: 'menu_database_data_compare', label: '库表基础数据对比', desc: '库表基础数据对比', ref: null},
                 {id: 'menu_database_import', label: '库表结构及数据导入', desc: '库表结构及数据导入', ref: null},
-                {id: 'menu_database_export', label: '库表脚本导出', desc: '库表脚本导出', ref: null}
+                {id: 'menu_database_maintain', label: '库表结构及数据维护', desc: '库表结构及数据维护', ref: null},
+                {id: 'menu_database_compare', label: '库表结构及数据对比', desc: '库表结构及数据对比', ref: null},
+                {id: 'menu_database_export', label: '库表结构及数据导出', desc: '库表结构及数据导出', ref: null},
+                {id: 'menu_divider', label: '', desc: '', ref: null},
+                {id: 'menu_database_config', label: '基础信息配置管理', desc: '基础信息配置管理', ref: null},
+                // {id: 'menu_database_data', label: '库表基础数据维护', desc: '库表基础数据维护', ref: null},
+                // {id: 'menu_database_relation', label: '库表及字段关系维护', desc: '库表及字段关系维护', ref: null},
+                // {id: 'menu_database_data_compare', label: '库表基础数据对比', desc: '库表基础数据对比', ref: null},
             ]
         },
         {
@@ -32,7 +34,7 @@ const GCtx = React.createContext({
         {
             id: 'menu_lowcode', label: '低代码管理', desc: '', ref: null, children: [
                 {id: 'menu_lowcode_single_table', label: '单表维护页面生成', desc: '', ref: null},
-                {id: 'menu_lowcode_multi_table', label: '及链表维护页面生成', desc: '', ref: null},
+                {id: 'menu_lowcode_multi_table', label: '级联表维护页面生成', desc: '', ref: null},
                 {id: 'menu_lowcode_report', label: '报表页面生成', desc: '', ref: null},
                 {id: 'menu_lowcode_business_datasource', label: '业务组件数据源生成', desc: '', ref: null},
                 {id: 'menu_lowcode_business_object', label: '业务对象维护页面生成', desc: '', ref: null},
@@ -47,12 +49,12 @@ const GCtx = React.createContext({
                 {id: 'menu_operation_disk', label: '主机磁盘空间专项监控', desc: '', ref: null},
                 {id: 'menu_operation_kafka', label: 'Kafka专项监控', desc: '', ref: null},
                 {id: 'menu_operation_system_fault', label: '故障系统业务数据专项监控', desc: '', ref: null},
-                {id: 'menu_operation_product', label: '自研软件产品管理', desc: '自研软件产品管理', ref: null}
             ]
         },
         {
             id: 'menu_help', label: '帮助', desc: '', ref: null, children: [
                 {id: 'menu_help_guide', label: '系统使用指南', desc: '', ref: null},
+                {id: 'menu_divider', label: '', desc: '', ref: null},
                 {id: 'menu_help_about', label: '关于本系统', desc: '', ref: null}
             ]
         }],
