@@ -214,40 +214,7 @@ $tabs-border-color: rgb(225,225,225);
                     padding-right: 5px;
                     margin-top: 5px;
                     display: grid;
-                    grid-template-rows: auto auto;
-                    grid-gap: 3px;
-
-                    .BoxToolbar {
-                        display: grid;
-
-                        .BoxLabel {
-                            display: grid;
-                            align-content: end;
-                        }
-
-                    }
-                    .BoxDetail {
-                        display: grid;
-                        grid-template-rows: auto 60px;
-                        grid-gap: 5px;
-
-                        .BoxSqlParams {
-                            display: grid;
-                            grid-template-columns: auto auto 1fr;
-                            grid-gap: 5px;
-                        }
-
-                        .BoxSql {
-                            display: grid;
-                        }
-                    }
-                }
-
-                .BoxTableRelationProperties {
-                    padding-right: 5px;
-                    margin-top: 5px;
-                    display: grid;
-                    grid-template-rows: auto auto;
+                    grid-template-rows: auto 1fr;
                     grid-gap: 3px;
 
                     .BoxToolbar {
@@ -263,6 +230,30 @@ $tabs-border-color: rgb(225,225,225);
                     .BoxDetail {
                         display: grid;
                     }
+
+                }
+
+                .BoxTableRelationProperties {
+                    padding-right: 5px;
+                    margin-top: 5px;
+                    display: grid;
+                    grid-template-rows: auto 1fr;
+                    grid-gap: 3px;
+
+                    .BoxToolbar {
+                        display: grid;
+                        grid-template-columns: 1fr auto auto auto;
+                        grid-gap: 5px;
+
+                        .BoxLabel {
+                            display: grid;
+                            align-content: end;
+                        }
+                    }
+                    .BoxDetail {
+                        display: grid;
+                    }
+
                 }
             }
 

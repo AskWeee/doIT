@@ -1,6 +1,5 @@
 export default class TadModule{
 
-
     constructor() {
         this.module_id = null;
         this.product_id = null;
