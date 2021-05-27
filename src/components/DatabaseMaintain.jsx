@@ -4,10 +4,11 @@ import axios from "axios";
 import GCtx from "../GCtx";
 import {Button, Select, Tree, Checkbox, Table, Input, Tabs} from 'antd'
 import {CaretDownOutlined} from '@ant-design/icons'
-import TadTable from '../entity/TadTable'
 import TadTableColumn from '../entity/TadTableColumn'
 import Mock from 'mockjs'
-import TadTableIndex from "../entity/TabTableIndex";
+import TadTableIndex from "../entity/TadTableIndex";
+import TadTablePartition from "../entity/TadTablePartition";
+import TadTableRelation from "../entity/TadTableRelation";
 
 const {TabPane} = Tabs;
 
@@ -45,27 +46,61 @@ export default class DatabaseMaintain extends React.Component {
             tablesKnown: [],
             letters: ["a", "b"],
             tableTableColumnsColumns: [],
-            pageSizeTableColumns: 50,
-            pageSizeTableIndexes: 0,
-            pageSizeTablePartitions: 0,
 
-            dsTablePropertyColumns: [],
-            dsTablePropertyIndexes: [],
+            dsColumns: [],
+            dsIndexes: [],
+            dsPartitions: [],
+            dsRelations: [],
+            dsRecords: [],
+            tableDDL: "",
 
+            pageSizeColumns: 0,
+            pageSizeIndexes: 0,
+            pageSizePartitions: 0,
+            pageSizeRelations: 0,
+            pageSizeRecords: 0,
+
+            isShownButtonAddColumn: "block",
+            isShownButtonDeleteColumn: "block",
+            isShownButtonAlterColumnConfirm: "none",
+            isShownButtonAlterColumnCancel: "none",
             isShownButtonAddIndex: "block",
             isShownButtonDeleteIndex: "block",
             isShownButtonAlterIndexConfirm: "none",
             isShownButtonAlterIndexCancel: "none",
-
-            isEditingKeyTablePropertyIndex: -1,
-
             isShownButtonAddPartition: "block",
             isShownButtonDeletePartition: "block",
             isShownButtonAlterPartitionConfirm: "none",
             isShownButtonAlterPartitionCancel: "none",
+            isShownButtonAddRelation: "block",
+            isShownButtonDeleteRelation: "block",
+            isShownButtonAlterRelationConfirm: "none",
+            isShownButtonAlterRelationCancel: "none",
+            isShownButtonAddRecord: "block",
+            isShownButtonDeleteRecord: "block",
+            isShownButtonAlterRecordConfirm: "none",
+            isShownButtonAlterRecordCancel: "none",
 
-            isEditingKeyTablePropertyPartition: -1,
+            isEditingKeyColumn: -1,
+            isEditingKeyIndex: -1,
+            isEditingKeyPartition: -1,
+            isEditingKeyRelation: -1,
+            isEditingKeyData: -1,
 
+            editingColumn: {
+                key: -1,
+                column_id: -1,
+                table_id: -1,
+                name: "",
+                data_type: "",
+                data_length: -1,
+                data_default: "",
+                nullable_flag: "",
+                primary_flag: "",
+                split_flag: "",
+                repeat_flag: "",
+                desc: ""
+            },
             editingIndex: {
                 key: -1,
                 id: -1,
@@ -75,7 +110,32 @@ export default class DatabaseMaintain extends React.Component {
                 columns: "",
                 attributes: "",
                 desc: ""
-            }
+            },
+            editingPartition: {
+                key: -1,
+                id: -1,
+                table_id: -1,
+                type: "",
+                column: -1,
+                name: "",
+                operator: "",
+                expression: "",
+                tablespace: "",
+                desc: ""
+            },
+            editingRelation: {
+                key: -1,
+                id: -1,
+                type: "",
+                s_db_user_id: -1,
+                s_table_id: -1,
+                s_column_id: -1,
+                a_db_user_id: -1,
+                a_table_id: -1,
+                a_column_id: -1,
+                data_flow: "",
+                desc: ""
+            },
         }
 
 
@@ -94,7 +154,6 @@ export default class DatabaseMaintain extends React.Component {
         this.doNewGetTableColumns = this.doNewGetTableColumns.bind(this);
         this.doNewGetTypes = this.doNewGetTypes.bind(this);
         this.doNewGetDbConnections = this.doNewGetDbConnections.bind(this);
-        this.doGetSchemas = this.doGetSchemas.bind(this);
         this.doGetTablesByLetter = this.doGetTablesByLetter.bind(this);
         this.doMock = this.doMock.bind(this);
         this.onTreeLettersSelected = this.onTreeLettersSelected.bind(this);
@@ -115,8 +174,11 @@ export default class DatabaseMaintain extends React.Component {
         this.onTreeProductsSelected = this.onTreeProductsSelected.bind(this);
         this.onTreeTablesSelected = this.onTreeTablesSelected.bind(this);
 
-        this.onButtonInClicked = this.onButtonInClicked.bind(this);
-        this.onButtonOutClicked = this.onButtonOutClicked.bind(this);
+        this.onButtonAddColumnClicked = this.onButtonAddColumnClicked.bind(this);
+        this.onButtonAlterColumnClicked = this.onButtonAlterColumnClicked.bind(this);
+        this.onButtonDeleteColumnClicked = this.onButtonDeleteColumnClicked.bind(this);
+        this.onButtonAlterColumnConfirmClicked = this.onButtonAlterColumnConfirmClicked.bind(this);
+        this.onButtonAlterColumnCancelClicked = this.onButtonAlterColumnCancelClicked.bind(this);
         this.onButtonAddIndexClicked = this.onButtonAddIndexClicked.bind(this);
         this.onButtonAlterIndexClicked = this.onButtonAlterIndexClicked.bind(this);
         this.onButtonDeleteIndexClicked = this.onButtonDeleteIndexClicked.bind(this);
@@ -127,8 +189,19 @@ export default class DatabaseMaintain extends React.Component {
         this.onButtonDeletePartitionClicked = this.onButtonDeletePartitionClicked.bind(this);
         this.onButtonAlterPartitionConfirmClicked = this.onButtonAlterPartitionConfirmClicked.bind(this);
         this.onButtonAlterPartitionCancelClicked = this.onButtonAlterPartitionCancelClicked.bind(this);
+        this.onButtonAddRelationClicked = this.onButtonAddRelationClicked.bind(this);
+        this.onButtonAlterRelationClicked = this.onButtonAlterRelationClicked.bind(this);
+        this.onButtonDeleteRelationClicked = this.onButtonDeleteRelationClicked.bind(this);
+        this.onButtonAlterRelationConfirmClicked = this.onButtonAlterRelationConfirmClicked.bind(this);
+        this.onButtonAlterRelationCancelClicked = this.onButtonAlterRelationCancelClicked.bind(this);
+        this.onButtonAddRecordClicked = this.onButtonAddRecordClicked.bind(this);
+        this.onButtonAlterRecordClicked = this.onButtonAlterRecordClicked.bind(this);
+        this.onButtonDeleteRecordClicked = this.onButtonDeleteRecordClicked.bind(this);
+        this.onButtonAlterRecordConfirmClicked = this.onButtonAlterRecordConfirmClicked.bind(this);
+        this.onButtonAlterRecordCancelClicked = this.onButtonAlterRecordCancelClicked.bind(this);
 
-        this.onInputTablePropertyIndexNameChanged = this.onInputTablePropertyIndexNameChanged.bind(this);
+        this.onInputIndexNameChanged = this.onInputIndexNameChanged.bind(this);
+        this.onInputPartitionNameChanged = this.onInputPartitionNameChanged.bind(this);
     }
 
     test(s) {
@@ -652,6 +725,38 @@ export default class DatabaseMaintain extends React.Component {
         }
     }
 
+    // get table properties...
+
+    doGetTablePropertyColumns(params) {
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_column", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetTablePropertyIndexes(params) {
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_index", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetTablePropertyPartitions(params) {
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_partition", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetTablePropertyRelations(params) {
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_relation", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetTablePropertyRecords(params) {
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_records", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
     // ********** ********** ********** ********** **********
     // TREE...
     // ********** ********** ********** ********** **********
@@ -701,56 +806,96 @@ export default class DatabaseMaintain extends React.Component {
     };
 
     onTreeTablesSelected(selectedKeys, info) {
+
         if (selectedKeys[0] === undefined) return;
 
-        let nodeType = info.node.nodeType;
-        this.gCurrent.nodeSelectedType = nodeType;
-
+        this.gCurrent.nodeSelectedType = info.node.nodeType;
         this.gCurrent.tableId = parseInt(selectedKeys[0]);
 
-        let dsTablePropertyColumns = [];
-        let nColumns = 0;
-        this.gMap.tables.get(this.gCurrent.tableId).columns.forEach((itemColumn) => {
-            let tcId = itemColumn;
-            let column = this.gMap.columns.get(tcId);
-            let nodeColumn = {
-                key: this.gCurrent.tableId + "_" + tcId,
-                column_name: column.column_name,
-                data_type: column.data_type,
-                data_length: column.data_length
-            }
-            dsTablePropertyColumns.push(nodeColumn);
-            nColumns++;
-        })
-        this.setState({
-            pageSizeTableColumns: nColumns,
-            dsTablePropertyColumns: dsTablePropertyColumns,
-        })
-
-        let pageSizeTableIndexes = 0;
-        let dsTablePropertyIndexes = [];
+        let myColumn = new TadTableColumn();
         let myIndex = new TadTableIndex();
+        let myPartition = new TadTablePartition();
+        let myRelation = new TadTableRelation();
+
+        myColumn.table_id = this.gCurrent.tableId;
         myIndex.table_id = this.gCurrent.tableId;
-        axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_index",
-            myIndex,
-            {headers: {'Content-Type': 'application/json'}}
-        ).then((response) => {
-            let data = response.data;
+        myPartition.table_id = this.gCurrent.tableId;
+        myRelation.s_table_id = this.gCurrent.tableId;
 
-            if (data.success) {
-                data.data.forEach((index) => {
-                    pageSizeTableIndexes++;
-                    let uiIndex = index;
-                    uiIndex.key = index.id;
-                    dsTablePropertyIndexes.push(uiIndex);
-                })
-                this.setState({
-                    pageSizeTableIndexes: pageSizeTableIndexes,
-                    dsTablePropertyIndexes: dsTablePropertyIndexes
-                })
-            }
-        });
+        axios.all([
+            this.doGetTablePropertyColumns(myColumn),
+            this.doGetTablePropertyIndexes(myIndex),
+            this.doGetTablePropertyPartitions(myPartition),
+            this.doGetTablePropertyRelations(myRelation)
+        ]).then(axios.spread((
+            columns,
+            indexes,
+            partitions,
+            relations) => {
+            console.log(columns);
+            let pageSizeColumns = columns.data.data.length;
+            let dsColumns = [];
+            let pageSizeIndexes = indexes.data.data.length;
+            let dsIndexes = [];
+            let pageSizePartitions = partitions.data.data.length;
+            let dsPartitions = [];
+            let pageSizeRelations = relations.data.data.length;
+            let dsRelations = [];
 
+            let table = this.gMap.tables.get(this.gCurrent.tableId);
+            let tableDDL = "CREATE TABLE " + table.table_name + "(\n";
+
+            columns.data.data.forEach((item) => {
+                console.log(item);
+                let uiObject = item;
+                uiObject.key = item.column_id;
+                dsColumns.push(uiObject);
+
+                switch (item.data_type) {
+                    case "varchar":
+                    case "varchar2":
+                        tableDDL += "\t" + item.column_name + " " + item.data_type + "(" + item.data_length + "),\n"
+                        break
+                    default:
+                        tableDDL += "\t" + item.column_name + " " + item.data_type + ",\n"
+                        break
+                }
+
+            })
+            tableDDL = tableDDL.substr(0, tableDDL.length - 2);
+            tableDDL += "\n);\n\n";
+
+            indexes.data.data.forEach((item) => {
+                let uiObject = item;
+                uiObject.key = item.id;
+                dsIndexes.push(uiObject);
+            })
+
+            partitions.data.data.forEach((item) => {
+                let uiObject = item;
+                uiObject.key = item.id;
+                dsPartitions.push(uiObject);
+            })
+
+            relations.data.data.forEach((item) => {
+                let uiObject = item;
+                uiObject.key = item.id;
+                dsRelations.push(uiObject);
+            })
+
+
+            this.setState({
+                pageSizeColumns: pageSizeColumns,
+                dsColumns: dsColumns,
+                pageSizeIndexes: pageSizeIndexes,
+                dsIndexes: dsIndexes,
+                pageSizePartitions: pageSizePartitions,
+                dsPartitions: dsPartitions,
+                pageSizeRelations: pageSizeRelations,
+                dsRelations: dsRelations,
+                tableDDL: tableDDL
+            })
+        }));
     };
 
     // ********** ********** ********** ********** **********
@@ -943,6 +1088,105 @@ export default class DatabaseMaintain extends React.Component {
     // BUTTON...
     // ********** ********** ********** ********** **********
 
+    // Column...
+    onButtonAddColumnClicked() {
+        let tableId = this.gCurrent.tableId;
+        let objectId = null;
+
+        let myObject = new TadTableColumn();
+        myObject.table_id = tableId;
+
+        axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_column",
+            myObject,
+            {headers: {'Content-Type': 'application/json'}}
+        ).then((response) => {
+            let data = response.data;
+
+            if (data.success) {
+                objectId = data.data.column_id;
+                let uiObject = data.data;
+                uiObject.key = objectId;
+
+                let dsColumns = JSON.parse(JSON.stringify(this.state.dsColumns));
+
+                dsColumns.push(uiObject);
+                this.setState({
+                    pageSizeColumns: this.state.pageSizeColumns + 1,
+                    dsColumns: dsColumns
+                })
+            }
+        });
+    }
+
+    onButtonAlterColumnClicked() {
+
+        this.setState({
+            isShownButtonAddIndex: "none",
+            isShownButtonDeleteIndex: "none",
+            isShownButtonAlterIndexConfirm: "block",
+            isShownButtonAlterIndexCancel: "block",
+        })
+    }
+
+    onButtonAlterColumnConfirmClicked() {
+
+        let myIndex = new TadTableIndex();
+        myIndex.id = this.state.editingIndex.id;
+        myIndex.table_id = this.state.editingIndex.table_id;
+        myIndex.index_name = this.state.editingIndex.name;
+        myIndex.index_type = this.state.editingIndex.type;
+        myIndex.index_columns = this.state.editingIndex.columns;
+        myIndex.index_attributes = this.state.editingIndex.attributes;
+        myIndex.index_desc = this.state.editingIndex.desc;
+
+        axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/update_table_index",
+            myIndex,
+            {headers: {'Content-Type': 'application/json'}}
+        ).then((response) => {
+            let data = response.data;
+
+            if (data.success) {
+                let dsIndexes = JSON.parse(JSON.stringify(this.state.dsIndexes));
+
+                for (let i = 0; i < dsIndexes.length; i++) {
+                    let record = dsIndexes[i];
+                    if (record.key === this.state.editingIndex.key) {
+                        record.index_name = this.state.editingIndex.name;
+                        record.index_type = this.state.editingIndex.type;
+                        record.index_columns = this.state.editingIndex.columns;
+                        record.index_attributes = this.state.editingIndex.attributes;
+
+                        break
+                    }
+                }
+
+                this.setState({
+                    dsIndexes: dsIndexes,
+                    isShownButtonAddIndex: "block",
+                    isShownButtonDeleteIndex: "block",
+                    isShownButtonAlterIndexConfirm: "none",
+                    isShownButtonAlterIndexCancel: "none",
+                })
+            }
+        });
+
+    }
+
+    onButtonAlterColumnCancelClicked() {
+
+        this.setState({
+            isShownButtonAddIndex: "block",
+            isShownButtonDeleteIndex: "block",
+            isShownButtonAlterIndexConfirm: "none",
+            isShownButtonAlterIndexCancel: "none",
+        })
+    }
+
+    onButtonDeleteColumnClicked() {
+
+    }
+
+    // Index...
     onButtonAddIndexClicked() {
         let tableId = this.gCurrent.tableId;
         let indexId = null;
@@ -974,12 +1218,12 @@ export default class DatabaseMaintain extends React.Component {
                     index_desc: ""
                 }
 
-                let dsTablePropertyIndexes = JSON.parse(JSON.stringify(this.state.dsTablePropertyIndexes));
+                let dsIndexes = JSON.parse(JSON.stringify(this.state.dsIndexes));
 
-                dsTablePropertyIndexes.push(uiIndex);
+                dsIndexes.push(uiIndex);
                 this.setState({
                     pageSizeTableIndexes: this.state.pageSizeTableIndexes + 1,
-                    dsTablePropertyIndexes: dsTablePropertyIndexes
+                    dsIndexes: dsIndexes
                 })
             }
         });
@@ -1013,10 +1257,10 @@ export default class DatabaseMaintain extends React.Component {
             let data = response.data;
 
             if (data.success) {
-                let dsTablePropertyIndexes = JSON.parse(JSON.stringify(this.state.dsTablePropertyIndexes));
+                let dsIndexes = JSON.parse(JSON.stringify(this.state.dsIndexes));
 
-                for (let i = 0; i < dsTablePropertyIndexes.length; i++) {
-                    let record = dsTablePropertyIndexes[i];
+                for (let i = 0; i < dsIndexes.length; i++) {
+                    let record = dsIndexes[i];
                     if (record.key === this.state.editingIndex.key) {
                         record.index_name = this.state.editingIndex.name;
                         record.index_type = this.state.editingIndex.type;
@@ -1028,7 +1272,7 @@ export default class DatabaseMaintain extends React.Component {
                 }
 
                 this.setState({
-                    dsTablePropertyIndexes: dsTablePropertyIndexes,
+                    dsIndexes: dsIndexes,
                     isShownButtonAddIndex: "block",
                     isShownButtonDeleteIndex: "block",
                     isShownButtonAlterIndexConfirm: "none",
@@ -1053,8 +1297,210 @@ export default class DatabaseMaintain extends React.Component {
 
     }
 
+    // Partition...
     onButtonAddPartitionClicked() {
-        /*
+
+        let tableId = this.gCurrent.tableId;
+        let partitionId = null;
+
+        let myObject = new TadTablePartition();
+        myObject.table_id = tableId;
+
+        axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_partition",
+            myObject,
+            {headers: {'Content-Type': 'application/json'}}
+        ).then((response) => {
+            let data = response.data;
+
+            if (data.success) {
+                partitionId = data.data.id;
+                let uiPartition = data.data;
+                uiPartition.key = partitionId;
+
+                let dsPartitions = JSON.parse(JSON.stringify(this.state.dsPartitions));
+
+                dsPartitions.push(uiPartition);
+                this.setState({
+                    pageSizePartitions: this.state.pageSizePartitions + 1,
+                    dsPartitions: dsPartitions
+                })
+            }
+        });
+    }
+
+    onButtonAlterPartitionClicked() {
+
+        this.setState({
+            isShownButtonAddPartition: "none",
+            isShownButtonDeletePartition: "none",
+            isShownButtonAlterPartitionConfirm: "block",
+            isShownButtonAlterPartitionCancel: "block",
+        })
+    }
+
+    onButtonAlterPartitionConfirmClicked() {
+
+        let myObject = new TadTablePartition();
+        myObject.id = this.state.editingPartition.id;
+        myObject.table_id = this.state.editingPartition.table_id;
+        myObject.partition_type = this.state.editingPartition.type;
+        myObject.partition_column = this.state.editingPartition.column;
+        myObject.partition_name = this.state.editingPartition.name;
+        myObject.partition_operator = this.state.editingPartition.operator;
+        myObject.partition_tablespace = this.state.editingPartition.tablespace;
+        myObject.partition_desc = this.state.editingPartition.desc;
+
+        axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/update_table_partition",
+            myObject,
+            {headers: {'Content-Type': 'application/json'}}
+        ).then((response) => {
+            let data = response.data;
+
+            if (data.success) {
+                let dsPartitions = JSON.parse(JSON.stringify(this.state.dsPartitions));
+
+                for (let i = 0; i < dsPartitions.length; i++) {
+                    let record = dsPartitions[i];
+                    if (record.key === this.state.editingPartition.key) {
+                        record.id = this.state.editingPartition.id;
+                        record.table_id = this.state.editingPartition.table_id;
+                        record.partition_type = this.state.editingPartition.type;
+                        record.partition_column = this.state.editingPartition.column;
+                        record.partition_name = this.state.editingPartition.name;
+                        record.partition_operator = this.state.editingPartition.operator;
+                        record.partition_tablespace = this.state.editingPartition.tablespace;
+                        record.partition_desc = this.state.editingPartition.desc;
+
+                        break
+                    }
+                }
+
+                this.setState({
+                    dsPartitions: dsPartitions,
+                    isShownButtonAddPartition: "block",
+                    isShownButtonDeletePartition: "block",
+                    isShownButtonAlterPartitionConfirm: "none",
+                    isShownButtonAlterPartitionCancel: "none",
+                })
+            }
+        });
+
+    }
+
+    onButtonAlterPartitionCancelClicked() {
+
+        this.setState({
+            isShownButtonAddPartition: "block",
+            isShownButtonDeletePartition: "block",
+            isShownButtonAlterPartitionConfirm: "none",
+            isShownButtonAlterPartitionCancel: "none",
+        })
+    }
+
+    onButtonDeletePartitionClicked() {
+
+    }
+
+    // Relation...
+    onButtonAddRelationClicked() {
+        let tableId = this.gCurrent.tableId;
+        let relationId = null;
+
+        let myRelation = new TadTableRelation();
+        myRelation.s_table_id = tableId;
+
+        axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_relation",
+            myRelation,
+            {headers: {'Content-Type': 'application/json'}}
+        ).then((response) => {
+            let data = response.data;
+
+            if (data.success) {
+                relationId = data.data.id;
+                let uiRelation = data.data;
+                uiRelation.key = relationId;
+
+                let dsRelations = JSON.parse(JSON.stringify(this.state.dsRelations));
+
+                dsRelations.push(uiRelation);
+                this.setState({
+                    pageSizeRelations: this.state.pageSizeRelations + 1,
+                    dsRelations: dsRelations
+                })
+            }
+        });
+    }
+
+    onButtonAlterRelationClicked() {
+
+        this.setState({
+            isShownButtonAddIndex: "none",
+            isShownButtonDeleteIndex: "none",
+            isShownButtonAlterIndexConfirm: "block",
+            isShownButtonAlterIndexCancel: "block",
+        })
+    }
+
+    onButtonAlterRelationConfirmClicked() {
+
+        let myIndex = new TadTableIndex();
+        myIndex.id = this.state.editingIndex.id;
+        myIndex.table_id = this.state.editingIndex.table_id;
+        myIndex.index_name = this.state.editingIndex.name;
+        myIndex.index_type = this.state.editingIndex.type;
+        myIndex.index_columns = this.state.editingIndex.columns;
+        myIndex.index_attributes = this.state.editingIndex.attributes;
+        myIndex.index_desc = this.state.editingIndex.desc;
+
+        axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/update_table_index",
+            myIndex,
+            {headers: {'Content-Type': 'application/json'}}
+        ).then((response) => {
+            let data = response.data;
+
+            if (data.success) {
+                let dsIndexes = JSON.parse(JSON.stringify(this.state.dsIndexes));
+
+                for (let i = 0; i < dsIndexes.length; i++) {
+                    let record = dsIndexes[i];
+                    if (record.key === this.state.editingIndex.key) {
+                        record.index_name = this.state.editingIndex.name;
+                        record.index_type = this.state.editingIndex.type;
+                        record.index_columns = this.state.editingIndex.columns;
+                        record.index_attributes = this.state.editingIndex.attributes;
+
+                        break
+                    }
+                }
+
+                this.setState({
+                    dsIndexes: dsIndexes,
+                    isShownButtonAddIndex: "block",
+                    isShownButtonDeleteIndex: "block",
+                    isShownButtonAlterIndexConfirm: "none",
+                    isShownButtonAlterIndexCancel: "none",
+                })
+            }
+        });
+
+    }
+
+    onButtonAlterRelationCancelClicked() {
+
+        this.setState({
+            isShownButtonAddIndex: "block",
+            isShownButtonDeleteIndex: "block",
+            isShownButtonAlterIndexConfirm: "none",
+            isShownButtonAlterIndexCancel: "none",
+        })
+    }
+
+    onButtonDeleteRelationClicked() {
+
+    }
+
+    // Record...
+    onButtonAddRecordClicked() {
         let tableId = this.gCurrent.tableId;
         let indexId = null;
 
@@ -1085,31 +1531,29 @@ export default class DatabaseMaintain extends React.Component {
                     index_desc: ""
                 }
 
-                let dsTablePropertyIndexes = JSON.parse(JSON.stringify(this.state.dsTablePropertyIndexes));
+                let dsIndexes = JSON.parse(JSON.stringify(this.state.dsIndexes));
 
-                dsTablePropertyIndexes.push(uiIndex);
+                dsIndexes.push(uiIndex);
                 this.setState({
                     pageSizeTableIndexes: this.state.pageSizeTableIndexes + 1,
-                    dsTablePropertyIndexes: dsTablePropertyIndexes
+                    dsIndexes: dsIndexes
                 })
             }
         });
-
-         */
     }
 
-    onButtonAlterPartitionClicked() {
+    onButtonAlterRecordClicked() {
 
         this.setState({
-            isShownButtonAddPartition: "none",
-            isShownButtonDeletePartition: "none",
-            isShownButtonAlterPartitionConfirm: "block",
-            isShownButtonAlterPartitionCancel: "block",
+            isShownButtonAddIndex: "none",
+            isShownButtonDeleteIndex: "none",
+            isShownButtonAlterIndexConfirm: "block",
+            isShownButtonAlterIndexCancel: "block",
         })
     }
 
-    onButtonAlterPartitionConfirmClicked() {
-        /*
+    onButtonAlterRecordConfirmClicked() {
+
         let myIndex = new TadTableIndex();
         myIndex.id = this.state.editingIndex.id;
         myIndex.table_id = this.state.editingIndex.table_id;
@@ -1126,10 +1570,10 @@ export default class DatabaseMaintain extends React.Component {
             let data = response.data;
 
             if (data.success) {
-                let dsTablePropertyIndexes = JSON.parse(JSON.stringify(this.state.dsTablePropertyIndexes));
+                let dsIndexes = JSON.parse(JSON.stringify(this.state.dsIndexes));
 
-                for (let i = 0; i < dsTablePropertyIndexes.length; i++) {
-                    let record = dsTablePropertyIndexes[i];
+                for (let i = 0; i < dsIndexes.length; i++) {
+                    let record = dsIndexes[i];
                     if (record.key === this.state.editingIndex.key) {
                         record.index_name = this.state.editingIndex.name;
                         record.index_type = this.state.editingIndex.type;
@@ -1141,125 +1585,36 @@ export default class DatabaseMaintain extends React.Component {
                 }
 
                 this.setState({
-                    dsTablePropertyIndexes: dsTablePropertyIndexes,
-                    isShownButtonAddPartition: "block",
-                    isShownButtonDeletePartition: "block",
-                    isShownButtonAlterPartitionConfirm: "none",
-                    isShownButtonAlterPartitionCancel: "none",
+                    dsIndexes: dsIndexes,
+                    isShownButtonAddIndex: "block",
+                    isShownButtonDeleteIndex: "block",
+                    isShownButtonAlterIndexConfirm: "none",
+                    isShownButtonAlterIndexCancel: "none",
                 })
             }
         });
 
-         */
-        this.setState({
-            isShownButtonAddPartition: "block",
-            isShownButtonDeletePartition: "block",
-            isShownButtonAlterPartitionConfirm: "none",
-            isShownButtonAlterPartitionCancel: "none",
-        })
     }
 
-    onButtonAlterPartitionCancelClicked() {
+    onButtonAlterRecordCancelClicked() {
 
         this.setState({
-            isShownButtonAddPartition: "block",
-            isShownButtonDeletePartition: "block",
-            isShownButtonAlterPartitionConfirm: "none",
-            isShownButtonAlterPartitionCancel: "none",
+            isShownButtonAddIndex: "block",
+            isShownButtonDeleteIndex: "block",
+            isShownButtonAlterIndexConfirm: "none",
+            isShownButtonAlterIndexCancel: "none",
         })
     }
 
-    onButtonDeletePartitionClicked() {
+    onButtonDeleteRecordClicked() {
 
-    }
-
-    onButtonIsTempClicked() {
-
-    }
-
-    onButtonInClicked() {
-        for (let i = 0; i < this.gTableUnknownSelected.length; i++) {
-            if (this.gTableUnknownSelected[i].olc.nodeType === "table_column") continue
-
-            let tableName = this.gTableUnknownSelected[i].title;
-
-            let myTable = new TadTable();
-            myTable.table_name = tableName;
-            myTable.db_user_id = this.gCurrent.dbUserId;
-            myTable.module_id = this.gCurrent.moduleId;
-
-            axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table",
-                myTable,
-                {headers: {'Content-Type': 'application/json'}}
-            ).then((response) => {
-                let data = response.data;
-
-                if (data.success) {
-                    for (let j = 0; j < this.gTableUnknownSelected[i].children.length; j++) {
-                        let tableColumnName = this.gTableUnknownSelected[i].children[j].key.split(".")[1];
-
-                        let myTableColumn = new TadTableColumn();
-                        myTableColumn.table_id = data.data.table_id;
-                        myTableColumn.column_name = tableColumnName;
-
-                        axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_column",
-                            myTableColumn,
-                            {headers: {'Content-Type': 'application/json'}}
-                        ).then((response2) => {
-                            let data2 = response2.data;
-                            if (data2.success) {
-                                //
-                            }
-                        });
-                    }
-                }
-            });
-        }
-    }
-
-    onButtonOutClicked() {
-
-        /*
-        let tablesKnown = JSON.parse(JSON.stringify(this.state.tablesKnown));
-        let tablesUnknown = JSON.parse(JSON.stringify(this.state.tablesUnknown));
-
-        this.gTableKnownSelected.forEach(function (item) {
-            tablesUnknown.push(item);
-            for (let i = 0; i < tablesKnown.length; i++) {
-                if (tablesKnown[i].title === item.title) {
-                    tablesKnown.splice(i, 1);
-                    break
-                }
-            }
-        })
-
-        this.setState({
-            tablesKnown: tablesKnown,
-            tablesUnknown: tablesUnknown
-        })
-
-         */
-    }
-
-    onButtonImportClicked() {
-
-    }
-
-    onButtonDeleteClicked() {
-
-    }
-
-    doGetSchemas(params) {
-        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_connection", params,
-            {headers: {'Content-Type': 'application/json'}}).then((response) => {
-        });
     }
 
     // ********** ********** ********** ********** **********
     // TABLE ROW...
     // ********** ********** ********** ********** **********
 
-    onRowTablePropertyIndexSelected = {
+    onRowColumnSelected = {
         onChange: (selectedRowKeys, selectedRows) => {
             let isShownButtonAlterIndexConfirm = this.state.isShownButtonAlterIndexConfirm;
             if (isShownButtonAlterIndexConfirm === "block") return false;
@@ -1285,7 +1640,161 @@ export default class DatabaseMaintain extends React.Component {
 
             this.setState({
                 editingIndex: editingIndex,
-                isEditingKeyTablePropertyIndex: selectedRows[0].key
+                isEditingKeyIndex: selectedRows[0].key
+            })
+        },
+        renderCell: (checked, record, index, originNode) => {
+            return (
+                <Fragment>
+                    {this.state.isShownButtonAlterColumnConfirm === "none" && (originNode)}
+                </Fragment>
+            )
+        }
+    }
+
+    onRowIndexSelected = {
+        onChange: (selectedRowKeys, selectedRows) => {
+            let isShownButtonAlterIndexConfirm = this.state.isShownButtonAlterIndexConfirm;
+            if (isShownButtonAlterIndexConfirm === "block") return false;
+
+            let arrPropertyName = Object.keys(selectedRows[0]);
+            let mapValues = new Map();
+            for (let item of arrPropertyName) {
+                mapValues.set(item, selectedRows[0][item])
+            }
+
+            this.gCurrent.selectedRowsTablePropertyIndex = selectedRows[0];
+
+            let editingIndex = JSON.parse(JSON.stringify(this.state.editingIndex));
+
+            editingIndex.key = selectedRows[0].key;
+            editingIndex.id = selectedRows[0].id;
+            editingIndex.table_id = selectedRows[0].table_id;
+            editingIndex.name = selectedRows[0].index_name;
+            editingIndex.type = selectedRows[0].index_type;
+            editingIndex.columns = selectedRows[0].index_columns;
+            editingIndex.attributes = selectedRows[0].index_attributes;
+            editingIndex.desc = selectedRows[0].index_desc;
+
+            this.setState({
+                editingIndex: editingIndex,
+                isEditingKeyIndex: selectedRows[0].key
+            })
+        },
+        renderCell: (checked, record, index, originNode) => {
+            return (
+                <Fragment>
+                    {this.state.isShownButtonAlterIndexConfirm === "none" && (originNode)}
+                </Fragment>
+            )
+        }
+    }
+
+    onRowPartitionSelected = {
+        onChange: (selectedRowKeys, selectedRows) => {
+            let isShownButtonAlterPartitionConfirm = this.state.isShownButtonAlterPartitionConfirm;
+            if (isShownButtonAlterPartitionConfirm === "block") return false;
+
+            // let arrPropertyName = Object.keys(selectedRows[0]);
+            // let mapValues = new Map();
+            // for (let item of arrPropertyName) {
+            //     mapValues.set(item, selectedRows[0][item])
+            // }
+
+            this.gCurrent.selectedRowsPartition = selectedRows[0];
+
+            let editingPartition = JSON.parse(JSON.stringify(this.state.editingPartition));
+
+            editingPartition.key = selectedRows[0].key;
+            editingPartition.id = selectedRows[0].id;
+            editingPartition.table_id = selectedRows[0].table_id;
+            editingPartition.type = selectedRows[0].partition_type;
+            editingPartition.column = selectedRows[0].partition_column;
+            editingPartition.name = selectedRows[0].partition_name;
+            editingPartition.operator = selectedRows[0].partition_operator;
+            editingPartition.expression = selectedRows[0].partition_expression;
+            editingPartition.tablespace = selectedRows[0].partition_tablespace;
+            editingPartition.desc = selectedRows[0].partition_desc;
+
+            this.setState({
+                editingPartition: editingPartition,
+                isEditingKeyPartition: selectedRows[0].key
+            })
+        },
+        renderCell: (checked, record, index, originNode) => {
+            return (
+                <Fragment>
+                    {this.state.isShownButtonAlterPartitionConfirm === "none" && (originNode)}
+                </Fragment>
+            )
+        }
+    }
+
+    onRowRelationSelected = {
+        onChange: (selectedRowKeys, selectedRows) => {
+            let isShownButtonAlterIndexConfirm = this.state.isShownButtonAlterIndexConfirm;
+            if (isShownButtonAlterIndexConfirm === "block") return false;
+
+            let arrPropertyName = Object.keys(selectedRows[0]);
+            let mapValues = new Map();
+            for (let item of arrPropertyName) {
+                mapValues.set(item, selectedRows[0][item])
+            }
+
+            this.gCurrent.selectedRowsTablePropertyIndex = selectedRows[0];
+
+            let editingIndex = JSON.parse(JSON.stringify(this.state.editingIndex));
+
+            editingIndex.key = selectedRows[0].key;
+            editingIndex.id = selectedRows[0].id;
+            editingIndex.table_id = selectedRows[0].table_id;
+            editingIndex.name = selectedRows[0].index_name;
+            editingIndex.type = selectedRows[0].index_type;
+            editingIndex.columns = selectedRows[0].index_columns;
+            editingIndex.attributes = selectedRows[0].index_attributes;
+            editingIndex.desc = selectedRows[0].index_desc;
+
+            this.setState({
+                editingIndex: editingIndex,
+                isEditingKeyIndex: selectedRows[0].key
+            })
+        },
+        renderCell: (checked, record, index, originNode) => {
+            return (
+                <Fragment>
+                    {this.state.isShownButtonAlterRelationConfirm === "none" && (originNode)}
+                </Fragment>
+            )
+        }
+    }
+
+    onRowRecordSelected = {
+        onChange: (selectedRowKeys, selectedRows) => {
+            let isShownButtonAlterIndexConfirm = this.state.isShownButtonAlterIndexConfirm;
+            if (isShownButtonAlterIndexConfirm === "block") return false;
+
+            let arrPropertyName = Object.keys(selectedRows[0]);
+            let mapValues = new Map();
+            for (let item of arrPropertyName) {
+                mapValues.set(item, selectedRows[0][item])
+            }
+
+            this.gCurrent.selectedRowsTablePropertyIndex = selectedRows[0];
+
+            let editingIndex = JSON.parse(JSON.stringify(this.state.editingIndex));
+
+            editingIndex.key = selectedRows[0].key;
+            editingIndex.id = selectedRows[0].id;
+            editingIndex.table_id = selectedRows[0].table_id;
+            editingIndex.name = selectedRows[0].index_name;
+            editingIndex.type = selectedRows[0].index_type;
+            editingIndex.columns = selectedRows[0].index_columns;
+            editingIndex.attributes = selectedRows[0].index_attributes;
+            editingIndex.desc = selectedRows[0].index_desc;
+
+            this.setState({
+                editingIndex: editingIndex,
+                isEditingKeyIndex: selectedRows[0].key
             })
         },
         renderCell: (checked, record, index, originNode) => {
@@ -1301,7 +1810,7 @@ export default class DatabaseMaintain extends React.Component {
     // INPUT...
     // ********** ********** ********** ********** **********
 
-    onInputTablePropertyIndexNameChanged(e) {
+    onInputIndexNameChanged(e) {
 
         let editingIndex = JSON.parse(JSON.stringify(this.state.editingIndex));
         editingIndex.name = e.target.value;
@@ -1310,8 +1819,17 @@ export default class DatabaseMaintain extends React.Component {
         })
     }
 
+    onInputPartitionNameChanged(e) {
+
+        let editingPartition = JSON.parse(JSON.stringify(this.state.editingPartition));
+        editingPartition.name = e.target.value;
+        this.setState({
+            editingPartition: editingPartition
+        })
+    }
+
     render() {
-        const tableTableColumnsColumns = [
+        const columnsColumn = [
             {
                 title: '字段名称',
                 dataIndex: 'column_name',
@@ -1348,9 +1866,14 @@ export default class DatabaseMaintain extends React.Component {
                 key: 'split_flag',
             },
             {
-                title: '重复标识符',
+                title: '是否可重复',
                 dataIndex: 'repeat_flag',
                 key: 'repeat_flag',
+            },
+            {
+                title: '字段简述',
+                dataIndex: 'column_desc',
+                key: 'column_desc',
             },
         ];
         const columnsIndex = [
@@ -1361,21 +1884,21 @@ export default class DatabaseMaintain extends React.Component {
                 render: (text, record, index) => {
                     return (
                         <Fragment>
-                            {this.state.isEditingKeyTablePropertyIndex !== record.key && (
+                            {this.state.isEditingKeyIndex !== record.key && (
                                 <span>
                                 {text}
                                 </span>
                             )}
-                            {this.state.isEditingKeyTablePropertyIndex === record.key && (
+                            {this.state.isEditingKeyIndex === record.key && (
                                 <span style={{display: this.state.isShownButtonAddIndex}}>
                                 {text}
                                 </span>
                             )}
-                            {this.state.isEditingKeyTablePropertyIndex === record.key && (
+                            {this.state.isEditingKeyIndex === record.key && (
                                 <Input
                                     style={{display: this.state.isShownButtonAlterIndexConfirm}}
                                     value={this.state.editingIndex.name}
-                                    onChange={this.onInputTablePropertyIndexNameChanged}
+                                    onChange={this.onInputIndexNameChanged}
                                 />
                             )}
                         </Fragment>
@@ -1405,56 +1928,84 @@ export default class DatabaseMaintain extends React.Component {
                 key: 'partition_column',
             },
             {
-                title: '分区名称', // for RANGE LIST
+                title: '分区名称',
                 dataIndex: 'partition_name',
                 key: 'partition_name',
+                render: (text, record, index) => {
+                    return (
+                        <Fragment>
+                            {this.state.isEditingKeyPartition !== record.key && (
+                                <span>
+                                {text}
+                                </span>
+                            )}
+                            {this.state.isEditingKeyPartition === record.key && (
+                                <span style={{display: this.state.isShownButtonAddPartition}}>
+                                {text}
+                                </span>
+                            )}
+                            {this.state.isEditingKeyPartition === record.key && (
+                                <Input
+                                    style={{display: this.state.isShownButtonAlterPartitionConfirm}}
+                                    value={this.state.editingPartition.name}
+                                    onChange={this.onInputPartitionNameChanged}
+                                />
+                            )}
+                        </Fragment>
+                    )
+                }
             },
             {
-                title: '操作符', // for RANGE LIST
+                title: '操作符',
                 dataIndex: 'partition_operator',
                 key: 'partition_operator',
             },
             {
-                title: '表达式', // for ALL
+                title: '表达式',
                 dataIndex: 'partition_expression',
                 key: 'partition_expression',
             },
             {
-                title: '表空间名称', // for RANGE
+                title: '表空间名称',
                 dataIndex: 'partition_tablespace',
                 key: 'partition_tablespace',
             },
             {
-                title: '分区数量', // for HASH
-                dataIndex: 'partition_number',
-                key: 'partition_number',
+                title: '分区简述',
+                dataIndex: 'partition_desc',
+                key: 'partition_desc',
             },
         ];
         const columnsRelation = [
             {
-                title: '关系类型', // RANGE/LIST/HASH/LINEAR HASH
+                title: '关系类型', //
                 dataIndex: 'relation_type',
                 key: 'relation_type',
             },
             {
                 title: '源表字段',
-                dataIndex: 'relation_source_column',
-                key: 'relation_source_column',
+                dataIndex: 's_column_id',
+                key: 's_column_id',
             },
             {
-                title: '数据流向', // for RANGE LIST
+                title: '数据流向', //
                 dataIndex: 'data_flow',
                 key: 'data_flow',
             },
             {
-                title: '关联表', // for RANGE LIST
-                dataIndex: 'relation_target_table',
-                key: 'relation_target_table',
+                title: '关联表',
+                dataIndex: 'a_table_id',
+                key: 'a_table_id',
             },
             {
-                title: '关联表字段', // for ALL
-                dataIndex: 'relation_target_column',
-                key: 'relation_target_column',
+                title: '关联表字段',
+                dataIndex: 'a_column_id',
+                key: 'a_column_id',
+            },
+            {
+                title: '关系简述',
+                dataIndex: 'relation_desc',
+                key: 'relation_desc',
             },
         ];
         const indexTypes = ["普通索引", "唯一索引", "位图索引"];
@@ -1515,27 +2066,37 @@ export default class DatabaseMaintain extends React.Component {
                     </div>
                     <div className={"BoxOtherProperties"}>
                         <Tabs defaultActiveKey="1" type="card" tabBarGutter={5} animated={false}>
-                            <TabPane tab="表字段" key="1" className={"BoxTabPane"}>
+                            <TabPane tab="表字段" key="1">
                                 <div className={"BoxTableColumnProperties"}>
                                     <div className={"BoxToolbar"}>
                                         <div className={"BoxLabel"}>&nbsp;</div>
-                                        <Button>新增</Button>
-                                        <Button>修改</Button>
-                                        <Button>删除</Button>
+                                        <Button onClick={this.onButtonAddColumnClicked}
+                                                style={{display: this.state.isShownButtonAddColumn}}>新增</Button>
+                                        <Button
+                                            onClick={this.onButtonAlterColumnClicked}
+                                            disabled={this.state.isShownButtonAlterColumnConfirm === "block"}>修改</Button>
+                                        <Button onClick={this.onButtonDeleteColumnClicked}
+                                                style={{display: this.state.isShownButtonDeleteColumn}}>删除</Button>
+                                        <Button onClick={this.onButtonAlterColumnConfirmClicked}
+                                                style={{display: this.state.isShownButtonAlterColumnConfirm}}>确认</Button>
+                                        <Button onClick={this.onButtonAlterColumnCancelClicked}
+                                                style={{display: this.state.isShownButtonAlterColumnCancel}}>放弃</Button>
                                     </div>
                                     <div className={"BoxDetail"}>
                                         <Table
+                                            dataSource={this.state.dsColumns}
+                                            columns={columnsColumn}
+                                            scroll={{y: 400}}
                                             bordered={true}
                                             size={"small"}
-                                            // pagination={{ pageSize: 50 }}
-                                            // pagination={{disabled: true, position: ["none", "none"] }}
                                             pagination={{
-                                                pageSize: this.state.pageSizeTableColumns,
+                                                pageSize: this.state.pageSizeColumns,
                                                 position: ["none", "none"]
                                             }}
-                                            scroll={{y: 400}}
-                                            dataSource={this.state.dsTablePropertyColumns}
-                                            columns={tableTableColumnsColumns}/>
+                                            rowSelection={{
+                                                type: "radio",
+                                                ...this.onRowColumnSelected
+                                            }}/>
                                     </div>
                                 </div>
                             </TabPane>
@@ -1557,18 +2118,18 @@ export default class DatabaseMaintain extends React.Component {
                                     </div>
                                     <div className={"BoxDetail"}>
                                         <Table
-                                            dataSource={this.state.dsTablePropertyIndexes}
+                                            dataSource={this.state.dsIndexes}
                                             columns={columnsIndex}
                                             scroll={{y: 400}}
                                             bordered={true}
                                             size={"small"}
                                             pagination={{
-                                                pageSize: this.state.pageSizeTableIndexes,
+                                                pageSize: this.state.pageSizeIndexes,
                                                 position: ["none", "none"]
                                             }}
                                             rowSelection={{
                                                 type: "radio",
-                                                ...this.onRowTablePropertyIndexSelected
+                                                ...this.onRowIndexSelected
                                             }}/>
                                     </div>
                                 </div>
@@ -1577,7 +2138,7 @@ export default class DatabaseMaintain extends React.Component {
                                 <div className={"BoxTablePartitionProperties"}>
                                     <div className={"BoxToolbar"}>
                                         <div className={"BoxLabel"}>&nbsp;</div>
-                                        <Button onClick={this.onButtonAddIndexClicked}
+                                        <Button onClick={this.onButtonAddPartitionClicked}
                                                 style={{display: this.state.isShownButtonAddPartition}}>新增</Button>
                                         <Button
                                             onClick={this.onButtonAlterPartitionClicked}
@@ -1591,18 +2152,18 @@ export default class DatabaseMaintain extends React.Component {
                                     </div>
                                     <div className={"BoxDetail"}>
                                         <Table
-                                            dataSource={this.state.dsTablePropertyIndexes}
+                                            dataSource={this.state.dsPartitions}
                                             columns={columnsPartition}
                                             scroll={{y: 400}}
                                             bordered={true}
                                             size={"small"}
                                             pagination={{
-                                                pageSize: this.state.pageSizeTablePartitions,
+                                                pageSize: this.state.pageSizePartitions,
                                                 position: ["none", "none"]
                                             }}
                                             rowSelection={{
                                                 type: "radio",
-                                                ...this.onRowTablePropertyIndexSelected
+                                                ...this.onRowPartitionSelected
                                             }}/>
                                     </div>
                                 </div>
@@ -1611,32 +2172,32 @@ export default class DatabaseMaintain extends React.Component {
                                 <div className={"BoxTableRelationProperties"}>
                                     <div className={"BoxToolbar"}>
                                         <div className={"BoxLabel"}>&nbsp;</div>
-                                        <Button onClick={this.onButtonAddIndexClicked}
-                                                style={{display: this.state.isShownButtonAddPartition}}>新增</Button>
+                                        <Button onClick={this.onButtonAddRelationClicked}
+                                                style={{display: this.state.isShownButtonAddRelation}}>新增</Button>
                                         <Button
-                                            onClick={this.onButtonAlterPartitionClicked}
-                                            disabled={this.state.isShownButtonAlterPartitionConfirm === "block"}>修改</Button>
-                                        <Button onClick={this.onButtonDeletePartitionClicked}
-                                                style={{display: this.state.isShownButtonDeletePartition}}>删除</Button>
-                                        <Button onClick={this.onButtonAlterPartitionConfirmClicked}
-                                                style={{display: this.state.isShownButtonAlterPartitionConfirm}}>确认</Button>
-                                        <Button onClick={this.onButtonAlterPartitionCancelClicked}
-                                                style={{display: this.state.isShownButtonAlterPartitionCancel}}>放弃</Button>
+                                            onClick={this.onButtonAlterRelationClicked}
+                                            disabled={this.state.isShownButtonAlterRelationConfirm === "block"}>修改</Button>
+                                        <Button onClick={this.onButtonDeleteRelationClicked}
+                                                style={{display: this.state.isShownButtonDeleteRelation}}>删除</Button>
+                                        <Button onClick={this.onButtonAlterRelationConfirmClicked}
+                                                style={{display: this.state.isShownButtonAlterRelationConfirm}}>确认</Button>
+                                        <Button onClick={this.onButtonAlterRelationCancelClicked}
+                                                style={{display: this.state.isShownButtonAlterRelationCancel}}>放弃</Button>
                                     </div>
                                     <div className={"BoxDetail"}>
                                         <Table
-                                            dataSource={this.state.dsTablePropertyIndexes}
+                                            dataSource={this.state.dsRelations}
                                             columns={columnsRelation}
                                             scroll={{y: 400}}
                                             bordered={true}
                                             size={"small"}
                                             pagination={{
-                                                pageSize: this.state.pageSizeTablePartitions,
+                                                pageSize: this.state.pageSizeRelations,
                                                 position: ["none", "none"]
                                             }}
                                             rowSelection={{
                                                 type: "radio",
-                                                ...this.onRowTablePropertyIndexSelected
+                                                ...this.onRowRelationSelected
                                             }}/>
                                     </div>
                                 </div>
@@ -1644,27 +2205,43 @@ export default class DatabaseMaintain extends React.Component {
                             <TabPane tab="表数据" key="5">
                                 <div className={"BoxTableRelationProperties"}>
                                     <div className={"BoxToolbar"}>
-                                        <div className={"BoxLabel"}>&nbsp;;</div>
-                                        <Button>新增</Button>
-                                        <Button>修改</Button>
-                                        <Button>删除</Button>
+                                        <div className={"BoxLabel"}>&nbsp;</div>
+                                        <Button onClick={this.onButtonAddIndexClicked}
+                                                style={{display: this.state.isShownButtonAddRecord}}>新增</Button>
+                                        <Button
+                                            onClick={this.onButtonAlterIndexClicked}
+                                            disabled={this.state.isShownButtonAlterRecordConfirm === "block"}>修改</Button>
+                                        <Button onClick={this.onButtonDeleteIndexClicked}
+                                                style={{display: this.state.isShownButtonDeleteRecord}}>删除</Button>
+                                        <Button onClick={this.onButtonAlterIndexConfirmClicked}
+                                                style={{display: this.state.isShownButtonAlterRecordConfirm}}>确认</Button>
+                                        <Button onClick={this.onButtonAlterIndexCancelClicked}
+                                                style={{display: this.state.isShownButtonAlterRecordCancel}}>放弃</Button>
                                     </div>
                                     <div className={"BoxDetail"}>
-                                        <Table/>
+                                        <Table
+                                            dataSource={this.state.dsRecords}
+                                            columns={this.state.columnsRecord}
+                                            scroll={{y: 400}}
+                                            bordered={true}
+                                            size={"small"}
+                                            pagination={{
+                                                pageSize: this.state.pageSizeRecords,
+                                                position: ["none", "none"]
+                                            }}
+                                            rowSelection={{
+                                                type: "radio",
+                                                ...this.onRowRecordSelected
+                                            }}/>
                                     </div>
                                 </div>
                             </TabPane>
                             <TabPane tab="表DDL" key="6">
                                 <div className={"BoxTableRelationProperties"}>
-                                    <div className={"BoxToolbar"}>
-                                        <div className={"BoxLabel"}>&nbsp;;</div>
-                                        <Button>新增</Button>
-                                        <Button>修改</Button>
-                                        <Button>删除</Button>
-                                    </div>
-                                    <div className={"BoxDetail"}>
-                                        <Table/>
-                                    </div>
+                                    <pre>{this.state.tableDDL}</pre>
+                                    {/*{this.state.domTableSql.map((item, index) => {*/}
+                                    {/*    return item*/}
+                                    {/*})}*/}
                                 </div>
                             </TabPane>
                         </Tabs>
