@@ -3,10 +3,20 @@ import './DatabaseImport.scss'
 import axios from "axios";
 import GCtx from "../GCtx";
 import {Button, Select, Tree, Checkbox, Radio, Table} from 'antd'
-import {CaretDownOutlined, DeleteOutlined, DoubleLeftOutlined, DoubleRightOutlined, LeftOutlined, RightOutlined} from '@ant-design/icons'
+import {
+    CaretDownOutlined,
+    DeleteOutlined,
+    DoubleLeftOutlined,
+    DoubleRightOutlined,
+    LeftOutlined,
+    RightOutlined
+} from '@ant-design/icons'
 import TadTable from '../entity/TadTable'
 import TadTableColumn from '../entity/TadTableColumn'
 import TadTableIgnore from '../entity/TadTableIgnore'
+import TadTablePartition from "../entity/TadTablePartition";
+import TadTableIndex from "../entity/TadTableIndex";
+import TadTableIndexColumn from "../entity/TadTableIndexColumn";
 
 export default class DatabaseImport extends React.Component {
     static contextType = GCtx;
@@ -552,6 +562,10 @@ export default class DatabaseImport extends React.Component {
         }
     };
 
+    // ********** ********** ********** ********** ********** ********** ********** ********** ********** **********
+    // SELECT...
+    // ********** ********** ********** ********** ********** ********** ********** ********** ********** **********
+
     onSelectDbUsersChanged(value, option) {
         this.gCurrent.dbUserId = value;
         this.doGetSpecialTables();
@@ -566,11 +580,13 @@ export default class DatabaseImport extends React.Component {
         axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_schemas", connection,
             {headers: {'Content-Type': 'application/json'}}).then((response) => {
 
+            console.log(response);
+
             let mapTablesByLetter = new Map();
             let setLetters = new Set();
 
-            for (let i = 0; i < response.data.data.rows.length; i++) {
-                let item = response.data.data.rows[i];
+            for (let i = 0; i < response.data.data[0].data.rows.length; i++) {
+                let item = response.data.data[0].data.rows[i];
                 let tableName = item[0].toLowerCase();
                 let columnName = item[1].toLowerCase();
                 let dataType = item[2].toLowerCase();
@@ -619,6 +635,61 @@ export default class DatabaseImport extends React.Component {
 
             let tablesUnknownTreeData = this.doGetTablesByLetter(letters[0]);
 
+            // index information
+            let mapTableIndexes = new Map();
+            for (let i = 0; i < response.data.data[1].data.rows.length; i++) {
+                let item = response.data.data[1].data.rows[i];
+                let tableName = item[0] ? item[0].toLowerCase() : item[0]; //0: {name: "TABLE_NAME"}
+                let indexName = item[1]; //1: {name: "INDEX_NAME"}
+                let indexType = item[2] ? item[2].toLowerCase() : item[2]; //2: {name: "INDEX_TYPE"}
+                let uniqueness = item[3] ? item[3].toLowerCase() : item[3]; //3: {name: "UNIQUENESS"}
+                let columnName = item[4] ? item[2].toLowerCase() : item[4]; //4: {name: "COLUMN_NAME"}
+                let columnPosition = item[5]; //5: {name: "COLUMN_POSITION"}
+                let descend = item[6] ? item[6].toLowerCase() : item[6]; //6: {name: "DESCEND"}
+                if (!mapTableIndexes.has(tableName)) {
+                    let mapIndex = new Map();
+                    mapIndex.set(indexName, {indexType: indexType, uniqueness: uniqueness, columns: [{
+                            indexName: indexName, columnName: columnName, columnPosition: columnPosition, descend: descend}]
+                    });
+                    mapTableIndexes.set(tableName, mapIndex);
+                } else {
+                    if (!mapTableIndexes.get(tableName).has(indexName)) {
+                        mapTableIndexes.get(tableName).set(indexName, {indexType: indexType, uniqueness: uniqueness, columns: [{
+                                indexName: indexName, columnName: columnName, columnPosition: columnPosition, descend: descend}]
+                        })
+                    } else {
+                        mapTableIndexes.get(tableName).get(indexName).columns.push({
+                            indexName: indexName, columnName: columnName, columnPosition: columnPosition, descend: descend
+                        })
+                    }
+                }
+            }
+            this.gMap.tableIndexes = mapTableIndexes;
+
+            // partition information
+            let mapTablePartitions = new Map();
+            for (let i = 0; i < response.data.data[2].data.rows.length; i++) {
+                let item = response.data.data[2].data.rows[i];
+                let tableName = item[0] ? item[0].toLowerCase() : item[0]; //0: {name: "TABLE_NAME"}
+                let partitionType = item[1] ? item[1].toLowerCase() : item[1]; //1: {name: "PARTITION_TYPE"}
+                let partitionName = item[2]; //2: {name: "PARTITION_NAME"}
+                let highValue = item[3] ? item[3].toLowerCase() : item[3]; //3: {name: "HIGH_VALUE"}
+                let partitionPosition = item[4]; //4: {name: "PARTITION_POSITION"}
+                let columnName = item[5] ? item[5].toLowerCase() : item[5]; //5: {name: "COLUMN_NAME"}
+
+                if (!mapTablePartitions.has(tableName)) {
+                    mapTablePartitions.set(tableName, {partitionType: partitionType, columnName: columnName, partitions: [{
+                            partitionName: partitionName, highValue: highValue, partitionPosition: partitionPosition
+                        }]});
+                } else {
+                    mapTablePartitions.get(tableName).partitions.push({
+                        partitionName: partitionName, highValue: highValue, partitionPosition: partitionPosition
+                    })
+                }
+            }
+            this.gMap.tablePartitions = mapTablePartitions;
+            console.log(this.gMap.tablePartitions);
+
             this.setState({
                 letters: letters,
                 lettersTreeData: lettersTreeData,
@@ -664,35 +735,35 @@ export default class DatabaseImport extends React.Component {
         let myResult = [];
 
         if (letter === undefined) return myResult;
-        if (!this.gMap.mapTablesbyLetter.has(letter)) return  myResult;
+        if (!this.gMap.mapTablesbyLetter.has(letter)) return myResult;
 
         this.gMap.mapTablesbyLetter.get(letter).tables.forEach((value, key) => {
             let tableName = key;
 
             //if (!this.gMap.tablesByName.has(tableName)) {
-                let nodeTable = {
-                    key: tableName,
-                    title: tableName,
+            let nodeTable = {
+                key: tableName,
+                title: tableName,
+                children: [],
+                olc: {
+                    nodeType: "table"
+                },
+            }
+
+            value.columns.forEach((item) => {
+                let nodeColumn = {
+                    key: tableName + "." + item.name,
+                    title: item.name + " : " + item.type,
                     children: [],
                     olc: {
-                        nodeType: "table"
+                        nodeType: "table_column",
+                        dataType: item.type,
+                        dataLength: item.length
                     },
                 }
-
-                value.columns.forEach((item) => {
-                    let nodeColumn = {
-                        key: tableName + "." + item.name,
-                        title: item.name + " : " + item.type,
-                        children: [],
-                        olc: {
-                            nodeType: "table_column",
-                            dataType: item.type,
-                            dataLength: item.length
-                        },
-                    }
-                    nodeTable.children.push(nodeColumn);
-                })
-                myResult.push(nodeTable);
+                nodeTable.children.push(nodeColumn);
+            })
+            myResult.push(nodeTable);
             //}
         });
 
@@ -775,6 +846,10 @@ export default class DatabaseImport extends React.Component {
     getColumnDataType(name) {
     }
 
+    // ********** ********** ********** ********** ********** ********** ********** ********** ********** **********
+    // SELECT...
+    // ********** ********** ********** ********** ********** ********** ********** ********** ********** **********
+
     // 导入结构
     onButtonInClicked() {
         for (let i = 0; i < this.gTableUnknownSelected.length; i++) {
@@ -787,13 +862,17 @@ export default class DatabaseImport extends React.Component {
             myTable.db_user_id = this.gCurrent.dbUserId;
             myTable.module_id = this.gCurrent.moduleId;
 
+            if (this.gMap.tablePartitions.has(tableName)) {
+                myTable.partition_type = this.gMap.tablePartitions.get(tableName).partitionType;
+                myTable.partition_column = this.gMap.tablePartitions.get(tableName).columnName;
+            }
+
             axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table",
                 myTable,
                 {headers: {'Content-Type': 'application/json'}}
             ).then((response) => {
                 let data = response.data;
                 if (data.success) {
-                    console.log(this.gTableUnknownSelected[i].children);
                     for (let j = 0; j < this.gTableUnknownSelected[i].children.length; j++) {
                         let tableColumnName = this.gTableUnknownSelected[i].children[j].key.split(".")[1];
                         let tableColumnDataType = this.gTableUnknownSelected[i].children[j].olc.dataType;
@@ -849,6 +928,77 @@ export default class DatabaseImport extends React.Component {
                         });
                     }
 
+                    // 导入索引信息
+                    //todo::import index
+                    if (this.gMap.tableIndexes.has(tableName)) {
+                        this.gMap.tableIndexes.get(tableName).forEach((value, key) => {
+                            let myIndex = new TadTableIndex();
+                            myIndex.table_id = data.data.table_id;
+                            myIndex.index_name = key;
+                            myIndex.index_type = value.indexType;
+                            myIndex.uniqueness = value.uniqueness;
+
+                            axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_index",
+                                myIndex,
+                                {headers: {'Content-Type': 'application/json'}}
+                            ).then((responseIndex) => {
+                                let dataIndex = responseIndex.data;
+                                console.log(dataIndex);
+                                if (dataIndex.success) {
+                                    console.log("add index success");
+                                }
+                            })
+
+                            for (let j = 0; j < value.columns.length; j++) {
+                                let item = value.columns[j];
+                                let myIndexColumn = new TadTableIndexColumn();
+                                myIndexColumn.table_id = data.data.table_id;
+                                myIndexColumn.index_name = item.indexName;
+                                myIndexColumn.column_name = item.columnName;
+                                myIndexColumn.column_position = item.columnPosition;
+                                myIndexColumn.descend = item.descend;
+
+                                axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_index_column",
+                                    myIndexColumn,
+                                    {headers: {'Content-Type': 'application/json'}}
+                                ).then((responseIndexColumn) => {
+                                    let dataIndexColumn = responseIndexColumn.data;
+                                    console.log(dataIndexColumn);
+                                    if (dataIndexColumn.success) {
+                                        console.log("add index column success");
+                                    }
+                                })
+                            }
+                        })
+                    }
+
+                    // 导入分区信息
+                    if (this.gMap.tablePartitions.has(tableName)) {
+                        for (let j = 0; j < this.gMap.tablePartitions.get(tableName).partitions.length; j++) {
+                            let item = this.gMap.tablePartitions.get(tableName).partitions[j];
+                            let partitionName = item.partitionName;
+                            let highValue = item.highValue;
+                            let partitionPosition = item.partitionPosition;
+
+                            let myPartition = new TadTablePartition();
+                            myPartition.table_id = data.data.table_id;
+                            myPartition.partition_name = partitionName;
+                            myPartition.high_value = highValue;
+                            myPartition.partition_position = partitionPosition;
+
+                            axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_partition",
+                                myPartition,
+                                {headers: {'Content-Type': 'application/json'}}
+                            ).then((responsePartition) => {
+                                let dataPartition = responsePartition.data;
+                                console.log(dataPartition);
+                                if (dataPartition.success) {
+                                    console.log("add partition success");
+                                }
+                            })
+                        }
+                    }
+
                     // 从界面移除
                     let tablesUnknownTreeData = JSON.parse(JSON.stringify(this.state.tablesUnknownTreeData));
                     tablesUnknownTreeData.forEach((item, index) => {
@@ -875,7 +1025,8 @@ export default class DatabaseImport extends React.Component {
                         table_label_id: data.data.table_label_id,
                         db_user_id: data.data.db_user_id,
                         module_id: data.data.module_id,
-                        columns: []});
+                        columns: []
+                    });
                     this.setState({
                         tablesKnownTreeData: tablesKnownTreeData,
                         tablesUnknownTreeData: tablesUnknownTreeData
@@ -977,11 +1128,11 @@ export default class DatabaseImport extends React.Component {
                 </div>
             </div>
             <div className={"BoxButtons"}>
-                <Button onClick={this.onButtonIsTempClicked} icon={<DeleteOutlined />}>无需归类</Button>
-                <Button onClick={this.onButtonInClicked} icon={<LeftOutlined />}>导入结构</Button>
-                <Button onClick={this.onButtonImportClicked} icon={<DoubleLeftOutlined />}>导入数据</Button>
-                <Button onClick={this.onButtonOutClicked} icon={<RightOutlined />}>移除结构</Button>
-                <Button onClick={this.onButtonDeleteClicked} icon={<DoubleRightOutlined />}>移除数据</Button>
+                <Button onClick={this.onButtonIsTempClicked} icon={<DeleteOutlined/>}>无需归类</Button>
+                <Button onClick={this.onButtonInClicked} icon={<LeftOutlined/>}>导入结构</Button>
+                <Button onClick={this.onButtonImportClicked} icon={<DoubleLeftOutlined/>}>导入数据</Button>
+                <Button onClick={this.onButtonOutClicked} icon={<RightOutlined/>}>移除结构</Button>
+                <Button onClick={this.onButtonDeleteClicked} icon={<DoubleRightOutlined/>}>移除数据</Button>
             </div>
             <div className={"BoxUnknown"}>
                 <div className={"BoxLabel"}>待归档数据库表：</div>

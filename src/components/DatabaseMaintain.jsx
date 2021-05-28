@@ -53,6 +53,7 @@ export default class DatabaseMaintain extends React.Component {
             dsRelations: [],
             dsRecords: [],
             tableDDL: "",
+            domTableDDL: [],
 
             pageSizeColumns: 0,
             pageSizeIndexes: 0,
@@ -844,6 +845,9 @@ export default class DatabaseMaintain extends React.Component {
 
             let table = this.gMap.tables.get(this.gCurrent.tableId);
             let tableDDL = "CREATE TABLE " + table.table_name + "(\n";
+            let domTableDDL = [];
+
+            domTableDDL.push(<Fragment>create table {table.table_name}(<br/></Fragment>);
 
             columns.data.data.forEach((item) => {
                 console.log(item);
@@ -855,15 +859,18 @@ export default class DatabaseMaintain extends React.Component {
                     case "varchar":
                     case "varchar2":
                         tableDDL += "\t" + item.column_name + " " + item.data_type + "(" + item.data_length + "),\n"
+                        domTableDDL.push(<Fragment>{item.column_name} {item.data_type}(item.data_length),<br/></Fragment>);
                         break
                     default:
                         tableDDL += "\t" + item.column_name + " " + item.data_type + ",\n"
+                        domTableDDL.push(<Fragment>{item.column_name} {item.data_type},<br/></Fragment>);
                         break
                 }
 
             })
             tableDDL = tableDDL.substr(0, tableDDL.length - 2);
             tableDDL += "\n);\n\n";
+            domTableDDL.push(<Fragment>);<br/></Fragment>);
 
             indexes.data.data.forEach((item) => {
                 let uiObject = item;
@@ -893,7 +900,8 @@ export default class DatabaseMaintain extends React.Component {
                 dsPartitions: dsPartitions,
                 pageSizeRelations: pageSizeRelations,
                 dsRelations: dsRelations,
-                tableDDL: tableDDL
+                tableDDL: tableDDL,
+                domTableDDL: domTableDDL
             })
         }));
     };
@@ -2009,6 +2017,12 @@ export default class DatabaseMaintain extends React.Component {
             },
         ];
         const indexTypes = ["普通索引", "唯一索引", "位图索引"];
+        const typesPartition = [
+            {value: "range", name: "范围分区"},
+            {value: "hash", name: "散列分区"},
+            {value: "list", name: "列表分区"},
+            {value: "wow", name: "复合分区"},
+        ]
 
         return <div className="DatabaseMaintain">
             {/*1-1*/}
@@ -2239,9 +2253,11 @@ export default class DatabaseMaintain extends React.Component {
                             <TabPane tab="表DDL" key="6">
                                 <div className={"BoxTableRelationProperties"}>
                                     <pre>{this.state.tableDDL}</pre>
-                                    {/*{this.state.domTableSql.map((item, index) => {*/}
-                                    {/*    return item*/}
-                                    {/*})}*/}
+                                    <div>
+                                    {this.state.domTableDDL.map((item, index) => {
+                                        return item
+                                    })}
+                                    </div>
                                 </div>
                             </TabPane>
                         </Tabs>

@@ -79,6 +79,10 @@ class Content extends React.Component {
 
   }
 
+  onContentMouseEnter(e) {
+    console.log(e);
+  }
+
   render() {
     return (
       <div className="Content">

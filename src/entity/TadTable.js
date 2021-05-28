@@ -1,16 +1,4 @@
 export default class TadTable{
-  table_id;
-  table_name;
-  table_desc;
-  table_type_id;
-  table_label_id;
-  db_user_id;
-  module_id;
-  create_user_id;
-  create_time;
-  modify_user_id;
-  modify_time;
-
 
   constructor() {
     this.table_id = null;
@@ -24,6 +12,8 @@ export default class TadTable{
     this.create_time = null;
     this.modify_user_id = null;
     this.modify_time = null;
+    this.partition_type = null;
+    this.partition_column = null;
   }
 }
 

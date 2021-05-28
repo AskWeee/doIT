@@ -9,6 +9,7 @@ const GCtx = React.createContext({
     mapMenus: new Map(),
     gRefLine: React.createRef(),
     gRefDivToy: React.createRef(),
+    isSubMenuEntered: false,
     menus: [
         {
             id: 'menu_database', label: '数据库管理', desc: '数据库管理', ref: null, children: [
