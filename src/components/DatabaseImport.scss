@@ -1,3 +1,5 @@
+$tabs-border-color: rgb(225, 225, 225);
+
 .DatabaseImport {
     display: grid;
     background: rgba(55, 175, 255, 0.2);
@@ -18,22 +20,17 @@
         display: grid;
         //background: rgba(55,175, 255, 0.2);
         //border: 1px solid rgba(55,55,55,1);
-        grid-template-rows: 30px 1fr 160px;
+        grid-template-rows: 1fr 160px;
         grid-gap: 5px;
-
-        .BoxLabel {
-            //background: rgba(55,175, 255, 0.2);
-            //border: 1px solid rgba(55,55,55,1);
-            display: grid;
-            align-content: end;
-            margin-left: 5px;
-        }
+        overflow: hidden;
+        background: white;
 
         .BoxTree {
             background: rgba(55, 175, 255, 0.2);
             //border: 1px solid rgba(55,55,55,1);
             display: grid;
             overflow: auto;
+            margin: 5px;
         }
 
         .BoxDescription {
@@ -44,15 +41,9 @@
 
     .BoxKnown {
         display: grid;
-        grid-template-rows: 30px auto auto 1fr;
+        grid-template-rows: auto auto 1fr;
         grid-gap: 5px;
         overflow: hidden;
-
-        .BoxLabel {
-            display: grid;
-            align-content: end;
-            margin-left: 5px;
-        }
 
         .BoxSelect {
             display: grid;
@@ -65,25 +56,63 @@
 
         .BoxTreeAndTable {
             display: grid;
-            grid-template-rows: 1fr auto auto;
-            overflow: auto;
+            grid-template-columns: 80px 1fr;
+            overflow: hidden;
+            background: white;
+
+            .BoxList {
+                display: grid;
+                background: rgba(255, 255, 255, 1);
+                overflow: auto;
+                margin: 5px;
+            }
 
             .BoxTree {
-                background: green;
                 display: grid;
+                grid-template-rows: 1fr auto auto;
+                background: rgba(255, 255, 255, 1);
+                overflow: hidden;
+                margin: 5px;
+
+                .BoxTree2 {
+                    overflow: auto;
+                }
+
+                .HLine {
+                    display: grid;
+                    height: 5px;
+                }
+
+                .BoxTable {
+                    background: yellow;
+                    display: grid;
+                    height: 200px;
+                }
             }
 
-            .HLine {
-                display: grid;
-                height: 5px;
-            }
-
-            .BoxTable {
-                background: yellow;
-                display: grid;
-                height: 200px;
-            }
         }
+
+        //.BoxTreeAndTable {
+        //    display: grid;
+        //    grid-template-rows: 1fr auto auto;
+        //    overflow: auto;
+        //
+        //    .BoxTree {
+        //        background: green;
+        //        display: grid;
+        //    }
+        //
+        //    .HLine {
+        //        display: grid;
+        //        height: 5px;
+        //    }
+        //
+        //    .BoxTable {
+        //        background: yellow;
+        //        display: grid;
+        //        height: 200px;
+        //    }
+        //}
     }
 
     .BoxButtons {
@@ -104,50 +133,110 @@
 
     .BoxUnknown {
         display: grid;
-        grid-template-rows: 30px auto auto 1fr;
+        grid-template-rows: auto auto 1fr;
         grid-gap: 5px;
         overflow: hidden;
 
-        .BoxLabel {
-            display: grid;
-            align-content: end;
-            margin-left: 5px;
-        }
-
-        .BoxSelect {
-            display: grid;
-        }
-
-        .BoxToolbar {
+        .BoxUnknownToolbar {
             background: rgba(255, 255, 255, 1);
             display: grid;
             grid-template-columns: auto auto 1fr;
             padding: 5px;
+        }
 
-            .BoxTabs {
+        .BoxUnknownTabs {
+            display: grid;
+            overflow: hidden;
+
+            .ant-tabs {
+                margin: 0;
+                padding: 0;
                 display: grid;
-                justify-content: end;
+                grid-template-rows: auto 1fr;
+                background: rgba(175, 175, 175, 1);
+
+                .ant-tabs-nav {
+                    margin: 5px 5px 0 0;
+                    padding: 0;
+
+                    &:before {
+                        border-bottom: 1px solid $tabs-border-color;
+                        margin: 0 5px 0 5px;
+                    }
+
+                    .ant-tabs-nav-wrap {
+                        display: grid;
+                        justify-content: end;
+
+                        .ant-tabs-tab {
+                            border: {
+                                width: 1px;
+                                style: solid;
+                                color: $tabs-border-color;
+                            }
+                            background: $tabs-border-color;
+
+                        }
+
+                        .ant-tabs-tab-active {
+                            border: {
+                                width: 1px 1px 0 1px;
+                                style: solid;
+                                color: $tabs-border-color;
+                            }
+                            background: white;
+                        }
+                    }
+                }
+
+                .ant-tabs-content-holder {
+                    display: grid;
+                    overflow: hidden;
+                    padding: 0 5px 5px 5px;
+
+                    .ant-tabs-content {
+                        margin: 0;
+                        border: {
+                            width: 0 1px 1px 1px;
+                            style: solid;
+                            color: $tabs-border-color;
+                        }
+                        background: white;
+                        display: grid;
+                        overflow: hidden;
+
+                        .ant-tabs-tabpane {
+                            display: grid;
+                            margin: 0;
+                            padding: 0;
+                            overflow: hidden;
+                        }
+                    }
+                }
             }
         }
 
-        .BoxTreeAndTable {
+
+        .BoxUnknownListAndTree {
             display: grid;
             grid-template-columns: 80px 1fr;
             overflow: hidden;
 
-            .BoxList {
+            .BoxUnknownList {
+                margin: 5px;
                 display: grid;
                 background: rgba(255, 255, 255, 1);
                 overflow: auto;
             }
 
-            .BoxTree {
+            .BoxUnknownTree {
+                margin: 5px;
                 display: grid;
                 grid-template-rows: 1fr auto auto;
                 background: rgba(255, 255, 255, 1);
                 overflow: hidden;
 
-                .BoxTree2 {
+                .BoxUnknownTree2 {
                     overflow: auto;
                 }
 

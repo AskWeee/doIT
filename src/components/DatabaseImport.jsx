@@ -2,7 +2,7 @@ import React from 'react'
 import './DatabaseImport.scss'
 import axios from "axios";
 import GCtx from "../GCtx";
-import {Button, Checkbox, Radio, Select, Table, Tree} from 'antd'
+import {Button, Checkbox, Select, Table, Tree, Tabs} from 'antd'
 import {
     CaretDownOutlined,
     DeleteOutlined,
@@ -18,46 +18,54 @@ import TadTablePartition from "../entity/TadTablePartition";
 import TadTableIndex from "../entity/TadTableIndex";
 import TadTableIndexColumn from "../entity/TadTableIndexColumn";
 
+const {TabPane} = Tabs;
+
 export default class DatabaseImport extends React.Component {
     static contextType = GCtx;
 
     gUi = {};
-    gMap = {};
+    gMap = {
+        // tablesByLetter
+        //
+    };
     gData = {};
     gCurrent = {
         productLineId: undefined,
         productId: undefined,
         moduleId: undefined,
         dbUserId: undefined,
-        // productsNodeSelectedId: undefined,
-        productsNodeSelectedType: undefined // product_line product module
+        productsNodeSelectedId: undefined,
+        productsNodeSelectedType: undefined, // product_line product module
+        tablesKnownSelected: [],
+        tablesUnknownSelected: [],
+        tablesArchivedSelected: [],
+        tablesIgnoredSelected: []
     };
-    refSelectDbUsers = React.createRef();
-
-    gTableUnknownSelected = [];
-    gTableKnownSelected = [];
-    gTablesUnknown = [];
+    gRef = new Map();
 
     constructor(props) {
         super(props);
 
         this.state = {
             productsTreeData: [],
+            lettersKnownTreeData: [],
             tablesKnownTreeData: [],
+            lettersUnknownTreeData: [],
             tablesUnknownTreeData: [],
+            lettersArchivedTreeData: [],
+            tablesArchivedTreeData: [],
+            lettersIgnoredTreeData: [],
+            tablesIgnoredTreeData: [],
+
             dbUsersSelectOptions: [{value: -1, label: "请选择"}],
             connectionsSelectOptions: [{value: -1, label: "请选择"}],
-            dbUserSelected: -1,
+            dbUsersSelected: -1,
+            connectionsSelected: -1,
+
             showKnownTable: false,
             showUnknownTable: false,
-            uiRadioUnknownSelected: 0,
             uiTableKnownDisplay: "none",
             uiTableUnknownDisplay: "none",
-            message: '',
-            tablesAll: [],
-            tablesUnknown: [],
-            tablesKnown: [],
-            letters: ["a", "b"]
         }
 
 
@@ -85,22 +93,22 @@ export default class DatabaseImport extends React.Component {
         this.showProductTables = this.showProductTables.bind(this);
         this.showModuleTables = this.showModuleTables.bind(this);
 
-        this.onTreeLettersSelected = this.onTreeLettersSelected.bind(this);
-
-        this.onTreeProductsChanged = this.onTreeProductsChanged.bind(this);
         this.onTreeProductsSelected = this.onTreeProductsSelected.bind(this);
         this.onTreeProductsExpanded = this.onTreeProductsExpanded.bind(this);
+        this.onTreeLettersKnownSelected = this.onTreeLettersKnownSelected.bind(this);
+        this.onTreeLettersUnknownSelected = this.onTreeLettersUnknownSelected.bind(this);
+        this.onTreeLettersArchivedSelected = this.onTreeLettersArchivedSelected.bind(this);
+        this.onTreeLettersIgnoredSelected = this.onTreeLettersIgnoredSelected.bind(this);
+        this.onTreeTablesKnownChecked = this.onTreeTablesKnownChecked.bind(this);
+        this.onTreeTablesUnknownChecked = this.onTreeTablesUnknownChecked.bind(this);
+        this.onTreeTablesArchivedChecked = this.onTreeTablesArchivedChecked.bind(this);
+        this.onTreeTablesIgnoredChecked = this.onTreeTablesIgnoredChecked.bind(this);
 
         this.onSelectDbUsersChanged = this.onSelectDbUsersChanged.bind(this);
         this.onSelectConnectionsChanged = this.onSelectConnectionsChanged.bind(this);
-        this.onRadioUnknownChanged = this.onRadioUnknownChanged.bind(this);
         this.onCheckboxKnownTableDisplayChanged = this.onCheckboxKnownTableDisplayChanged.bind(this);
         this.onCheckboxUnknownTableDisplayChanged = this.onCheckboxUnknownTableDisplayChanged.bind(this);
 
-        this.onSelect = this.onSelect.bind(this);
-        this.onTableUnknownChecked = this.onTableUnknownChecked.bind(this);
-        this.onTableKnownChecked = this.onTableKnownChecked.bind(this);
-        this.doTablesCompare = this.doTablesCompare.bind(this);
 
         this.onButtonIsTempClicked = this.onButtonIsTempClicked.bind(this);
         this.onButtonInClicked = this.onButtonInClicked.bind(this);
@@ -209,7 +217,7 @@ export default class DatabaseImport extends React.Component {
             let mapColumns = new Map();
             let mapTypes = new Map();
             let mapConnections = new Map();
-            let mapTablesIgnore = new Map();
+            let mapTablesIgnoredByName = new Map();
 
             this.gData.productRelations = productRelations.data.data;
             this.gData.productLines = productLines.data.data;
@@ -398,8 +406,8 @@ export default class DatabaseImport extends React.Component {
 
             tablesIgnore.data.data.forEach((item) => {
                 let myKey = item.table_name;
-                if (!mapTablesIgnore.has(myKey)) {
-                    mapTablesIgnore.set(myKey, {
+                if (!mapTablesIgnoredByName.has(myKey)) {
+                    mapTablesIgnoredByName.set(myKey, {
                         table_name: myKey,
                         desc: item.desc
                     });
@@ -418,7 +426,7 @@ export default class DatabaseImport extends React.Component {
             this.gMap.columns = mapColumns;
             this.gMap.types = mapTypes;
             this.gMap.connections = mapConnections;
-            this.gMap.tablesIgnore = mapTablesIgnore;
+            this.gMap.tablesIgnoredByName = mapTablesIgnoredByName;
 
         })).then(() => {
             this.doInit();
@@ -497,6 +505,68 @@ export default class DatabaseImport extends React.Component {
             {headers: {'Content-Type': 'application/json'}})
     }
 
+    // 获取某字母开头的表
+    doGetTablesByLetter(source, letter) {
+
+        let myResult = [];
+
+        if (letter === undefined) return myResult
+
+        let tables;
+        switch (source) {
+            case "known":
+                tables = this.gMap.tablesKnownByLetter;
+                break
+            case "unknown":
+                tables = this.gMap.tablesByLetter;
+                break
+            case "archived":
+                tables = this.gMap.tablesArchivedByLetter;
+                break
+            case "ignored":
+                tables = this.gMap.tablesIgnoredByLetter;
+                break
+            default:
+                break
+        }
+
+        if (!tables.has(letter)) return myResult;
+
+        tables.get(letter).tables.forEach((value, key) => {
+            let tableName = key;
+
+            let nodeTable = {
+                key: tableName,
+                title: tableName,
+                children: [],
+                olc: {
+                    nodeType: "table",
+                    tableId: value.tableId,
+                },
+            }
+
+            value.columns.forEach((item) => {
+                let nodeColumn = {
+                    key: tableName + "." + item.name,
+                    title: item.name + " : " + item.type,
+                    children: [],
+                    olc: {
+                        nodeType: "table_column",
+                        dataType: item.type,
+                        dataLength: item.length
+                    },
+                }
+                nodeTable.children.push(nodeColumn);
+            })
+            myResult.push(nodeTable);
+        });
+
+        return myResult;
+    }
+
+    // ****************************************************************************************************
+    // show...
+    // ****************************************************************************************************
     showProductTables() {
         this.setState({
             tablesKnownTreeData: []
@@ -542,31 +612,55 @@ export default class DatabaseImport extends React.Component {
     // 获取当前产品线-产品-模块-用户，所归属的库表
     showModuleTables() {
         if ((this.gCurrent.productsNodeSelectedType === "module") && (this.gCurrent.dbUserId !== -1)) {
-            let tablesKnownTreeData = [];
+            let setLetters = new Set();
+            let mapTablesByLetter = new Map();
+
             this.gData.tables.forEach((itemTable) => {
                 let uId = itemTable.db_user_id;
                 let mId = itemTable.module_id;
                 if ((mId === this.gCurrent.moduleId) && (uId === this.gCurrent.dbUserId)) {
                     let tId = itemTable.table_id;
-                    let nodeTable = {
-                        key: tId,
-                        title: itemTable.table_name,
-                        children: []
+                    let firstLetter = itemTable.table_name[0];
+                    setLetters.add(firstLetter);
+
+                    let mapTable = new Map();
+                    if (!mapTablesByLetter.has(firstLetter)) {
+                        mapTable.set(itemTable.table_name, {tableId: tId, columns: []});
+                        mapTablesByLetter.set(firstLetter, {tables: mapTable});
+                    } else {
+                        mapTable = mapTablesByLetter.get(firstLetter).tables;
+                        mapTable.set(itemTable.table_name, {tableId: tId, columns: []});
                     }
-                    tablesKnownTreeData.push(nodeTable);
                     this.gMap.tables.get(tId).columns.forEach((itemColumn) => {
                         let tcId = itemColumn;
                         let column = this.gMap.columns.get(tcId);
-                        let nodeColumn = {
-                            key: tId + "_" + tcId,
-                            title: column.column_name + " : " + column.column_type_id,
-                            children: []
-                        }
-                        nodeTable.children.push(nodeColumn);
+                        mapTable.get(itemTable.table_name).columns.push({
+                            name: column.column_name,
+                            type: column.data_type,
+                            length: column.data_length
+                        });
                     })
                 }
+
             });
+
+            this.gMap.tablesKnownByLetter = mapTablesByLetter;
+
+            // 生成UI数据
+            let letters = Array.from(setLetters).sort();
+            let lettersKnownTreeData = [];
+            letters.forEach((item) => {
+                lettersKnownTreeData.push({
+                    key: item,
+                    title: item,
+                    children: []
+                })
+            })
+
+            let tablesKnownTreeData = this.doGetTablesByLetter("known", letters[0]);
+
             this.setState({
+                lettersKnownTreeData: lettersKnownTreeData,
                 tablesKnownTreeData: tablesKnownTreeData
             })
         } else {
@@ -588,73 +682,11 @@ export default class DatabaseImport extends React.Component {
         });
 
         this.setState({
-            dbUserSelected: -1,
+            dbUsersSelected: -1,
             dbUsersSelectOptions: dbUsersSelectOptions
         })
 
     }
-
-    // ****************************************************************************************************
-    // TREE...
-    // ****************************************************************************************************
-    onTreeProductsSelected(selectedKeys, info) {
-        console.log(selectedKeys, info);
-
-        if (info.selected) {
-            let ids = selectedKeys[0].toString().split("_");
-            console.log(ids);
-            let nodeType = info.node.nodeType;
-            this.gCurrent.productsNodeSelectedType = nodeType;
-
-            switch (nodeType) {
-                case "product_line":
-                    this.gCurrent.productLineId = parseInt(ids[0]);
-                    this.gCurrent.productId = undefined;
-                    this.gCurrent.moduleId = undefined;
-
-                    this.showProductDbUsers();
-
-                    this.setState({
-                        tablesKnownTreeData: []
-                    })
-                    break
-                case "product":
-                    this.gCurrent.productId = parseInt(ids[1]);
-                    this.gCurrent.moduleId = undefined;
-                    if (this.gCurrent.productLineId === undefined ) {
-                        this.gCurrent.productLineId = parseInt(ids[0]);
-                        this.showProductDbUsers();
-                    }
-                    this.showProductTables();
-                    break
-                case "module":
-                    this.gCurrent.moduleId = parseInt(ids[2]);
-                    if (this.gCurrent.productId === undefined ) {
-                        this.gCurrent.productId = parseInt(ids[1]);
-                    }
-                    if (this.gCurrent.productLineId === undefined ) {
-                        this.gCurrent.productLineId = parseInt(ids[0]);
-                        this.showProductDbUsers();
-                    }
-                    this.showModuleTables();
-                    break
-                default:
-                    break
-            }
-        } else {
-            this.gCurrent.productLineId = undefined;
-            this.gCurrent.productId = undefined;
-            this.gCurrent.moduleId = undefined;
-
-            this.setState({
-                tablesKnownTreeData: []
-            })
-        }
-
-
-
-    };
-
 
     // ****************************************************************************************************
     // SELECT...
@@ -670,14 +702,6 @@ export default class DatabaseImport extends React.Component {
         }
     }
 
-    onTreeProductsChanged(value, label, extra) {
-        console.log(value, label, extra);
-    }
-
-    onTreeProductsExpanded(expandedKeys) {
-        console.log(expandedKeys);
-    }
-
     // 选择目标数据源，并获取目标数据库结构信息
     onSelectConnectionsChanged(value, option) {
 
@@ -687,22 +711,76 @@ export default class DatabaseImport extends React.Component {
         axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_schemas", connection,
             {headers: {'Content-Type': 'application/json'}}).then((response) => {
 
-            console.log(response);
-
             let mapTablesByLetter = new Map();
             let setLetters = new Set();
+            let mapTablesArchivedByLetter = new Map();
+            let setLettersArchived = new Set();
+            let mapTablesIgnoredByLetter = new Map();
+            let setLettersIgnored = new Set();
+            let data = response.data.data[0].data;
+            let dataIndex = response.data.data[1].data;
+            let dataPartition = response.data.data[2].data;
 
-            for (let i = 0; i < response.data.data[0].data.rows.length; i++) {
-                let item = response.data.data[0].data.rows[i];
+            for (let i = 0; i < data.rows.length; i++) {
+                let item = data.rows[i];
                 let tableName = item[0].toLowerCase();
                 let columnName = item[1].toLowerCase();
                 let dataType = item[2].toLowerCase();
                 let dataLength = item[3];
 
-                if (tableName.startsWith("temp_")
-                    || tableName.endsWith("$")
-                    || this.gMap.tablesIgnore.has(tableName)
-                    || this.gMap.tablesByName.has(tableName)) continue
+                if (tableName.startsWith("temp_") || tableName.endsWith("$")) continue
+                if (this.gMap.tablesIgnoredByName.has(tableName)) {
+                    let firstLetter = tableName[0];
+                    setLettersIgnored.add(firstLetter);
+                    if (!mapTablesIgnoredByLetter.has(firstLetter)) {
+                        let mapTables = new Map();
+                        mapTables.set(tableName, {columns: [{name: columnName, type: dataType, length: dataLength}]});
+                        mapTablesIgnoredByLetter.set(firstLetter, {tables: mapTables});
+                    } else {
+                        if (!mapTablesIgnoredByLetter.get(firstLetter).tables.has(tableName)) {
+                            mapTablesIgnoredByLetter.get(firstLetter).tables.set(tableName, {
+                                columns: [{
+                                    name: columnName,
+                                    type: dataType,
+                                    length: dataLength
+                                }]
+                            });
+                        } else {
+                            mapTablesIgnoredByLetter.get(firstLetter).tables.get(tableName).columns.push({
+                                name: columnName,
+                                type: dataType,
+                                length: dataLength
+                            });
+                        }
+                    }
+                    continue
+                }
+                if (this.gMap.tablesByName.has(tableName)) {
+                    let firstLetter = tableName[0];
+                    setLettersArchived.add(firstLetter);
+                    if (!mapTablesArchivedByLetter.has(firstLetter)) {
+                        let mapTables = new Map();
+                        mapTables.set(tableName, {columns: [{name: columnName, type: dataType, length: dataLength}]});
+                        mapTablesArchivedByLetter.set(firstLetter, {tables: mapTables});
+                    } else {
+                        if (!mapTablesArchivedByLetter.get(firstLetter).tables.has(tableName)) {
+                            mapTablesArchivedByLetter.get(firstLetter).tables.set(tableName, {
+                                columns: [{
+                                    name: columnName,
+                                    type: dataType,
+                                    length: dataLength
+                                }]
+                            });
+                        } else {
+                            mapTablesArchivedByLetter.get(firstLetter).tables.get(tableName).columns.push({
+                                name: columnName,
+                                type: dataType,
+                                length: dataLength
+                            });
+                        }
+                    }
+                    continue
+                }
 
                 let firstLetter = tableName[0];
                 setLetters.add(firstLetter);
@@ -728,24 +806,51 @@ export default class DatabaseImport extends React.Component {
                     }
                 }
             }
-            this.gMap.mapTablesbyLetter = mapTablesByLetter;
+            this.gMap.tablesByLetter = mapTablesByLetter;
+            this.gMap.tablesArchivedByLetter = mapTablesArchivedByLetter;
+            this.gMap.tablesIgnoredByLetter = mapTablesIgnoredByLetter;
 
-            let letters = Array.from(setLetters);
-            let lettersTreeData = [];
+            // 生成UI数据
+            let letters = Array.from(setLetters).sort();
+            let lettersUnknownTreeData = [];
             letters.forEach((item) => {
-                lettersTreeData.push({
+                lettersUnknownTreeData.push({
                     key: item,
                     title: item,
                     children: []
                 })
             })
 
-            let tablesUnknownTreeData = this.doGetTablesByLetter(letters[0]);
+            let tablesUnknownTreeData = this.doGetTablesByLetter("unknown", letters[0]);
+
+            let lettersArchived = Array.from(setLettersArchived);
+            let lettersArchivedTreeData = [];
+            lettersArchived.forEach((item) => {
+                lettersArchivedTreeData.push({
+                    key: item,
+                    title: item,
+                    children: []
+                })
+            })
+
+            let tablesArchivedTreeData = this.doGetTablesByLetter("archived", lettersArchived[0]);
+
+            let lettersIgnored = Array.from(setLettersIgnored);
+            let lettersIgnoredTreeData = [];
+            lettersIgnored.forEach((item) => {
+                lettersIgnoredTreeData.push({
+                    key: item,
+                    title: item,
+                    children: []
+                })
+            })
+
+            let tablesIgnoredTreeData = this.doGetTablesByLetter("ignored", lettersIgnored[0]);
 
             // index information
             let mapTableIndexes = new Map();
-            for (let i = 0; i < response.data.data[1].data.rows.length; i++) {
-                let item = response.data.data[1].data.rows[i];
+            for (let i = 0; i < dataIndex.rows.length; i++) {
+                let item = dataIndex.rows[i];
                 let tableName = item[0] ? item[0].toLowerCase() : item[0]; //0: {name: "TABLE_NAME"}
                 let indexName = item[1]; //1: {name: "INDEX_NAME"}
                 let indexType = item[2] ? item[2].toLowerCase() : item[2]; //2: {name: "INDEX_TYPE"}
@@ -788,8 +893,8 @@ export default class DatabaseImport extends React.Component {
 
             // partition information
             let mapTablePartitions = new Map();
-            for (let i = 0; i < response.data.data[2].data.rows.length; i++) {
-                let item = response.data.data[2].data.rows[i];
+            for (let i = 0; i < dataPartition.rows.length; i++) {
+                let item = dataPartition.rows[i];
                 let tableName = item[0] ? item[0].toLowerCase() : item[0]; //0: {name: "TABLE_NAME"}
                 let partitionType = item[1] ? item[1].toLowerCase() : item[1]; //1: {name: "PARTITION_TYPE"}
                 let partitionName = item[2]; //2: {name: "PARTITION_NAME"}
@@ -813,12 +918,137 @@ export default class DatabaseImport extends React.Component {
             console.log(this.gMap.tablePartitions);
 
             this.setState({
-                letters: letters,
-                lettersTreeData: lettersTreeData,
-                tablesUnknownTreeData: tablesUnknownTreeData
+                lettersUnknownTreeData: lettersUnknownTreeData,
+                tablesUnknownTreeData: tablesUnknownTreeData,
+                lettersArchivedTreeData: lettersArchivedTreeData,
+                tablesArchivedTreeData: tablesArchivedTreeData,
+                lettersIgnoredTreeData: lettersIgnoredTreeData,
+                tablesIgnoredTreeData: tablesIgnoredTreeData,
             })
         });
     }
+
+    // ****************************************************************************************************
+    // TREE...
+    // ****************************************************************************************************
+    onTreeProductsSelected(selectedKeys, info) {
+        console.log(selectedKeys, info);
+
+        if (info.selected) {
+            let ids = selectedKeys[0].toString().split("_");
+            console.log(ids);
+            let nodeType = info.node.nodeType;
+            this.gCurrent.productsNodeSelectedType = nodeType;
+
+            switch (nodeType) {
+                case "product_line":
+                    this.gCurrent.productLineId = parseInt(ids[0]);
+                    this.gCurrent.productId = undefined;
+                    this.gCurrent.moduleId = undefined;
+
+                    this.showProductDbUsers();
+
+                    this.setState({
+                        tablesKnownTreeData: []
+                    })
+                    break
+                case "product":
+                    this.gCurrent.productId = parseInt(ids[1]);
+                    this.gCurrent.moduleId = undefined;
+                    if (this.gCurrent.productLineId === undefined) {
+                        this.gCurrent.productLineId = parseInt(ids[0]);
+                        this.showProductDbUsers();
+                    }
+                    this.showProductTables();
+                    break
+                case "module":
+                    this.gCurrent.moduleId = parseInt(ids[2]);
+                    if (this.gCurrent.productId === undefined) {
+                        this.gCurrent.productId = parseInt(ids[1]);
+                    }
+                    if (this.gCurrent.productLineId === undefined) {
+                        this.gCurrent.productLineId = parseInt(ids[0]);
+                        this.showProductDbUsers();
+                    }
+                    this.showModuleTables();
+                    break
+                default:
+                    break
+            }
+        } else {
+            this.gCurrent.productLineId = undefined;
+            this.gCurrent.productId = undefined;
+            this.gCurrent.moduleId = undefined;
+
+            this.setState({
+                tablesKnownTreeData: []
+            })
+        }
+
+
+    };
+
+    onTreeProductsExpanded(expandedKeys) {
+        console.log(expandedKeys);
+    }
+
+    onTreeLettersKnownSelected(selectedKeys) {
+
+        if (selectedKeys[0] === undefined) return;
+
+        let tablesTreeData = this.doGetTablesByLetter("known", selectedKeys[0]);
+        this.setState({
+            tablesKnownTreeData: tablesTreeData
+        })
+    }
+
+    onTreeLettersUnknownSelected(selectedKeys) {
+        if (selectedKeys[0] === undefined) return;
+
+        let tablesTreeData = this.doGetTablesByLetter("unknown", selectedKeys[0]);
+        this.setState({
+            tablesUnknownTreeData: tablesTreeData
+        })
+    }
+
+    onTreeLettersArchivedSelected(selectedKeys) {
+        if (selectedKeys[0] === undefined) return;
+
+        let tablesTreeData = this.doGetTablesByLetter("archived", selectedKeys[0]);
+        this.setState({
+            tablesArchivedTreeData: tablesTreeData
+        })
+    }
+
+    onTreeLettersIgnoredSelected(selectedKeys) {
+        if (selectedKeys[0] === undefined) return;
+
+        let tablesTreeData = this.doGetTablesByLetter("ignored", selectedKeys[0]);
+        this.setState({
+            tablesIgnoredTreeData: tablesTreeData
+        })
+    }
+
+    onTreeTablesKnownChecked(checkedKeys, info) {
+
+        this.gCurrent.tablesKnownSelected = info.checkedNodes;
+    }
+
+    onTreeTablesUnknownChecked(checkedKeys, info) {
+        this.gCurrent.tablesUnknownSelected = info.checkedNodes;
+    }
+
+    onTreeTablesArchivedChecked(checkedKeys, info) {
+        this.gCurrent.tablesArchivedSelected = info.checkedNodes;
+    }
+
+    onTreeTablesIgnoredChecked(checkedKeys, info) {
+        this.gCurrent.tablesIgnoredSelected = info.checkedNodes;
+    };
+
+    // ****************************************************************************************************
+    // CheckBox...
+    // ****************************************************************************************************
 
     onCheckboxKnownTableDisplayChanged(e) {
 
@@ -844,102 +1074,15 @@ export default class DatabaseImport extends React.Component {
         })
     }
 
-    onRadioUnknownChanged(e) {
-
-        this.setState({
-            uiRadioUnknownSelected: e.target.value
-        })
-    }
-
-    // 获取某字母开头的表
-    doGetTablesByLetter(letter) {
-
-        let myResult = [];
-
-        if (letter === undefined) return myResult;
-        if (!this.gMap.mapTablesbyLetter.has(letter)) return myResult;
-
-        this.gMap.mapTablesbyLetter.get(letter).tables.forEach((value, key) => {
-            let tableName = key;
-
-            //if (!this.gMap.tablesByName.has(tableName)) {
-            let nodeTable = {
-                key: tableName,
-                title: tableName,
-                children: [],
-                olc: {
-                    nodeType: "table"
-                },
-            }
-
-            value.columns.forEach((item) => {
-                let nodeColumn = {
-                    key: tableName + "." + item.name,
-                    title: item.name + " : " + item.type,
-                    children: [],
-                    olc: {
-                        nodeType: "table_column",
-                        dataType: item.type,
-                        dataLength: item.length
-                    },
-                }
-                nodeTable.children.push(nodeColumn);
-            })
-            myResult.push(nodeTable);
-            //}
-        });
-
-        return myResult;
-    }
-
-    onTreeLettersSelected(selectedKeys) {
-        if (selectedKeys[0] === undefined) return;
-
-        let tablesUnknownTreeData = this.doGetTablesByLetter(selectedKeys[0]);
-        this.setState({
-            tablesUnknownTreeData: tablesUnknownTreeData
-        })
-    }
-
-    onSelect(selectedKeys, info) {
-        // console.log('selected', selectedKeys, info);
-    };
-
-    onTableUnknownChecked(checkedKeys, info) {
-
-        this.gTableUnknownSelected = info.checkedNodes;
-    };
-
-    onTableKnownChecked(checkedKeys, info) {
-
-        this.gTableKnownSelected = info.checkedNodes;
-    };
-
-    doTablesCompare() {
-        const {tablesKnown, tablesAll} = this.state;
-        for (let i = 0; i < tablesAll.length; i++) {
-            let isFound = false;
-            for (let j = 0; j < tablesKnown.length; j++) {
-                if (tablesAll[i].title === tablesKnown[j].title) {
-                    isFound = true;
-                    break;
-                }
-            }
-            if (!isFound) {
-                this.gTablesUnknown.push(tablesAll[i]);
-            }
-        }
-
-        this.setState({
-            tablesUnknown: this.gTablesUnknown
-        })
-    }
+    // ****************************************************************************************************
+    // BUTTON...
+    // ****************************************************************************************************
 
     onButtonIsTempClicked() {
-        for (let i = 0; i < this.gTableUnknownSelected.length; i++) {
-            if (this.gTableUnknownSelected[i].olc.nodeType === "table_column") continue
+        for (let i = 0; i < this.gCurrent.tablesUnknownSelected.length; i++) {
+            if (this.gCurrent.tablesUnknownSelected[i].olc.nodeType === "table_column") continue
 
-            let tableName = this.gTableUnknownSelected[i].title;
+            let tableName = this.gCurrent.tablesUnknownSelected[i].title;
 
             let myObject = new TadTableIgnore();
             myObject.table_name = tableName;
@@ -965,19 +1108,12 @@ export default class DatabaseImport extends React.Component {
         }
     }
 
-    getColumnDataType(name) {
-    }
-
-    // ********** ********** ********** ********** ********** ********** ********** ********** ********** **********
-    // SELECT...
-    // ********** ********** ********** ********** ********** ********** ********** ********** ********** **********
-
     // 导入结构
     onButtonInClicked() {
-        for (let i = 0; i < this.gTableUnknownSelected.length; i++) {
-            if (this.gTableUnknownSelected[i].olc.nodeType === "table_column") continue
+        for (let i = 0; i < this.gCurrent.tablesUnknownSelected.length; i++) {
+            if (this.gCurrent.tablesUnknownSelected[i].olc.nodeType === "table_column") continue
 
-            let tableName = this.gTableUnknownSelected[i].title;
+            let tableName = this.gCurrent.tablesUnknownSelected[i].title;
 
             let myTable = new TadTable();
             myTable.table_name = tableName;
@@ -995,10 +1131,10 @@ export default class DatabaseImport extends React.Component {
             ).then((response) => {
                 let data = response.data;
                 if (data.success) {
-                    for (let j = 0; j < this.gTableUnknownSelected[i].children.length; j++) {
-                        let tableColumnName = this.gTableUnknownSelected[i].children[j].key.split(".")[1];
-                        let tableColumnDataType = this.gTableUnknownSelected[i].children[j].olc.dataType;
-                        let tableColumnDataLength = this.gTableUnknownSelected[i].children[j].olc.dataLength;
+                    for (let j = 0; j < this.gCurrent.tablesUnknownSelected[i].children.length; j++) {
+                        let tableColumnName = this.gCurrent.tablesUnknownSelected[i].children[j].key.split(".")[1];
+                        let tableColumnDataType = this.gCurrent.tablesUnknownSelected[i].children[j].olc.dataType;
+                        let tableColumnDataLength = this.gCurrent.tablesUnknownSelected[i].children[j].olc.dataLength;
 
                         let myTableColumn = new TadTableColumn();
                         myTableColumn.table_id = data.data.table_id;
@@ -1160,26 +1296,69 @@ export default class DatabaseImport extends React.Component {
 
     onButtonOutClicked() {
 
-        /*
-        let tablesKnown = JSON.parse(JSON.stringify(this.state.tablesKnown));
-        let tablesUnknown = JSON.parse(JSON.stringify(this.state.tablesUnknown));
+        console.log(this.gCurrent.tablesKnownSelected);
+        for (let i = 0; i < this.gCurrent.tablesKnownSelected.length; i++) {
+            let item = this.gCurrent.tablesKnownSelected[i];
+            if (item.olc.nodeType !== "table") continue
 
-        this.gTableKnownSelected.forEach(function (item) {
-            tablesUnknown.push(item);
-            for (let i = 0; i < tablesKnown.length; i++) {
-                if (tablesKnown[i].title === item.title) {
-                    tablesKnown.splice(i, 1);
-                    break
+            let tId = item.olc.tableId;
+
+            let myTable = new TadTable();
+            let myColumn = new TadTableColumn();
+            let myIndex = new TadTableIndex();
+            let myIndexColumn = new TadTableIndexColumn();
+            let myPartition = new TadTablePartition();
+
+            myTable.table_id = tId;
+            myColumn.table_id = tId;
+            myIndex.table_id = tId;
+            myIndexColumn.table_id = tId;
+            myPartition.table_id = tId;
+
+            console.log("dddddddddddddddddddd", item, myTable);
+
+            axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table",
+                myTable,
+                {headers: {'Content-Type': 'application/json'}}
+            ).then((response) => {
+                let data = response.data;
+                if (data.success) {
+                    console.log("............");
+                    axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table_column",
+                        myColumn,
+                        {headers: {'Content-Type': 'application/json'}}
+                    ).then((response) => {
+                        let data = response.data;
+                        if (data.success) {
+                        }
+                    });
+                    axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table_index",
+                        myIndex,
+                        {headers: {'Content-Type': 'application/json'}}
+                    ).then((response) => {
+                        let data = response.data;
+                        if (data.success) {
+                        }
+                    });
+                    axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table_index_column",
+                        myIndexColumn,
+                        {headers: {'Content-Type': 'application/json'}}
+                    ).then((response) => {
+                        let data = response.data;
+                        if (data.success) {
+                        }
+                    });
+                    axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table_partition",
+                        myPartition,
+                        {headers: {'Content-Type': 'application/json'}}
+                    ).then((response) => {
+                        let data = response.data;
+                        if (data.success) {
+                        }
+                    });
                 }
-            }
-        })
-
-        this.setState({
-            tablesKnown: tablesKnown,
-            tablesUnknown: tablesUnknown
-        })
-
-         */
+            });
+        }
     }
 
     onButtonImportClicked() {
@@ -1197,15 +1376,8 @@ export default class DatabaseImport extends React.Component {
     }
 
     render() {
-        const options = [
-            {label: '未归档', value: 0},
-            {label: '已归档', value: 1},
-            {label: '已忽略', value: 2},
-        ];
-
         return <div className="DatabaseImport">
             <div className={"BoxProductsInfo"}>
-                <div className={"BoxLabel"}>产品线产品信息：</div>
                 <div className={"BoxTree"}>
                     <Tree
                         blockNode={true}
@@ -1219,11 +1391,10 @@ export default class DatabaseImport extends React.Component {
                 <div className={"BoxDescription"}>information</div>
             </div>
             <div className={"BoxKnown"}>
-                <div className={"BoxLabel"}>数据库用户：</div>
                 <div className={"BoxSelect"}>
                     <Select ref={this.refSelectDbUsers}
                             onChange={this.onSelectDbUsersChanged}
-                            defaultValue={this.state.dbUserSelected}
+                            defaultValue={this.state.dbUsersSelected}
                             options={this.state.dbUsersSelectOptions}/>
                 </div>
                 <div className={"BoxToolbar"}>
@@ -1231,75 +1402,139 @@ export default class DatabaseImport extends React.Component {
                     <Checkbox onChange={this.onCheckboxKnownTableDisplayChanged}>显示数据</Checkbox>
                 </div>
                 <div className={"BoxTreeAndTable"}>
-                    <div className={"BoxTree"}>
-                        <Tree
-                            checkable
-                            blockNode={true}
-                            showLine={true}
-                            showIcon={true}
-                            switcherIcon={<CaretDownOutlined/>}
-                            // onSelect={this.onSelect}
-                            onCheck={this.onTableKnownChecked}
-                            treeData={this.state.tablesKnownTreeData}
+                    <div className={"BoxList"}>
+                        <Tree className={"TreeLetters"}
+                              blockNode={true}
+                              showLine={false}
+                              showIcon={false}
+                              onSelect={this.onTreeLettersKnownSelected}
+                              treeData={this.state.lettersKnownTreeData}
                         />
                     </div>
-                    <div className={"HLine"} style={{display: this.state.uiTableKnownDisplay}}>&nbsp;</div>
-                    <div className={"BoxTable"} style={{display: this.state.uiTableKnownDisplay}}>
-                        <Table></Table>
+                    <div className={"BoxTree"}>
+                        <div className={"BoxTree2"}>
+                            <Tree className={"TreeKnown"}
+                                  checkable
+                                  blockNode={true}
+                                  showLine={true}
+                                  showIcon={true}
+                                  switcherIcon={<CaretDownOutlined/>}
+                                  onCheck={this.onTreeTablesKnownChecked}
+                                  treeData={this.state.tablesKnownTreeData}
+                            /></div>
+                        <div className={"HLine"}
+                             style={{display: this.state.uiTableKnownDisplay}}>&nbsp;</div>
+                        <div className={"BoxTable"} style={{display: this.state.uiTableKnownDisplay}}>
+                            <Table></Table>
+                        </div>
                     </div>
                 </div>
             </div>
             <div className={"BoxButtons"}>
-                <Button onClick={this.onButtonIsTempClicked} icon={<DeleteOutlined/>}>无需归类</Button>
+                <Button onClick={this.onButtonIsTempClicked} icon={<DeleteOutlined/>}>忽略</Button>
                 <Button onClick={this.onButtonInClicked} icon={<LeftOutlined/>}>导入结构</Button>
                 <Button onClick={this.onButtonImportClicked} icon={<DoubleLeftOutlined/>}>导入数据</Button>
                 <Button onClick={this.onButtonOutClicked} icon={<RightOutlined/>}>移除结构</Button>
                 <Button onClick={this.onButtonDeleteClicked} icon={<DoubleRightOutlined/>}>移除数据</Button>
             </div>
             <div className={"BoxUnknown"}>
-                <div className={"BoxLabel"}>待归档数据库表：</div>
-                <Select onChange={this.onSelectConnectionsChanged} defaultValue={-1}
-                        options={this.state.connectionsSelectOptions}/>
-                <div className={"BoxToolbar"}>
+                <Select
+                    onChange={this.onSelectConnectionsChanged}
+                    defaultValue={this.state.connectionsSelected}
+                    options={this.state.connectionsSelectOptions}/>
+                <div className={"BoxUnknownToolbar"}>
                     <Checkbox>分组显示</Checkbox>
                     <Checkbox onChange={this.onCheckboxUnknownTableDisplayChanged}>显示数据</Checkbox>
-                    <div className={"BoxTabs"}>
-                        <Radio.Group
-                            options={options}
-                            onChange={this.onRadioUnknownChanged}
-                            value={this.state.uiRadioUnknownSelected}
-                        />
-                    </div>
                 </div>
-                <div className={"BoxTreeAndTable"}>
-                    <div className={"BoxList"}>
-                        <Tree className={"TreeLetters"}
-                              blockNode={true}
-                              showLine={false}
-                              showIcon={false}
-                            // switcherIcon={<CaretDownOutlined/>}
-                              onSelect={this.onTreeLettersSelected}
-                            //onCheck={this.onTableUnknownChecked}
-                              treeData={this.state.lettersTreeData}
-                        />
-                    </div>
-                    <div className={"BoxTree"}>
-                        <div className={"BoxTree2"}>
-                            <Tree className={"TreeUnknown"}
-                                  checkable
-                                  blockNode={true}
-                                  showLine={true}
-                                  showIcon={true}
-                                  switcherIcon={<CaretDownOutlined/>}
-                                // onSelect={this.onSelect}
-                                  onCheck={this.onTableUnknownChecked}
-                                  treeData={this.state.tablesUnknownTreeData}
-                            /></div>
-                        <div className={"HLine"} style={{display: this.state.uiTableUnknownDisplay}}>&nbsp;</div>
-                        <div className={"BoxTable"} style={{display: this.state.uiTableUnknownDisplay}}>
-                            <Table></Table>
-                        </div>
-                    </div>
+                <div className={"BoxUnknownTabs"}>
+                    <Tabs
+                        defaultActiveKey="1"
+                        type="card"
+                        tabBarGutter={5}
+                        animated={false}>
+                        <TabPane tab="未归档" key="1">
+                            <div className={"BoxUnknownListAndTree"}>
+                                <div className={"BoxUnknownList"}>
+                                    <Tree
+                                        blockNode={true}
+                                        showLine={false}
+                                        showIcon={false}
+                                        onSelect={this.onTreeLettersUnknownSelected}
+                                        treeData={this.state.lettersUnknownTreeData}
+                                    />
+                                </div>
+                                <div className={"BoxUnknownTree"}>
+                                    <div className={"BoxUnknownTree2"}>
+                                        <Tree
+                                            checkable
+                                            blockNode={true}
+                                            showLine={true}
+                                            showIcon={true}
+                                            switcherIcon={<CaretDownOutlined/>}
+                                            onCheck={this.onTreeTablesUnknownChecked}
+                                            treeData={this.state.tablesUnknownTreeData}
+                                        /></div>
+                                    <div className={"HLine"}
+                                         style={{display: this.state.uiTableUnknownDisplay}}>&nbsp;</div>
+                                    <div className={"BoxTable"} style={{display: this.state.uiTableUnknownDisplay}}>
+                                        <Table></Table>
+                                    </div>
+                                </div>
+                            </div>
+                        </TabPane>
+                        <TabPane tab="已归档" key="2">
+                            <div className={"BoxUnknownListAndTree"}>
+                                <div className={"BoxUnknownList"}>
+                                    <Tree className={"TreeLetters"}
+                                          blockNode={true}
+                                          showLine={false}
+                                          showIcon={false}
+                                          onSelect={this.onTreeLettersArchivedSelected}
+                                          treeData={this.state.lettersArchivedTreeData}
+                                    />
+                                </div>
+                                <div className={"BoxUnknownTree"}>
+                                    <div className={"BoxUnknownTree2"}>
+                                        <Tree
+                                            checkable
+                                            blockNode={true}
+                                            showLine={true}
+                                            showIcon={true}
+                                            switcherIcon={<CaretDownOutlined/>}
+                                            onCheck={this.onTreeTablesArchivedChecked}
+                                            treeData={this.state.tablesArchivedTreeData}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </TabPane>
+                        <TabPane tab="已忽略" key="3">
+                            <div className={"BoxUnknownListAndTree"}>
+                                <div className={"BoxUnknownList"}>
+                                    <Tree className={"TreeLetters"}
+                                          blockNode={true}
+                                          showLine={false}
+                                          showIcon={false}
+                                          onSelect={this.onTreeLettersIgnoredSelected}
+                                          treeData={this.state.lettersIgnoredTreeData}
+                                    />
+                                </div>
+                                <div className={"BoxUnknownTree"}>
+                                    <div className={"BoxUnknownTree2"}>
+                                        <Tree
+                                            checkable
+                                            blockNode={true}
+                                            showLine={true}
+                                            showIcon={true}
+                                            switcherIcon={<CaretDownOutlined/>}
+                                            onCheck={this.onTreeTablesIgnoredChecked}
+                                            treeData={this.state.tablesIgnoredTreeData}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </TabPane>
+                    </Tabs>
                 </div>
             </div>
         </div>
