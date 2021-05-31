@@ -2,7 +2,7 @@ import React from 'react'
 import './DatabaseImport.scss'
 import axios from "axios";
 import GCtx from "../GCtx";
-import {Button, Select, Tree, Checkbox, Radio, Table} from 'antd'
+import {Button, Checkbox, Radio, Select, Table, Tree} from 'antd'
 import {
     CaretDownOutlined,
     DeleteOutlined,
@@ -24,7 +24,14 @@ export default class DatabaseImport extends React.Component {
     gUi = {};
     gMap = {};
     gData = {};
-    gCurrent = {};
+    gCurrent = {
+        productLineId: undefined,
+        productId: undefined,
+        moduleId: undefined,
+        dbUserId: undefined,
+        // productsNodeSelectedId: undefined,
+        productsNodeSelectedType: undefined // product_line product module
+    };
     refSelectDbUsers = React.createRef();
 
     gTableUnknownSelected = [];
@@ -74,9 +81,16 @@ export default class DatabaseImport extends React.Component {
         this.doGetSchemas = this.doGetSchemas.bind(this);
         this.doGetTablesByLetter = this.doGetTablesByLetter.bind(this);
 
+        this.showProductDbUsers = this.showProductDbUsers.bind(this);
+        this.showProductTables = this.showProductTables.bind(this);
+        this.showModuleTables = this.showModuleTables.bind(this);
+
         this.onTreeLettersSelected = this.onTreeLettersSelected.bind(this);
 
+        this.onTreeProductsChanged = this.onTreeProductsChanged.bind(this);
         this.onTreeProductsSelected = this.onTreeProductsSelected.bind(this);
+        this.onTreeProductsExpanded = this.onTreeProductsExpanded.bind(this);
+
         this.onSelectDbUsersChanged = this.onSelectDbUsersChanged.bind(this);
         this.onSelectConnectionsChanged = this.onSelectConnectionsChanged.bind(this);
         this.onRadioUnknownChanged = this.onRadioUnknownChanged.bind(this);
@@ -483,9 +497,51 @@ export default class DatabaseImport extends React.Component {
             {headers: {'Content-Type': 'application/json'}})
     }
 
+    showProductTables() {
+        this.setState({
+            tablesKnownTreeData: []
+        })
+
+        // if ((this.gCurrent.productsNodeSelectedType === "product") && (this.gCurrent.dbUserId !== -1)) {
+        //     let tablesKnownTreeData = [];
+        //     console.log(this.gData.tables,this.gMap.products);
+        //     let moduleIds = this.gMap.products.get(this.gCurrent.productId).modules;
+        //     console.log(moduleIds);
+        //     this.gData.tables.forEach((itemTable) => {
+        //         let uId = itemTable.db_user_id;
+        //         let mId = itemTable.module_id;
+        //         if ((moduleIds.indexOf(mId) >= 0) && (uId === this.gCurrent.dbUserId)) {
+        //             let tId = itemTable.table_id;
+        //             let nodeTable = {
+        //                 key: tId,
+        //                 title: itemTable.table_name,
+        //                 children: []
+        //             }
+        //             tablesKnownTreeData.push(nodeTable);
+        //             this.gMap.tables.get(tId).columns.forEach((itemColumn) => {
+        //                 let tcId = itemColumn;
+        //                 let column = this.gMap.columns.get(tcId);
+        //                 let nodeColumn = {
+        //                     key: tId + "_" + tcId,
+        //                     title: column.column_name + " : " + column.column_type_id,
+        //                     children: []
+        //                 }
+        //                 nodeTable.children.push(nodeColumn);
+        //             })
+        //         }
+        //     });
+        //     this.setState({
+        //         tablesKnownTreeData: tablesKnownTreeData
+        //     })
+        // } else {
+        //     console.log("do nothing");
+        // }
+
+    }
+
     // 获取当前产品线-产品-模块-用户，所归属的库表
-    doGetSpecialTables() {
-        if ((this.gCurrent.nodeSelectedType === "module") && (this.gCurrent.dbUserId !== -1)) {
+    showModuleTables() {
+        if ((this.gCurrent.productsNodeSelectedType === "module") && (this.gCurrent.dbUserId !== -1)) {
             let tablesKnownTreeData = [];
             this.gData.tables.forEach((itemTable) => {
                 let uId = itemTable.db_user_id;
@@ -518,57 +574,108 @@ export default class DatabaseImport extends React.Component {
         }
     }
 
-    onTreeProductsSelected(selectedKeys, info) {
-        if (selectedKeys[0] === undefined) return;
+    showProductDbUsers() {
+        let dbUsersSelectOptions = [{value: -1, label: "请选择"}];
+
+        this.gData.dbUsers.forEach((item) => {
+            if (item.product_line_id === this.gCurrent.productLineId) {
+                let option = {
+                    value: item.user_id,
+                    label: item.user_name
+                }
+                dbUsersSelectOptions.push(option);
+            }
+        });
 
         this.setState({
-            tablesKnownTreeData: []
+            dbUserSelected: -1,
+            dbUsersSelectOptions: dbUsersSelectOptions
         })
 
-        let nodeType = info.node.nodeType;
-        this.gCurrent.nodeSelectedType = nodeType;
+    }
 
-        switch (nodeType) {
-            case "product_line":
-                this.gCurrent.productLineId = selectedKeys[0];
+    // ****************************************************************************************************
+    // TREE...
+    // ****************************************************************************************************
+    onTreeProductsSelected(selectedKeys, info) {
+        console.log(selectedKeys, info);
 
-                let dbUsersSelectOptions = [{value: -1, label: "请选择"}];
+        if (info.selected) {
+            let ids = selectedKeys[0].toString().split("_");
+            console.log(ids);
+            let nodeType = info.node.nodeType;
+            this.gCurrent.productsNodeSelectedType = nodeType;
 
-                this.gData.dbUsers.forEach((item) => {
-                    if (item.product_line_id === this.gCurrent.productLineId) {
-                        let option = {
-                            value: item.user_id,
-                            label: item.user_name
-                        }
-                        dbUsersSelectOptions.push(option);
+            switch (nodeType) {
+                case "product_line":
+                    this.gCurrent.productLineId = parseInt(ids[0]);
+                    this.gCurrent.productId = undefined;
+                    this.gCurrent.moduleId = undefined;
+
+                    this.showProductDbUsers();
+
+                    this.setState({
+                        tablesKnownTreeData: []
+                    })
+                    break
+                case "product":
+                    this.gCurrent.productId = parseInt(ids[1]);
+                    this.gCurrent.moduleId = undefined;
+                    if (this.gCurrent.productLineId === undefined ) {
+                        this.gCurrent.productLineId = parseInt(ids[0]);
+                        this.showProductDbUsers();
                     }
-                });
+                    this.showProductTables();
+                    break
+                case "module":
+                    this.gCurrent.moduleId = parseInt(ids[2]);
+                    if (this.gCurrent.productId === undefined ) {
+                        this.gCurrent.productId = parseInt(ids[1]);
+                    }
+                    if (this.gCurrent.productLineId === undefined ) {
+                        this.gCurrent.productLineId = parseInt(ids[0]);
+                        this.showProductDbUsers();
+                    }
+                    this.showModuleTables();
+                    break
+                default:
+                    break
+            }
+        } else {
+            this.gCurrent.productLineId = undefined;
+            this.gCurrent.productId = undefined;
+            this.gCurrent.moduleId = undefined;
 
-                this.setState({
-                    dbUserSelected: -1,
-                    dbUsersSelectOptions: dbUsersSelectOptions
-                })
-
-                break
-            case "product":
-                this.gCurrent.productId = parseInt(selectedKeys[0].split("_")[1]);
-                break
-            case "module":
-                this.gCurrent.moduleId = parseInt(selectedKeys[0].split("_")[2]);
-                this.doGetSpecialTables();
-                break
-            default:
-                break
+            this.setState({
+                tablesKnownTreeData: []
+            })
         }
+
+
+
     };
 
-    // ********** ********** ********** ********** ********** ********** ********** ********** ********** **********
+
+    // ****************************************************************************************************
     // SELECT...
-    // ********** ********** ********** ********** ********** ********** ********** ********** ********** **********
+    // ****************************************************************************************************
 
     onSelectDbUsersChanged(value, option) {
+
         this.gCurrent.dbUserId = value;
-        this.doGetSpecialTables();
+        if (this.gCurrent.productsNodeSelectedType === "product") {
+            this.showProductTables()
+        } else if (this.gCurrent.productsNodeSelectedType === "module") {
+            this.showModuleTables()
+        }
+    }
+
+    onTreeProductsChanged(value, label, extra) {
+        console.log(value, label, extra);
+    }
+
+    onTreeProductsExpanded(expandedKeys) {
+        console.log(expandedKeys);
     }
 
     // 选择目标数据源，并获取目标数据库结构信息
@@ -648,18 +755,31 @@ export default class DatabaseImport extends React.Component {
                 let descend = item[6] ? item[6].toLowerCase() : item[6]; //6: {name: "DESCEND"}
                 if (!mapTableIndexes.has(tableName)) {
                     let mapIndex = new Map();
-                    mapIndex.set(indexName, {indexType: indexType, uniqueness: uniqueness, columns: [{
-                            indexName: indexName, columnName: columnName, columnPosition: columnPosition, descend: descend}]
+                    mapIndex.set(indexName, {
+                        indexType: indexType, uniqueness: uniqueness, columns: [{
+                            indexName: indexName,
+                            columnName: columnName,
+                            columnPosition: columnPosition,
+                            descend: descend
+                        }]
                     });
                     mapTableIndexes.set(tableName, mapIndex);
                 } else {
                     if (!mapTableIndexes.get(tableName).has(indexName)) {
-                        mapTableIndexes.get(tableName).set(indexName, {indexType: indexType, uniqueness: uniqueness, columns: [{
-                                indexName: indexName, columnName: columnName, columnPosition: columnPosition, descend: descend}]
+                        mapTableIndexes.get(tableName).set(indexName, {
+                            indexType: indexType, uniqueness: uniqueness, columns: [{
+                                indexName: indexName,
+                                columnName: columnName,
+                                columnPosition: columnPosition,
+                                descend: descend
+                            }]
                         })
                     } else {
                         mapTableIndexes.get(tableName).get(indexName).columns.push({
-                            indexName: indexName, columnName: columnName, columnPosition: columnPosition, descend: descend
+                            indexName: indexName,
+                            columnName: columnName,
+                            columnPosition: columnPosition,
+                            descend: descend
                         })
                     }
                 }
@@ -678,9 +798,11 @@ export default class DatabaseImport extends React.Component {
                 let columnName = item[5] ? item[5].toLowerCase() : item[5]; //5: {name: "COLUMN_NAME"}
 
                 if (!mapTablePartitions.has(tableName)) {
-                    mapTablePartitions.set(tableName, {partitionType: partitionType, columnName: columnName, partitions: [{
+                    mapTablePartitions.set(tableName, {
+                        partitionType: partitionType, columnName: columnName, partitions: [{
                             partitionName: partitionName, highValue: highValue, partitionPosition: partitionPosition
-                        }]});
+                        }]
+                    });
                 } else {
                     mapTablePartitions.get(tableName).partitions.push({
                         partitionName: partitionName, highValue: highValue, partitionPosition: partitionPosition
