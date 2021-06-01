@@ -29,11 +29,14 @@ export default class DatabaseMaintain extends React.Component {
         super(props);
 
         this.state = {
+            lettersKnownTreeData: [],
+            dbUsersSelectOptions: [{value: -1, label: "请选择"}],
+            dbUsersSelected: -1,
+
             productsTreeData: [],
             tablesKnownTreeData: [],
             tablesUnknownTreeData: [],
             optionsDbUsers: [{value: -1, label: "请选择"}],
-            connectionsSelectOptions: [{value: -1, label: "请选择"}],
             dbUserSelected: -1,
             showKnownTable: false,
             showUnknownTable: false,
@@ -154,13 +157,11 @@ export default class DatabaseMaintain extends React.Component {
         this.doNewGetTables = this.doNewGetTables.bind(this);
         this.doNewGetTableColumns = this.doNewGetTableColumns.bind(this);
         this.doNewGetTypes = this.doNewGetTypes.bind(this);
-        this.doNewGetDbConnections = this.doNewGetDbConnections.bind(this);
         this.doGetTablesByLetter = this.doGetTablesByLetter.bind(this);
         this.doMock = this.doMock.bind(this);
         this.onTreeLettersSelected = this.onTreeLettersSelected.bind(this);
 
         this.onSelectDbUsersChanged = this.onSelectDbUsersChanged.bind(this);
-        this.onSelectConnectionsChanged = this.onSelectConnectionsChanged.bind(this);
 
         this.onRadioUnknownChanged = this.onRadioUnknownChanged.bind(this);
 
@@ -173,7 +174,13 @@ export default class DatabaseMaintain extends React.Component {
         this.doTablesCompare = this.doTablesCompare.bind(this);
 
         this.onTreeProductsSelected = this.onTreeProductsSelected.bind(this);
-        this.onTreeTablesSelected = this.onTreeTablesSelected.bind(this);
+        this.onTreeTablesKnownSelected = this.onTreeTablesKnownSelected.bind(this);
+
+        this.showProductDbUsers = this.showProductDbUsers.bind(this);
+        this.showProductTables = this.showProductTables.bind(this);
+        this.showModuleTables = this.showModuleTables.bind(this);
+        this.onTreeLettersKnownSelected = this.onTreeLettersKnownSelected.bind(this);
+        this.getTableId = this.getTableId.bind(this);
 
         this.onButtonAddColumnClicked = this.onButtonAddColumnClicked.bind(this);
         this.onButtonAlterColumnClicked = this.onButtonAlterColumnClicked.bind(this);
@@ -338,17 +345,6 @@ export default class DatabaseMaintain extends React.Component {
                 "version_name": "3.0",
             }]
         });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_connections", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "mtime": "@datetime",//随机生成日期时间
-                "score|1-800": 800,//随机生成1-800的数字
-                "rank|1-100": 100,//随机生成1-100的数字
-                "stars|1-5": 5,//随机生成1-5的数字
-                "nickname": "@cname",//随机生成中文名字
-            }]
-        });
     }
 
     doInit() {
@@ -391,18 +387,8 @@ export default class DatabaseMaintain extends React.Component {
 
         this.gUi.treeProductsData = dataTreeProducts;
 
-        let connectionsSelectOptions = [{value: -1, label: "请选择"}];
-        this.gData.connections.forEach((item) => {
-            let option = {
-                value: item.connection_id,
-                label: item.connection_name
-            }
-            connectionsSelectOptions.push(option);
-        })
-
         this.setState({
             productsTreeData: this.gUi.treeProductsData,
-            connectionsSelectOptions: connectionsSelectOptions
         })
     }
 
@@ -418,8 +404,17 @@ export default class DatabaseMaintain extends React.Component {
             this.doNewGetTables(),
             this.doNewGetTableColumns(),
             this.doNewGetTypes(),
-            this.doNewGetDbConnections(),
-        ]).then(axios.spread((productRelations, productLines, dbUsers, products, modules, versions, managers, tables, columns, types, connections) => {
+        ]).then(axios.spread((
+            productRelations,
+            productLines,
+            dbUsers,
+            products,
+            modules,
+            versions,
+            managers,
+            tables,
+            columns,
+            types) => {
             let mapProductRelations = new Map();
             let mapProductLines = new Map();
             let mapDbUsers = new Map();
@@ -431,7 +426,6 @@ export default class DatabaseMaintain extends React.Component {
             let mapTablesByName = new Map();
             let mapColumns = new Map();
             let mapTypes = new Map();
-            let mapConnections = new Map();
 
             this.gData.productRelations = productRelations.data.data;
             this.gData.productLines = productLines.data.data;
@@ -443,7 +437,6 @@ export default class DatabaseMaintain extends React.Component {
             this.gData.tables = tables.data.data;
             this.gData.columns = columns.data.data;
             this.gData.types = types.data.data;
-            this.gData.connections = connections.data.data;
 
             productLines.data.data.forEach(function (item) {
                 let myKey = item.product_line_id;
@@ -601,22 +594,6 @@ export default class DatabaseMaintain extends React.Component {
                 }
             });
 
-            connections.data.data.forEach(function (item) {
-                let myKey = item.connection_id;
-                if (!mapConnections.has(myKey)) {
-                    mapConnections.set(myKey, {
-                        connection_id: myKey,
-                        connection_name: item.connection_name,
-                        db_host: item.db_host,
-                        db_port: item.db_port,
-                        db_sid: item.db_sid,
-                        db_username: item.db_username,
-                        db_password: item.db_password,
-                        db_type: item.db_type
-                    });
-                }
-            });
-
             this.gMap.productRelations = mapProductRelations;
             this.gMap.productLines = mapProductLines;
             this.gMap.dbUsers = mapDbUsers;
@@ -628,7 +605,6 @@ export default class DatabaseMaintain extends React.Component {
             this.gMap.tablesByName = mapTablesByName;
             this.gMap.columns = mapColumns;
             this.gMap.types = mapTypes;
-            this.gMap.connections = mapConnections;
 
         })).then(() => {
             this.doInit();
@@ -695,39 +671,6 @@ export default class DatabaseMaintain extends React.Component {
             {headers: {'Content-Type': 'application/json'}})
     }
 
-    doNewGetDbConnections() {
-        let params = {};
-        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_connections", params,
-            {headers: {'Content-Type': 'application/json'}})
-    }
-
-    doGetSpecialTables() {
-
-        if ((this.gCurrent.nodeSelectedType === "module") && (this.gCurrent.dbUserId !== -1)) {
-            let tablesKnownTreeData = [];
-            this.gData.tables.forEach((itemTable) => {
-                let uId = itemTable.db_user_id;
-                let mId = itemTable.module_id;
-                if ((mId === this.gCurrent.moduleId) && (uId === this.gCurrent.dbUserId)) {
-                    let tId = itemTable.table_id;
-                    let nodeTable = {
-                        key: tId,
-                        title: itemTable.table_name,
-                        children: []
-                    }
-                    tablesKnownTreeData.push(nodeTable);
-                }
-            });
-            this.setState({
-                tablesKnownTreeData: tablesKnownTreeData
-            })
-        } else {
-            //
-        }
-    }
-
-    // get table properties...
-
     doGetTablePropertyColumns(params) {
 
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_column", params,
@@ -758,60 +701,263 @@ export default class DatabaseMaintain extends React.Component {
             {headers: {'Content-Type': 'application/json'}})
     }
 
-    // ********** ********** ********** ********** **********
-    // TREE...
-    // ********** ********** ********** ********** **********
+    // 获取某字母开头的表
+    doGetTablesByLetter(source, letter) {
 
-    onTreeProductsSelected(selectedKeys, info) {
-        if (selectedKeys[0] === undefined) return;
+        let myResult = [];
 
-        this.setState({
-            tablesKnownTreeData: []
-        })
+        if (letter === undefined) return myResult
 
-        let nodeType = info.node.nodeType;
-        this.gCurrent.nodeSelectedType = nodeType;
-
-        switch (nodeType) {
-            case "product_line":
-                this.gCurrent.productLineId = selectedKeys[0];
-
-                let optionsDbUsers = [{value: -1, label: "请选择"}];
-
-                this.gData.dbUsers.forEach((item) => {
-                    if (item.product_line_id === this.gCurrent.productLineId) {
-                        let option = {
-                            value: item.user_id,
-                            label: item.user_name
-                        }
-                        optionsDbUsers.push(option);
-                    }
-                });
-
-                this.setState({
-                    dbUserSelected: -1,
-                    optionsDbUsers: optionsDbUsers
-                })
-
+        let tables;
+        switch (source) {
+            case "known":
+                tables = this.gMap.tablesKnownByLetter;
                 break
-            case "product":
-                this.gCurrent.productId = parseInt(selectedKeys[0].split("_")[1]);
+            case "unknown":
+                tables = this.gMap.tablesUnknownByLetter;
                 break
-            case "module":
-                this.gCurrent.moduleId = parseInt(selectedKeys[0].split("_")[2]);
-                this.doGetSpecialTables();
+            case "archived":
+                tables = this.gMap.tablesArchivedByLetter;
+                break
+            case "ignored":
+                tables = this.gMap.tablesIgnoredByLetter;
                 break
             default:
                 break
         }
-    };
 
-    onTreeTablesSelected(selectedKeys, info) {
+        if (!tables.has(letter)) return myResult;
+
+        tables.get(letter).tables.forEach((value, key) => {
+            let tableName = key;
+
+            let nodeTable = {
+                key: tableName,
+                title: tableName,
+                children: [],
+                olc: {
+                    nodeType: "table",
+                    tableId: value.tableId,
+                },
+            }
+
+            value.columns.forEach((item) => {
+                let nodeColumn = {
+                    key: tableName + "." + item.name,
+                    title: item.name + " : " + item.type,
+                    children: [],
+                    olc: {
+                        nodeType: "table_column",
+                        dataType: item.type,
+                        dataLength: item.length
+                    },
+                }
+                nodeTable.children.push(nodeColumn);
+            })
+            myResult.push(nodeTable);
+        });
+
+        return myResult;
+    }
+
+    // ****************************************************************************************************
+    // show or hide...
+    // ****************************************************************************************************
+
+    showProductTables() {
+        this.setState({
+            tablesKnownTreeData: []
+        })
+    }
+
+    showModuleTables() {
+        //todo::一个big bug, wow, 数据来源可能不对，需要好好查证一下！！！
+        if ((this.gCurrent.productsNodeSelectedType === "module") && (this.gCurrent.dbUserId !== -1)) {
+            let setLetters = new Set();
+            let mapTablesByLetter = new Map();
+
+            this.gData.tables.forEach((itemTable) => {
+                let uId = itemTable.db_user_id;
+                let mId = itemTable.module_id;
+                if ((mId === this.gCurrent.moduleId) && (uId === this.gCurrent.dbUserId)) {
+                    let tId = itemTable.table_id;
+                    let firstLetter = itemTable.table_name[0];
+                    setLetters.add(firstLetter);
+
+                    let mapTable = new Map();
+                    if (!mapTablesByLetter.has(firstLetter)) {
+                        mapTable.set(itemTable.table_name, {tableId: tId, columns: []});
+                        mapTablesByLetter.set(firstLetter, {tables: mapTable});
+                    } else {
+                        mapTable = mapTablesByLetter.get(firstLetter).tables;
+                        mapTable.set(itemTable.table_name, {tableId: tId, columns: []});
+                    }
+                    this.gMap.tables.get(tId).columns.forEach((itemColumn) => {
+                        let tcId = itemColumn;
+                        let column = this.gMap.columns.get(tcId);
+                        mapTable.get(itemTable.table_name).columns.push({
+                            name: column.column_name,
+                            type: column.data_type,
+                            length: column.data_length
+                        });
+                    })
+                }
+
+            });
+
+            this.gMap.tablesKnownByLetter = mapTablesByLetter;
+
+            // 生成UI数据
+            let letters = Array.from(setLetters).sort();
+            let lettersKnownTreeData = [];
+            letters.forEach((item) => {
+                lettersKnownTreeData.push({
+                    key: item,
+                    title: item,
+                    children: []
+                })
+            })
+
+            let tablesKnownTreeData = this.doGetTablesByLetter("known", letters[0]);
+            this.gCurrent.letterKnownSelected = letters[0];
+
+            this.setState({
+                lettersKnownSelectedKeys: [letters[0]],
+                lettersKnownTreeData: lettersKnownTreeData,
+                tablesKnownTreeData: tablesKnownTreeData
+            })
+        }
+    }
+
+    showProductDbUsers() {
+        let dbUsersSelectOptions = [{value: -1, label: "请选择"}];
+
+        this.gData.dbUsers.forEach((item) => {
+            if (item.product_line_id === this.gCurrent.productLineId) {
+                let option = {
+                    value: item.user_id,
+                    label: item.user_name
+                }
+                dbUsersSelectOptions.push(option);
+            }
+        });
+
+        this.setState({
+            dbUsersSelected: -1,
+            dbUsersSelectOptions: dbUsersSelectOptions
+        })
+
+    }
+
+    getTableId(tableName) {
+
+        let myResult = undefined;
+
+        for(let i = 0; i < this.gData.tables.length; i++) {
+            let table = this.gData.tables[i];
+            if (table.table_name === tableName) {
+                myResult = table.table_id;
+            }
+        }
+
+        return myResult;
+    }
+
+    // ****************************************************************************************************
+    // TREE...
+    // ****************************************************************************************************
+
+    onTreeLettersKnownSelected(selectedKeys) {
 
         if (selectedKeys[0] === undefined) return;
 
-        this.gCurrent.nodeSelectedType = info.node.nodeType;
-        this.gCurrent.tableId = parseInt(selectedKeys[0]);
+        this.gCurrent.letterKnownSelected = selectedKeys[0];
+
+        let tablesTreeData = this.doGetTablesByLetter("known", selectedKeys[0]);
+        this.setState({
+            tablesKnownTreeData: tablesTreeData
+        })
+    }
+
+    onTreeProductsSelected(selectedKeys, info) {
+
+        if (info.selected) {
+
+            let ids = selectedKeys[0].toString().split("_");
+            let nodeType = info.node.nodeType;
+            this.gCurrent.productsNodeSelectedType = nodeType;
+
+            switch (nodeType) {
+                case "product_line":
+                    this.gCurrent.productLineId = parseInt(ids[0]);
+                    this.gCurrent.productId = undefined;
+                    this.gCurrent.moduleId = undefined;
+
+                    this.setState({
+                        lettersKnownSelectedKeys: [],
+                        lettersKnownTreeData: [],
+                        tablesKnownTreeData: []
+                    }, this.showProductDbUsers);
+
+                    break
+                case "product":
+                    this.gCurrent.productId = parseInt(ids[1]);
+                    this.gCurrent.moduleId = undefined;
+                    if (this.gCurrent.productLineId === undefined) {
+                        this.gCurrent.productLineId = parseInt(ids[0]);
+                        this.showProductDbUsers();
+                    }
+
+                    this.setState({
+                        lettersKnownSelectedKeys: [],
+                        lettersKnownTreeData: [],
+                        tablesKnownTreeData: []
+                    });
+
+                    break
+                case "module":
+                    this.gCurrent.moduleId = parseInt(ids[2]);
+                    if (this.gCurrent.productId === undefined) {
+                        this.gCurrent.productId = parseInt(ids[1]);
+                    }
+                    if (this.gCurrent.productLineId === undefined) {
+                        this.gCurrent.productLineId = parseInt(ids[0]);
+                        this.showProductDbUsers();
+                    }
+
+                    this.setState({
+                        lettersKnownSelectedKeys: [],
+                        lettersKnownTreeData: [],
+                        tablesKnownTreeData: []
+                    }, this.showModuleTables);
+
+                    break
+                default:
+                    break
+            }
+        } else {
+            this.gCurrent.productLineId = undefined;
+            this.gCurrent.productId = undefined;
+            this.gCurrent.moduleId = undefined;
+
+            this.setState({
+                lettersKnownSelectedKeys: [],
+                lettersKnownTreeData: [],
+                tablesKnownTreeData: []
+            })
+        }
+
+
+    };
+
+    onTreeTablesKnownSelected(selectedKeys, info) {
+
+        console.log(info);
+        console.log(this.gCurrent);
+        if (selectedKeys[0] === undefined) return;
+        if (info.node.olc.nodeType !== "table") return;
+
+        this.gCurrent.tableId = info.node.olc.tableId;
 
         let myColumn = new TadTableColumn();
         let myIndex = new TadTableIndex();
@@ -833,7 +979,7 @@ export default class DatabaseMaintain extends React.Component {
             indexes,
             partitions,
             relations) => {
-            console.log(columns);
+
             let pageSizeColumns = columns.data.data.length;
             let dsColumns = [];
             let pageSizeIndexes = indexes.data.data.length;
@@ -906,82 +1052,23 @@ export default class DatabaseMaintain extends React.Component {
         }));
     };
 
-    // ********** ********** ********** ********** **********
+    // ****************************************************************************************************
     // SELECT...
-    // ********** ********** ********** ********** **********
+    // ****************************************************************************************************
 
     onSelectDbUsersChanged(value, option) {
 
         this.gCurrent.dbUserId = value;
-        this.doGetSpecialTables();
+        if (this.gCurrent.productsNodeSelectedType === "product") {
+            this.showProductTables()
+        } else if (this.gCurrent.productsNodeSelectedType === "module") {
+            this.showModuleTables()
+        }
     }
 
-    // 选择目标数据源
-    onSelectConnectionsChanged(value, option) {
-
-        this.gCurrent.connectionId = value;
-        let connection = this.gMap.connections.get(value);
-
-        axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_schemas", connection,
-            {headers: {'Content-Type': 'application/json'}}).then((response) => {
-
-            let mapTablesByLetter = new Map();
-            let setLetters = new Set();
-
-            for (let i = 0; i < response.data.data.rows.length; i++) {
-                let item = response.data.data.rows[i];
-                let tableName = item[0].toLowerCase();
-                let columnName = item[1].toLowerCase();
-                let dataType = item[2].toLowerCase();
-                let dataLength = item[3];
-
-                if (tableName.startsWith("temp_") || tableName.endsWith("$")) continue
-
-                let firstLetter = tableName[0];
-                setLetters.add(firstLetter);
-                if (!mapTablesByLetter.has(firstLetter)) {
-                    let mapTables = new Map();
-                    mapTables.set(tableName, {columns: [{name: columnName, type: dataType, length: dataLength}]});
-                    mapTablesByLetter.set(firstLetter, {tables: mapTables});
-                } else {
-                    if (!mapTablesByLetter.get(firstLetter).tables.has(tableName)) {
-                        mapTablesByLetter.get(firstLetter).tables.set(tableName, {
-                            columns: [{
-                                name: columnName,
-                                type: dataType,
-                                length: dataLength
-                            }]
-                        });
-                    } else {
-                        mapTablesByLetter.get(firstLetter).tables.get(tableName).columns.push({
-                            name: columnName,
-                            type: dataType,
-                            length: dataLength
-                        });
-                    }
-                }
-            }
-            this.gMap.mapTablesbyLetter = mapTablesByLetter;
-
-            let letters = Array.from(setLetters);
-            let lettersTreeData = [];
-            letters.forEach((item) => {
-                lettersTreeData.push({
-                    key: item,
-                    title: item,
-                    children: []
-                })
-            })
-
-            let tablesUnknownTreeData = this.doGetTablesByLetter(letters[0]);
-
-            this.setState({
-                letters: letters,
-                lettersTreeData: lettersTreeData,
-                tablesUnknownTreeData: tablesUnknownTreeData
-            })
-        });
-    }
+    // ****************************************************************************************************
+    // CHECKBOX...
+    // ****************************************************************************************************
 
     onCheckboxKnownTableDisplayChanged(e) {
 
@@ -1012,41 +1099,6 @@ export default class DatabaseMaintain extends React.Component {
         this.setState({
             uiRadioUnknownSelected: e.target.value
         })
-    }
-
-    // 获取某字母开头的表
-    doGetTablesByLetter(letter) {
-
-        let myResult = [];
-        this.gMap.mapTablesbyLetter.get(letter).tables.forEach((value, key) => {
-            let tableName = key;
-
-            if (!this.gMap.tablesByName.has(tableName)) {
-                let nodeTable = {
-                    key: tableName,
-                    title: tableName,
-                    children: [],
-                    olc: {
-                        nodeType: "table"
-                    },
-                }
-
-                value.columns.forEach((item) => {
-                    let nodeColumn = {
-                        key: tableName + "." + item.name,
-                        title: item.name + " : " + item.type,
-                        children: [],
-                        olc: {
-                            nodeType: "table_column"
-                        },
-                    }
-                    nodeTable.children.push(nodeColumn);
-                })
-                myResult.push(nodeTable);
-            }
-        });
-
-        return myResult;
     }
 
     onTreeLettersSelected(selectedKeys) {
@@ -2016,21 +2068,20 @@ export default class DatabaseMaintain extends React.Component {
                 key: 'relation_desc',
             },
         ];
-        const indexTypes = ["普通索引", "唯一索引", "位图索引"];
-        const typesPartition = [
-            {value: "range", name: "范围分区"},
-            {value: "hash", name: "散列分区"},
-            {value: "list", name: "列表分区"},
-            {value: "wow", name: "复合分区"},
-        ]
+        // const indexTypes = ["普通索引", "唯一索引", "位图索引"];
+        // const typesPartition = [
+        //     {value: "range", name: "范围分区"},
+        //     {value: "hash", name: "散列分区"},
+        //     {value: "list", name: "列表分区"},
+        //     {value: "wow", name: "复合分区"},
+        // ]
 
         return <div className="DatabaseMaintain">
-            {/*1-1*/}
             <div className={"BoxProductsInfo"}>
                 <div className={"BoxTree"}>
                     <Tree
                         blockNode={true}
-                        showLine={true}
+                        showLine={{showLeafIcon: false}}
                         showIcon={true}
                         switcherIcon={<CaretDownOutlined/>}
                         onSelect={this.onTreeProductsSelected}
@@ -2039,34 +2090,43 @@ export default class DatabaseMaintain extends React.Component {
                 </div>
                 <div className={"BoxDescription"}>information</div>
             </div>
-            {/*1-2*/}
-            <div className={"BoxTables"}>
+            <div className={"BoxKnown"}>
                 <div className={"BoxSelect"}>
-                    <Select
-                        defaultValue={-1}
-                        onChange={this.onSelectDbUsersChanged}
-                        options={this.state.optionsDbUsers}>
-                    </Select>
+                    <Select ref={this.refSelectDbUsers}
+                            onChange={this.onSelectDbUsersChanged}
+                            defaultValue={this.state.dbUsersSelected}
+                            options={this.state.dbUsersSelectOptions}/>
                 </div>
                 <div className={"BoxToolbar"}>
                     <Checkbox>分组显示</Checkbox>
                 </div>
                 <div className={"BoxTreeAndTable"}>
+                    <div className={"BoxList"}>
+                        {this.state.lettersKnownTreeData.length ? (
+                            <Tree
+                                className={"TreeLetters"}
+                                blockNode={true}
+                                showLine={{showLeafIcon: false}}
+                                showIcon={false}
+                                defaultSelectedKeys={this.state.lettersKnownSelectedKeys}
+                                onSelect={this.onTreeLettersKnownSelected}
+                                treeData={this.state.lettersKnownTreeData}
+                            />
+                        ) : (<div>&nbsp;</div>)}
+                    </div>
                     <div className={"BoxTree"}>
-                        <Tree
-                            // checkable
-                            blockNode={true}
-                            // showLine={true}
-                            showIcon={true}
-                            // switcherIcon={<CaretDownOutlined/>}
-                            onSelect={this.onTreeTablesSelected}
-                            // onCheck={this.onTableKnownChecked}
-                            treeData={this.state.tablesKnownTreeData}
-                        />
+                        <div className={"BoxTree2"}>
+                            <Tree className={"TreeKnown"}
+                                  blockNode={true}
+                                  showLine={true}
+                                  showIcon={true}
+                                  switcherIcon={<CaretDownOutlined/>}
+                                  onSelect={this.onTreeTablesKnownSelected}
+                                  treeData={this.state.tablesKnownTreeData}
+                            /></div>
                     </div>
                 </div>
             </div>
-            {/*1-3*/}
             <div className={"BoxPropertiesBorder"}>
                 <div>&nbsp;</div>
                 <div>&nbsp;</div>
