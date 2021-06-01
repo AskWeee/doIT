@@ -553,6 +553,43 @@ export default class DatabaseExport extends React.Component {
         })
     }
 
+    showProductTables() {
+        // if ((this.gCurrent.productsNodeSelectedType === "product") && (this.gCurrent.dbUserId !== -1)) {
+        //     let tablesKnownTreeData = [];
+        //     console.log(this.gData.tables,this.gMap.products);
+        //     let moduleIds = this.gMap.products.get(this.gCurrent.productId).modules;
+        //     console.log(moduleIds);
+        //     this.gData.tables.forEach((itemTable) => {
+        //         let uId = itemTable.db_user_id;
+        //         let mId = itemTable.module_id;
+        //         if ((moduleIds.indexOf(mId) >= 0) && (uId === this.gCurrent.dbUserId)) {
+        //             let tId = itemTable.table_id;
+        //             let nodeTable = {
+        //                 key: tId,
+        //                 title: itemTable.table_name,
+        //                 children: []
+        //             }
+        //             tablesKnownTreeData.push(nodeTable);
+        //             this.gMap.tables.get(tId).columns.forEach((itemColumn) => {
+        //                 let tcId = itemColumn;
+        //                 let column = this.gMap.columns.get(tcId);
+        //                 let nodeColumn = {
+        //                     key: tId + "_" + tcId,
+        //                     title: column.column_name + " : " + column.column_type_id,
+        //                     children: []
+        //                 }
+        //                 nodeTable.children.push(nodeColumn);
+        //             })
+        //         }
+        //     });
+        //     this.setState({
+        //         tablesKnownTreeData: tablesKnownTreeData
+        //     })
+        // } else {
+        //     console.log("do nothing");
+        // }
+    }
+
     onTreeProductsChecked(checkedKeys, info) {
         //console.log('onCheck', checkedKeys, info);
         this.gCurrent.treeProductCheckedKeys = checkedKeys;

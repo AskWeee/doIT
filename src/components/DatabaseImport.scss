@@ -1,13 +1,16 @@
 $tabs-border-color: rgb(225, 225, 225);
+$colorComponentBackground: rgba(155, 155, 155, 1);
+$colorComponentBorder: rgba(225, 225, 225, 1);
+$colorBoxBackground: rgba(175, 175, 175, 1);
 
 .DatabaseImport {
     display: grid;
-    background: rgba(55, 175, 255, 0.2);
-    grid-template-columns: 2fr 3fr 110px 3fr;
+    background: $colorComponentBackground;
+    grid-template-columns: 2fr 3fr auto 3fr;
     grid-gap: 5px;
     margin: 5px;
-    border: 1px solid rgba(55, 55, 55, 1);
-    padding: 5px;
+    border: 1px solid $colorComponentBorder;
+    padding: 3px;
     overflow: hidden;
 
     .DivTest {
@@ -91,36 +94,14 @@ $tabs-border-color: rgb(225, 225, 225);
             }
 
         }
-
-        //.BoxTreeAndTable {
-        //    display: grid;
-        //    grid-template-rows: 1fr auto auto;
-        //    overflow: auto;
-        //
-        //    .BoxTree {
-        //        background: green;
-        //        display: grid;
-        //    }
-        //
-        //    .HLine {
-        //        display: grid;
-        //        height: 5px;
-        //    }
-        //
-        //    .BoxTable {
-        //        background: yellow;
-        //        display: grid;
-        //        height: 200px;
-        //    }
-        //}
     }
 
     .BoxButtons {
         display: grid;
-        //background: rgba(55,175, 255, 0.2);
-        //border: 1px solid rgba(55,55,55,1);
+        background: $colorBoxBackground;
         justify-content: center;
         align-content: center;
+        padding: 5px;
 
         Button {
             margin-top: 10px;
@@ -153,7 +134,7 @@ $tabs-border-color: rgb(225, 225, 225);
                 padding: 0;
                 display: grid;
                 grid-template-rows: auto 1fr;
-                background: rgba(175, 175, 175, 1);
+                background: $colorBoxBackground;
 
                 .ant-tabs-nav {
                     margin: 5px 5px 0 0;
