@@ -1,10 +1,35 @@
-
 $tabs-border-color: rgb(225,225,225);
+$colorComponentToolbar: rgb(175,225,255);
+
+.BoxNormal {
+    background: red;
+    grid-template-columns: 2fr 3fr 5fr;
+}
+
+.BoxSmall {
+    grid-template-columns: auto 1fr 3fr;
+}
+
+.BoxSmallSmall {
+    grid-template-columns: auto auto 1fr;
+}
+
+.clsIndexColumns {
+    display: grid;
+    //background: yellow;
+
+    .clsIndexColumn {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        //background: red;
+        margin: 3px;
+    }
+
+}
 
 .DatabaseMaintain {
     display: grid;
     background: rgba(55, 175, 255, 0.2);
-    grid-template-columns: 2fr 3fr 5fr;
     grid-gap: 5px;
     margin: 5px;
     border: 1px solid rgba(55, 55, 55, 1);
@@ -12,41 +37,59 @@ $tabs-border-color: rgb(225,225,225);
     overflow: hidden;
 
     .BoxProductsInfo {
-        display: grid;
-        //background: rgba(55,175, 255, 0.2);
         //border: 1px solid rgba(55,55,55,1);
-        grid-template-rows: 1fr 160px;
-        grid-gap: 5px;
+        background: darkgray;
+        display: grid;
+        grid-template-rows: auto 1fr 160px;
         overflow: hidden;
-        background: white;
+
+        .BoxTitleBar {
+            //border: 1px solid rgba(55,55,55,1);
+            background: $colorComponentToolbar;
+            display: grid;
+            justify-content: end;
+        }
 
         .BoxTree {
             background: rgba(55, 175, 255, 0.2);
             //border: 1px solid rgba(55,55,55,1);
             display: grid;
             overflow: auto;
-            margin: 5px;
+            margin: 5px 5px 0 5px;
         }
 
         .BoxDescription {
             background: rgba(255, 255, 255, 1);
             //border: 1px solid rgba(55,55,55,1);
+            color: black;
+            margin: 5px;
+            padding: 5px;
         }
     }
 
     .BoxKnown {
+        //border: 1px solid rgba(55,55,55,1);
+        background: darkgray;
         display: grid;
-        grid-template-rows: auto auto 1fr;
-        grid-gap: 5px;
+        grid-template-rows: auto auto auto 1fr;
         overflow: hidden;
+
+        .BoxTitleBar {
+            //border: 1px solid rgba(55,55,55,1);
+            background: $colorComponentToolbar;
+            display: grid;
+            justify-content: end;
+        }
 
         .BoxSelect {
             display: grid;
+            margin: 5px 5px 0 5px;
         }
 
         .BoxToolbar {
             background: rgba(255, 255, 255, 1);
             padding: 5px;
+            margin: 5px 5px 0 5px;
         }
 
         .BoxTreeAndTable {
@@ -54,6 +97,7 @@ $tabs-border-color: rgb(225,225,225);
             grid-template-columns: 80px 1fr;
             overflow: hidden;
             background: white;
+            margin: 5px;
 
             .BoxList {
                 display: grid;
@@ -87,68 +131,6 @@ $tabs-border-color: rgb(225,225,225);
 
         }
     }
-
-    //.BoxProductsInfo {
-    //    display: grid;
-    //    //background: rgba(55,175, 255, 0.2);
-    //    //border: 1px solid rgba(55,55,55,1);
-    //    grid-template-rows: 1fr 160px;
-    //    grid-gap: 5px;
-    //
-    //    .BoxTree {
-    //        background: rgba(55, 175, 255, 0.2);
-    //        //border: 1px solid rgba(55,55,55,1);
-    //        display: grid;
-    //        overflow: auto;
-    //    }
-    //
-    //    .BoxDescription {
-    //        background: rgba(255, 255, 255, 1);
-    //        //border: 1px solid rgba(55,55,55,1);
-    //    }
-    //}
-    //
-    //.BoxTables {
-    //    display: grid;
-    //    grid-template-rows: auto auto 1fr;
-    //    grid-gap: 5px;
-    //
-    //    .BoxLabel {
-    //        display: grid;
-    //        align-content: end;
-    //        margin-left: 5px;
-    //    }
-    //
-    //    .BoxSelect {
-    //        display: grid;
-    //    }
-    //
-    //    .BoxToolbar {
-    //        background: rgba(255, 255, 255, 1);
-    //        padding: 5px;
-    //    }
-    //
-    //    .BoxTreeAndTable {
-    //        display: grid;
-    //        grid-template-rows: 1fr auto auto;
-    //
-    //        .BoxTree {
-    //            background: green;
-    //            display: grid;
-    //        }
-    //
-    //        .HLine {
-    //            display: grid;
-    //            height: 5px;
-    //        }
-    //
-    //        .BoxTable {
-    //            background: yellow;
-    //            display: grid;
-    //            height: 200px;
-    //        }
-    //    }
-    //}
 
     .BoxPropertiesBorder {
         border: 1px solid gray;
@@ -253,9 +235,9 @@ $tabs-border-color: rgb(225,225,225);
                         }
                     }
                     .BoxDetail {
-                        display: grid;
-                        overflow: auto;
-
+                        //display: grid;
+                        overflow: hidden;
+                        //border: 1px solid red;
                     }
                 }
 
@@ -366,5 +348,15 @@ $tabs-border-color: rgb(225,225,225);
             //    border-color: #141414;
             //}
         }
+    }
+
+    .clsColumnTitle {
+        display: grid;
+        white-space:nowrap;
+        justify-content: center;
+    }
+
+    .clsColumnColumnName {
+        white-space:nowrap;
     }
 }

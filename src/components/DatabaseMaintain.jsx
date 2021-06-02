@@ -3,12 +3,16 @@ import './DatabaseMaintain.scss'
 import axios from "axios";
 import GCtx from "../GCtx";
 import {Button, Select, Tree, Checkbox, Table, Input, Tabs} from 'antd'
-import {CaretDownOutlined} from '@ant-design/icons'
+import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined} from '@ant-design/icons'
 import TadTableColumn from '../entity/TadTableColumn'
 import Mock from 'mockjs'
 import TadTableIndex from "../entity/TadTableIndex";
 import TadTablePartition from "../entity/TadTablePartition";
 import TadTableRelation from "../entity/TadTableRelation";
+import KColumnTitle from "./KColumnTitle";
+import TadTableIndexColumn from "../entity/TadTableIndexColumn";
+// import { DndProvider, useDrag, useDrop } from 'react-dnd';
+// import { sortableContainer, sortableElement, sortableHandle } from 'react-sortable-hoc';
 
 const {TabPane} = Tabs;
 
@@ -19,11 +23,11 @@ export default class DatabaseMaintain extends React.Component {
     gMap = {};
     gData = {};
     gCurrent = {};
+    refBoxDetail = React.createRef();
 
     gTableUnknownSelected = [];
     gTableKnownSelected = [];
     gTablesUnknown = [];
-
 
     constructor(props) {
         super(props);
@@ -140,8 +144,11 @@ export default class DatabaseMaintain extends React.Component {
                 data_flow: "",
                 desc: ""
             },
-        }
 
+            styleLayout: "NNN",
+            tablePropertiesScrollX: 1366,
+            tablePropertiesScrollY: 400,
+        }
 
         this.test = this.test.bind(this);
 
@@ -160,6 +167,7 @@ export default class DatabaseMaintain extends React.Component {
         this.doGetTablesByLetter = this.doGetTablesByLetter.bind(this);
         this.doMock = this.doMock.bind(this);
         this.onTreeLettersSelected = this.onTreeLettersSelected.bind(this);
+        this.doGetTablePropertyIndexColumns = this.doGetTablePropertyIndexColumns.bind(this);
 
         this.onSelectDbUsersChanged = this.onSelectDbUsersChanged.bind(this);
 
@@ -207,6 +215,8 @@ export default class DatabaseMaintain extends React.Component {
         this.onButtonDeleteRecordClicked = this.onButtonDeleteRecordClicked.bind(this);
         this.onButtonAlterRecordConfirmClicked = this.onButtonAlterRecordConfirmClicked.bind(this);
         this.onButtonAlterRecordCancelClicked = this.onButtonAlterRecordCancelClicked.bind(this);
+        this.onButtonProductsChangeComponentSizeClicked = this.onButtonProductsChangeComponentSizeClicked.bind(this);
+        this.onButtonTablesChangeComponentSizeClicked = this.onButtonTablesChangeComponentSizeClicked.bind(this);
 
         this.onInputIndexNameChanged = this.onInputIndexNameChanged.bind(this);
         this.onInputPartitionNameChanged = this.onInputPartitionNameChanged.bind(this);
@@ -352,6 +362,10 @@ export default class DatabaseMaintain extends React.Component {
         this.gCurrent.productId = undefined;
         this.gCurrent.moduleId = undefined;
         this.gCurrent.dbUserId = -1;
+
+        this.setState({
+            tablePropertiesScrollY: this.refBoxDetail.current.scrollHeight - 40,
+        })
 
         let dataTreeProducts = [];
         this.gMap.productLines.forEach((valuePl, key) => {
@@ -683,6 +697,12 @@ export default class DatabaseMaintain extends React.Component {
             {headers: {'Content-Type': 'application/json'}})
     }
 
+    doGetTablePropertyIndexColumns(params) {
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_index_column", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
     doGetTablePropertyPartitions(params) {
 
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_partition", params,
@@ -853,7 +873,7 @@ export default class DatabaseMaintain extends React.Component {
 
         let myResult = undefined;
 
-        for(let i = 0; i < this.gData.tables.length; i++) {
+        for (let i = 0; i < this.gData.tables.length; i++) {
             let table = this.gData.tables[i];
             if (table.table_name === tableName) {
                 myResult = table.table_id;
@@ -952,8 +972,6 @@ export default class DatabaseMaintain extends React.Component {
 
     onTreeTablesKnownSelected(selectedKeys, info) {
 
-        console.log(info);
-        console.log(this.gCurrent);
         if (selectedKeys[0] === undefined) return;
         if (info.node.olc.nodeType !== "table") return;
 
@@ -961,22 +979,26 @@ export default class DatabaseMaintain extends React.Component {
 
         let myColumn = new TadTableColumn();
         let myIndex = new TadTableIndex();
+        let myIndexColumn = new TadTableIndexColumn();
         let myPartition = new TadTablePartition();
         let myRelation = new TadTableRelation();
 
         myColumn.table_id = this.gCurrent.tableId;
         myIndex.table_id = this.gCurrent.tableId;
+        myIndexColumn.table_id = this.gCurrent.tableId;
         myPartition.table_id = this.gCurrent.tableId;
         myRelation.s_table_id = this.gCurrent.tableId;
 
         axios.all([
             this.doGetTablePropertyColumns(myColumn),
             this.doGetTablePropertyIndexes(myIndex),
+            this.doGetTablePropertyIndexColumns(myIndexColumn),
             this.doGetTablePropertyPartitions(myPartition),
             this.doGetTablePropertyRelations(myRelation)
         ]).then(axios.spread((
             columns,
             indexes,
+            indexColumns,
             partitions,
             relations) => {
 
@@ -984,6 +1006,7 @@ export default class DatabaseMaintain extends React.Component {
             let dsColumns = [];
             let pageSizeIndexes = indexes.data.data.length;
             let dsIndexes = [];
+            let dsIndexColumns = [];
             let pageSizePartitions = partitions.data.data.length;
             let dsPartitions = [];
             let pageSizeRelations = relations.data.data.length;
@@ -996,7 +1019,6 @@ export default class DatabaseMaintain extends React.Component {
             domTableDDL.push(<Fragment>create table {table.table_name}(<br/></Fragment>);
 
             columns.data.data.forEach((item) => {
-                console.log(item);
                 let uiObject = item;
                 uiObject.key = item.column_id;
                 dsColumns.push(uiObject);
@@ -1005,7 +1027,8 @@ export default class DatabaseMaintain extends React.Component {
                     case "varchar":
                     case "varchar2":
                         tableDDL += "\t" + item.column_name + " " + item.data_type + "(" + item.data_length + "),\n"
-                        domTableDDL.push(<Fragment>{item.column_name} {item.data_type}(item.data_length),<br/></Fragment>);
+                        domTableDDL.push(
+                            <Fragment>{item.column_name} {item.data_type}(item.data_length),<br/></Fragment>);
                         break
                     default:
                         tableDDL += "\t" + item.column_name + " " + item.data_type + ",\n"
@@ -1014,6 +1037,7 @@ export default class DatabaseMaintain extends React.Component {
                 }
 
             })
+
             tableDDL = tableDDL.substr(0, tableDDL.length - 2);
             tableDDL += "\n);\n\n";
             domTableDDL.push(<Fragment>);<br/></Fragment>);
@@ -1021,8 +1045,31 @@ export default class DatabaseMaintain extends React.Component {
             indexes.data.data.forEach((item) => {
                 let uiObject = item;
                 uiObject.key = item.id;
+                uiObject.columns = [];
+
+                for(let i = 0; i < indexColumns.data.data.length; i++) {
+                    let indexName = indexColumns.data.data[i].index_name;
+                    if (indexName == item.index_name) {
+                        let columnName = indexColumns.data.data[i].column_name;
+                        let descend = indexColumns.data.data[i].descend;
+                        let columnPosition = indexColumns.data.data[i].column_position;
+                        uiObject.columns.push({
+                            columnName: columnName,
+                            descend: descend,
+                            columnPosition: columnPosition
+                        });
+                    }
+                }
                 dsIndexes.push(uiObject);
-            })
+            });
+            console.log(dsIndexes);
+
+            indexColumns.data.data.forEach((item) => {
+                dsIndexColumns.push(item);
+            });
+            console.log(dsIndexColumns);
+
+            // this.gCurrent.indexColumns = dsIndexColumns;
 
             partitions.data.data.forEach((item) => {
                 let uiObject = item;
@@ -1035,7 +1082,6 @@ export default class DatabaseMaintain extends React.Component {
                 uiObject.key = item.id;
                 dsRelations.push(uiObject);
             })
-
 
             this.setState({
                 pageSizeColumns: pageSizeColumns,
@@ -1559,6 +1605,28 @@ export default class DatabaseMaintain extends React.Component {
 
     }
 
+    onButtonProductsChangeComponentSizeClicked(e) {
+
+        let styleLayout = "NNN";
+
+        if (this.state.styleLayout !== "SNN") styleLayout = "SNN";
+
+        this.setState({
+            styleLayout: styleLayout
+        })
+    }
+
+    onButtonTablesChangeComponentSizeClicked(e) {
+
+        let styleLayout = "NNN";
+
+        if (this.state.styleLayout !== "SSN") styleLayout = "SSN";
+
+        this.setState({
+            styleLayout: styleLayout
+        })
+    }
+
     // Record...
     onButtonAddRecordClicked() {
         let tableId = this.gCurrent.tableId;
@@ -1891,56 +1959,82 @@ export default class DatabaseMaintain extends React.Component {
     render() {
         const columnsColumn = [
             {
-                title: '字段名称',
+                title: <KColumnTitle content='字段名称' className={'clsColumnTitle'}/>,
                 dataIndex: 'column_name',
                 key: 'column_name',
+                className: 'clsColumnColumnName',
+                width: 200,
             },
             {
-                title: '数据类型',
+                title: <KColumnTitle content='数据类型' className={'clsColumnTitle'}/>,
                 dataIndex: 'data_type',
                 key: 'data_type',
+                align: 'center',
+                className: 'clsColumnColumnName',
+                width: 100,
             },
             {
-                title: '数据长度',
+                title: <KColumnTitle content='数据长度' className={'clsColumnTitle'}/>,
                 dataIndex: 'data_length',
                 key: 'data_length',
+                align: 'right',
+                className: 'clsColumnColumnName',
+                width: 100,
             },
             {
-                title: '是否为主键',
+                title: <KColumnTitle content='主键' className={'clsColumnTitle'}/>,
                 dataIndex: 'primary_flag',
                 key: 'primary_flag',
+                align: 'center',
+                className: 'clsColumnColumnName',
+                width: 100,
             },
             {
-                title: '是否可为空',
+                title: <KColumnTitle content='可空' className={'clsColumnTitle'}/>,
                 dataIndex: 'nullable_flag',
                 key: 'nullable_flag',
+                align: 'center',
+                className: 'clsColumnColumnName',
+                width: 100,
             },
             {
-                title: '缺省值',
+                title: <KColumnTitle content='缺省值' className={'clsColumnTitle'}/>,
                 dataIndex: 'data_default',
                 key: 'data_default',
+                align: 'center',
+                className: 'clsColumnColumnName',
+                width: 200,
             },
             {
-                title: '数值分隔符',
+                title: <KColumnTitle content='分隔符' className={'clsColumnTitle'}/>,
                 dataIndex: 'split_flag',
                 key: 'split_flag',
+                align: 'center',
+                className: 'clsColumnColumnName',
+                width: 100,
             },
             {
-                title: '是否可重复',
+                title: <KColumnTitle content='重复标识' chong className={'clsColumnTitle'}/>,
                 dataIndex: 'repeat_flag',
                 key: 'repeat_flag',
+                align: 'center',
+                className: 'clsColumnColumnName',
+                width: 100,
             },
             {
-                title: '字段简述',
+                title: <KColumnTitle content='字段简述' className={'clsColumnTitle'}/>,
                 dataIndex: 'column_desc',
                 key: 'column_desc',
+                className: 'clsColumnColumnName',
+                width: 200,
             },
         ];
         const columnsIndex = [
             {
-                title: '索引名称',
+                title: <KColumnTitle content='索引名称' className={'clsColumnTitle'}/>,
                 dataIndex: 'index_name',
                 key: 'index_name',
+                width: 300,
                 render: (text, record, index) => {
                     return (
                         <Fragment>
@@ -1962,18 +2056,56 @@ export default class DatabaseMaintain extends React.Component {
                                 />
                             )}
                         </Fragment>
+
+
+
                     )
                 }
             },
             {
-                title: '索引类型',
+                title: <KColumnTitle content='索引类型' className={'clsColumnTitle'}/>,
                 dataIndex: 'index_type',
                 key: 'index_type',
+                width: 100,
             },
             {
-                title: '索引字段',
+                title: <KColumnTitle content='索引字段' className={'clsColumnTitle'}/>,
                 dataIndex: 'index_columns',
                 key: 'index_columns',
+                render: (text, record, index) => {
+                    console.log(text, record, index);
+                    return (
+                        <Fragment>
+                            {this.state.isEditingKeyIndex !== record.key && (
+                                <div className={"clsIndexColumns"}>
+                                {record.columns.map((item, index) => {
+                                    return <div className={"clsIndexColumn"}>
+                                        <div>{item.columnName}</div>
+                                        <div>({item.descend})</div>
+                                    </div>
+                                })}
+                                </div>
+                            )}
+                            {this.state.isEditingKeyIndex === record.key && (
+                                <div className={"clsIndexColumns"} style={{display: this.state.isShownButtonAddIndex}}>
+                                {record.columns.map((item, index) => {
+                                    return <div className={"clsIndexColumn"}>
+                                        <div>{item.columnName}</div>
+                                        <div>({item.descend})</div>
+                                    </div>
+                                })}
+                                </div>
+                            )}
+                            {this.state.isEditingKeyIndex === record.key && (
+                                <Input
+                                    style={{display: this.state.isShownButtonAlterIndexConfirm}}
+                                    value={this.state.editingIndex.name}
+                                    onChange={this.onInputIndexNameChanged}
+                                />
+                            )}
+                        </Fragment>
+                    )
+                }
             },
         ];
         const columnsPartition = [
@@ -2076,56 +2208,90 @@ export default class DatabaseMaintain extends React.Component {
         //     {value: "wow", name: "复合分区"},
         // ]
 
-        return <div className="DatabaseMaintain">
+        return <div
+            className={this.state.styleLayout === "NNN" ? "DatabaseMaintain BoxNormal" :
+                this.state.styleLayout === "SNN" ? "DatabaseMaintain BoxSmall" :
+                    this.state.styleLayout === "SSN" ? "DatabaseMaintain BoxSmallSmall" : "DatabaseMaintain BoxNormal"
+            }>
             <div className={"BoxProductsInfo"}>
-                <div className={"BoxTree"}>
-                    <Tree
-                        blockNode={true}
-                        showLine={{showLeafIcon: false}}
-                        showIcon={true}
-                        switcherIcon={<CaretDownOutlined/>}
-                        onSelect={this.onTreeProductsSelected}
-                        treeData={this.state.productsTreeData}
-                    />
+                <div className={"BoxTitleBar"}>
+                    <Button
+                        size={"small"}
+                        type={"ghost"}
+                        icon={this.state.styleLayout === "NNN" ? <CaretLeftOutlined/> : <CaretRightOutlined/>}
+                        onClick={this.onButtonProductsChangeComponentSizeClicked}/>
                 </div>
-                <div className={"BoxDescription"}>information</div>
-            </div>
-            <div className={"BoxKnown"}>
-                <div className={"BoxSelect"}>
-                    <Select ref={this.refSelectDbUsers}
-                            onChange={this.onSelectDbUsersChanged}
-                            defaultValue={this.state.dbUsersSelected}
-                            options={this.state.dbUsersSelectOptions}/>
-                </div>
-                <div className={"BoxToolbar"}>
-                    <Checkbox>分组显示</Checkbox>
-                </div>
-                <div className={"BoxTreeAndTable"}>
-                    <div className={"BoxList"}>
-                        {this.state.lettersKnownTreeData.length ? (
+                {this.state.styleLayout === "NNN" ? (
+                    <Fragment>
+                        <div className={"BoxTree"}>
                             <Tree
-                                className={"TreeLetters"}
                                 blockNode={true}
                                 showLine={{showLeafIcon: false}}
-                                showIcon={false}
-                                defaultSelectedKeys={this.state.lettersKnownSelectedKeys}
-                                onSelect={this.onTreeLettersKnownSelected}
-                                treeData={this.state.lettersKnownTreeData}
+                                showIcon={true}
+                                switcherIcon={<CaretDownOutlined/>}
+                                onSelect={this.onTreeProductsSelected}
+                                treeData={this.state.productsTreeData}
                             />
-                        ) : (<div>&nbsp;</div>)}
-                    </div>
-                    <div className={"BoxTree"}>
-                        <div className={"BoxTree2"}>
-                            <Tree className={"TreeKnown"}
-                                  blockNode={true}
-                                  showLine={true}
-                                  showIcon={true}
-                                  switcherIcon={<CaretDownOutlined/>}
-                                  onSelect={this.onTreeTablesKnownSelected}
-                                  treeData={this.state.tablesKnownTreeData}
-                            /></div>
-                    </div>
+                        </div>
+                        <div className={"BoxDescription"}>information</div>
+                    </Fragment>
+                ) : (<Fragment>
+                    <div>&nbsp;</div>
+                    <div>&nbsp;</div>
+                </Fragment>)}
+            < /div>
+            <div className={"BoxKnown"}>
+                <div className={"BoxTitleBar"}>
+                    <Button
+                        size={"small"}
+                        type={"ghost"}
+                        icon={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ?
+                            <CaretLeftOutlined/> : <CaretRightOutlined/>}
+                        onClick={this.onButtonTablesChangeComponentSizeClicked}/>
                 </div>
+                {(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? (
+                    <Fragment>
+                        <div className={"BoxSelect"}>
+                            <Select ref={this.refSelectDbUsers}
+                                    onChange={this.onSelectDbUsersChanged}
+                                    defaultValue={this.state.dbUsersSelected}
+                                    options={this.state.dbUsersSelectOptions}/>
+                        </div>
+                        <div className={"BoxToolbar"}>
+                            <Checkbox>分组显示</Checkbox>
+                        </div>
+                        <div className={"BoxTreeAndTable"}>
+                            <div className={"BoxList"}>
+                                {this.state.lettersKnownTreeData.length ? (
+                                    <Tree
+                                        className={"TreeLetters"}
+                                        blockNode={true}
+                                        showLine={{showLeafIcon: false}}
+                                        showIcon={false}
+                                        defaultSelectedKeys={this.state.lettersKnownSelectedKeys}
+                                        onSelect={this.onTreeLettersKnownSelected}
+                                        treeData={this.state.lettersKnownTreeData}
+                                    />
+                                ) : (<div>&nbsp;</div>)}
+                            </div>
+                            <div className={"BoxTree"}>
+                                <div className={"BoxTree2"}>
+                                    <Tree className={"TreeKnown"}
+                                          blockNode={true}
+                                          showLine={true}
+                                          showIcon={true}
+                                          switcherIcon={<CaretDownOutlined/>}
+                                          onSelect={this.onTreeTablesKnownSelected}
+                                          treeData={this.state.tablesKnownTreeData}
+                                    /></div>
+                            </div>
+                        </div>
+                    </Fragment>
+                ) : (<Fragment>
+                    <div>&nbsp;</div>
+                    <div>&nbsp;</div>
+                    <div>&nbsp;</div>
+                </Fragment>)}
             </div>
             <div className={"BoxPropertiesBorder"}>
                 <div>&nbsp;</div>
@@ -2156,11 +2322,14 @@ export default class DatabaseMaintain extends React.Component {
                                         <Button onClick={this.onButtonAlterColumnCancelClicked}
                                                 style={{display: this.state.isShownButtonAlterColumnCancel}}>放弃</Button>
                                     </div>
-                                    <div className={"BoxDetail"}>
+                                    <div ref={this.refBoxDetail} className={"BoxDetail"}>
                                         <Table
                                             dataSource={this.state.dsColumns}
                                             columns={columnsColumn}
-                                            scroll={{y: 400}}
+                                            scroll={{
+                                                x: this.state.tablePropertiesScrollX,
+                                                y: this.state.tablePropertiesScrollY
+                                            }}
                                             bordered={true}
                                             size={"small"}
                                             pagination={{
@@ -2183,18 +2352,21 @@ export default class DatabaseMaintain extends React.Component {
                                         <Button
                                             onClick={this.onButtonAlterIndexClicked}
                                             disabled={this.state.isShownButtonAlterIndexConfirm === "block"}>修改</Button>
-                                        <Button onClick={this.onButtonDeleteIndexClicked}
-                                                style={{display: this.state.isShownButtonDeleteIndex}}>删除</Button>
-                                        <Button onClick={this.onButtonAlterIndexConfirmClicked}
-                                                style={{display: this.state.isShownButtonAlterIndexConfirm}}>确认</Button>
-                                        <Button onClick={this.onButtonAlterIndexCancelClicked}
-                                                style={{display: this.state.isShownButtonAlterIndexCancel}}>放弃</Button>
+                                        <Button
+                                            onClick={this.onButtonDeleteIndexClicked}
+                                            style={{display: this.state.isShownButtonDeleteIndex}}>删除</Button>
+                                        <Button
+                                            onClick={this.onButtonAlterIndexConfirmClicked}
+                                            style={{display: this.state.isShownButtonAlterIndexConfirm}}>确认</Button>
+                                        <Button
+                                            onClick={this.onButtonAlterIndexCancelClicked}
+                                            style={{display: this.state.isShownButtonAlterIndexCancel}}>放弃</Button>
                                     </div>
                                     <div className={"BoxDetail"}>
                                         <Table
                                             dataSource={this.state.dsIndexes}
                                             columns={columnsIndex}
-                                            scroll={{y: 400}}
+                                            scroll={{y: this.state.tablePropertiesScrollY}}
                                             bordered={true}
                                             size={"small"}
                                             pagination={{
@@ -2314,9 +2486,9 @@ export default class DatabaseMaintain extends React.Component {
                                 <div className={"BoxTableRelationProperties"}>
                                     <pre>{this.state.tableDDL}</pre>
                                     <div>
-                                    {this.state.domTableDDL.map((item, index) => {
-                                        return item
-                                    })}
+                                        {this.state.domTableDDL.map((item, index) => {
+                                            return item
+                                        })}
                                     </div>
                                 </div>
                             </TabPane>

@@ -7,5 +7,7 @@ export default class TadTableIndex {
         this.index_type = null;
         this.uniqueness = null;
         this.index_desc = null;
+        this.columns = [];
+
     }
 }

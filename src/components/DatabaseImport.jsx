@@ -1202,7 +1202,7 @@ export default class DatabaseImport extends React.Component {
                 let indexName = item[1]; //1: {name: "INDEX_NAME"}
                 let indexType = item[2] ? item[2].toLowerCase() : item[2]; //2: {name: "INDEX_TYPE"}
                 let uniqueness = item[3] ? item[3].toLowerCase() : item[3]; //3: {name: "UNIQUENESS"}
-                let columnName = item[4] ? item[2].toLowerCase() : item[4]; //4: {name: "COLUMN_NAME"}
+                let columnName = item[4] ? item[4].toLowerCase() : item[4]; //4: {name: "COLUMN_NAME"}
                 let columnPosition = item[5]; //5: {name: "COLUMN_POSITION"}
                 let descend = item[6] ? item[6].toLowerCase() : item[6]; //6: {name: "DESCEND"}
                 if (!mapTableIndexes.has(tableName)) {
@@ -1237,6 +1237,7 @@ export default class DatabaseImport extends React.Component {
                 }
             }
             this.gMap.tableIndexes = mapTableIndexes;
+            console.log(mapTableIndexes);
 
             // partition information
             let mapTablePartitions = new Map();
@@ -1520,7 +1521,7 @@ export default class DatabaseImport extends React.Component {
             nTimers++;
         }
 
-        let timerDynamic = setInterval(() => {
+        this.timer = setInterval(() => {
             if (mapTimers.size === nTimers) {
                 let isAllDone = true;
                 mapTimers.forEach(value => {
@@ -1546,8 +1547,6 @@ export default class DatabaseImport extends React.Component {
 
             }
         }, 100);
-
-        this.timer = timerDynamic;
 
         for (let i = 0; i < this.gCurrent.tablesUnknownSelected.length; i++) {
             if (this.gCurrent.tablesUnknownSelected[i].olc.nodeType === "table_column") continue
