@@ -59,8 +59,8 @@ export default class DatabaseMaintain extends React.Component {
             dsPartitions: [],
             dsRelations: [],
             dsRecords: [],
-            tableDDL: "",
-            domTableDDL: [],
+            tableSql: "",
+            domTableSql: [],
 
             pageSizeColumns: 0,
             pageSizeIndexes: 0,
@@ -543,6 +543,8 @@ export default class DatabaseMaintain extends React.Component {
                         table_label_id: item.table_label_id,
                         db_user_id: item.db_user_id,
                         module_id: item.module_id,
+                        partition_column: item.partition_column,
+                        partition_type: item.partition_type,
                         columns: []
                     });
                     mapTablesByName.set(item.table_name, {
@@ -983,10 +985,16 @@ export default class DatabaseMaintain extends React.Component {
         let myPartition = new TadTablePartition();
         let myRelation = new TadTableRelation();
 
-        myColumn.table_id = this.gCurrent.tableId;
-        myIndex.table_id = this.gCurrent.tableId;
-        myIndexColumn.table_id = this.gCurrent.tableId;
-        myPartition.table_id = this.gCurrent.tableId;
+        let tableId = this.gCurrent.tableId;
+        myColumn.table_id = tableId;
+        myIndex.table_id = tableId;
+        myIndexColumn.table_id = tableId;
+        myPartition.table_id = tableId;
+        myPartition.key = tableId;
+        myPartition.partition_column = this.gMap.tables.get(tableId).partition_column;
+        myPartition.partition_type = this.gMap.tables.get(tableId).partition_type;
+        myPartition.partitionNames = [];
+        myPartition.partitionHighValues = [];
         myRelation.s_table_id = this.gCurrent.tableId;
 
         axios.all([
@@ -1013,10 +1021,10 @@ export default class DatabaseMaintain extends React.Component {
             let dsRelations = [];
 
             let table = this.gMap.tables.get(this.gCurrent.tableId);
-            let tableDDL = "CREATE TABLE " + table.table_name + "(\n";
-            let domTableDDL = [];
+            let tableSql = 'CREATE TABLE "' + table.table_name + '"(\n';
+            let domTableSql = [];
 
-            domTableDDL.push(<Fragment>create table {table.table_name}(<br/></Fragment>);
+            domTableSql.push(<Fragment>create table {table.table_name}(<br/></Fragment>);
 
             columns.data.data.forEach((item) => {
                 let uiObject = item;
@@ -1026,56 +1034,76 @@ export default class DatabaseMaintain extends React.Component {
                 switch (item.data_type) {
                     case "varchar":
                     case "varchar2":
-                        tableDDL += "\t" + item.column_name + " " + item.data_type + "(" + item.data_length + "),\n"
-                        domTableDDL.push(
-                            <Fragment>{item.column_name} {item.data_type}(item.data_length),<br/></Fragment>);
+                        tableSql += '\t"' + item.column_name + '" ' + item.data_type.toUpperCase() + '(' + item.data_length + '),\n';
+                        domTableSql.push(
+                            <Fragment>{item.column_name} {item.data_type.toUpperCase()}(item.data_length),<br/></Fragment>);
                         break
                     default:
-                        tableDDL += "\t" + item.column_name + " " + item.data_type + ",\n"
-                        domTableDDL.push(<Fragment>{item.column_name} {item.data_type},<br/></Fragment>);
+                        tableSql += '\t"' + item.column_name + '" ' + item.data_type.toUpperCase() + ',\n';
+                        domTableSql.push(<Fragment>{item.column_name} {item.data_type.toUpperCase()},<br/></Fragment>);
                         break
                 }
 
             })
 
-            tableDDL = tableDDL.substr(0, tableDDL.length - 2);
-            tableDDL += "\n);\n\n";
-            domTableDDL.push(<Fragment>);<br/></Fragment>);
+            tableSql = tableSql.substr(0, tableSql.length - 2);
+            tableSql += "\n);\n\n";
+            domTableSql.push(<Fragment>);<br/></Fragment>);
 
-            indexes.data.data.forEach((item) => {
-                let uiObject = item;
-                uiObject.key = item.id;
-                uiObject.columns = [];
+            let indexSql = "";
+            if (indexes.data.data.length > 0) {
+                indexes.data.data.forEach((item) => {
+                    let uiObject = item;
+                    uiObject.key = item.id;
+                    uiObject.columns = [];
 
-                for(let i = 0; i < indexColumns.data.data.length; i++) {
-                    let indexName = indexColumns.data.data[i].index_name;
-                    if (indexName == item.index_name) {
-                        let columnName = indexColumns.data.data[i].column_name;
-                        let descend = indexColumns.data.data[i].descend;
-                        let columnPosition = indexColumns.data.data[i].column_position;
-                        uiObject.columns.push({
-                            columnName: columnName,
-                            descend: descend,
-                            columnPosition: columnPosition
-                        });
+                    indexSql += 'CREATE INDEX "' + item.index_name + '" ON "' + table.table_name + '" (\n';
+                    for (let i = 0; i < indexColumns.data.data.length; i++) {
+                        let indexName = indexColumns.data.data[i].index_name;
+                        if (indexName == item.index_name) {
+                            let columnName = indexColumns.data.data[i].column_name;
+                            let descend = indexColumns.data.data[i].descend;
+                            let columnPosition = indexColumns.data.data[i].column_position;
+                            uiObject.columns.push({
+                                columnName: columnName,
+                                descend: descend,
+                                columnPosition: columnPosition
+                            });
+                            indexSql += '\t"' + columnName + '",\n';
+                        }
                     }
+                    dsIndexes.push(uiObject);
+                    indexSql = indexSql.substr(0, indexSql.length - 2);
+                    indexSql += '\n);\n\n'
+                });
+
+                indexColumns.data.data.forEach((item) => {
+                    dsIndexColumns.push(item);
+                });
+            }
+
+            let partitionSql = "";
+            if (partitions.data.data.length > 0) {
+                switch (myPartition.partition_type) {
+                    case "range":
+                        partitionSql += 'PARTITION BY ' + myPartition.partition_type.toUpperCase() + '(' + myPartition.partition_column + ') (\n';
+                        partitions.data.data.forEach((item) => {
+                            myPartition.partitionNames.push(item.partition_name);
+                            myPartition.partitionHighValues.push(item.high_value);
+                            partitionSql += '\tPARTITION "' + item.partition_name + '" VALUES LESS THAN (' + item.high_value + '),\n';
+                        })
+                        break
+                    case "list":
+                        break
+                    case "hash":
+                        break
+                    default:
+                        break
                 }
-                dsIndexes.push(uiObject);
-            });
-            console.log(dsIndexes);
-
-            indexColumns.data.data.forEach((item) => {
-                dsIndexColumns.push(item);
-            });
-            console.log(dsIndexColumns);
-
-            // this.gCurrent.indexColumns = dsIndexColumns;
-
-            partitions.data.data.forEach((item) => {
-                let uiObject = item;
-                uiObject.key = item.id;
-                dsPartitions.push(uiObject);
-            })
+                dsPartitions.push(myPartition);
+                partitionSql = partitionSql.substr(0, partitionSql.length - 2);
+                partitionSql += '\n);\n\n';
+            }
 
             relations.data.data.forEach((item) => {
                 let uiObject = item;
@@ -1092,8 +1120,8 @@ export default class DatabaseMaintain extends React.Component {
                 dsPartitions: dsPartitions,
                 pageSizeRelations: pageSizeRelations,
                 dsRelations: dsRelations,
-                tableDDL: tableDDL,
-                domTableDDL: domTableDDL
+                tableSql: tableSql + indexSql + partitionSql,
+                // domTableSql: domTableSql
             })
         }));
     };
@@ -2058,7 +2086,6 @@ export default class DatabaseMaintain extends React.Component {
                         </Fragment>
 
 
-
                     )
                 }
             },
@@ -2078,22 +2105,22 @@ export default class DatabaseMaintain extends React.Component {
                         <Fragment>
                             {this.state.isEditingKeyIndex !== record.key && (
                                 <div className={"clsIndexColumns"}>
-                                {record.columns.map((item, index) => {
-                                    return <div className={"clsIndexColumn"}>
-                                        <div>{item.columnName}</div>
-                                        <div>({item.descend})</div>
-                                    </div>
-                                })}
+                                    {record.columns.map((item, index) => {
+                                        return <div className={"clsIndexColumn"}>
+                                            <div>{item.columnName}</div>
+                                            <div>({item.descend})</div>
+                                        </div>
+                                    })}
                                 </div>
                             )}
                             {this.state.isEditingKeyIndex === record.key && (
                                 <div className={"clsIndexColumns"} style={{display: this.state.isShownButtonAddIndex}}>
-                                {record.columns.map((item, index) => {
-                                    return <div className={"clsIndexColumn"}>
-                                        <div>{item.columnName}</div>
-                                        <div>({item.descend})</div>
-                                    </div>
-                                })}
+                                    {record.columns.map((item, index) => {
+                                        return <div className={"clsIndexColumn"}>
+                                            <div>{item.columnName}</div>
+                                            <div>({item.descend})</div>
+                                        </div>
+                                    })}
                                 </div>
                             )}
                             {this.state.isEditingKeyIndex === record.key && (
@@ -2110,31 +2137,47 @@ export default class DatabaseMaintain extends React.Component {
         ];
         const columnsPartition = [
             {
-                title: '分区类型', // RANGE/LIST/HASH/LINEAR HASH
+                title: <KColumnTitle content='分区类型' className={'clsColumnTitle'}/>,
                 dataIndex: 'partition_type',
                 key: 'partition_type',
+                width: 100,
+                align: 'center',
             },
             {
-                title: '分区字段',
+                title: <KColumnTitle content='分区字段' className={'clsColumnTitle'}/>,
                 dataIndex: 'partition_column',
                 key: 'partition_column',
+                width: 200,
+                align: 'center',
             },
             {
-                title: '分区名称',
-                dataIndex: 'partition_name',
-                key: 'partition_name',
+                title: <KColumnTitle content='分区名称' className={'clsColumnTitle'}/>,
+                dataIndex: 'partitionNames',
+                key: 'partitionNames',
+                width: 200,
                 render: (text, record, index) => {
+                    console.log(record);
                     return (
                         <Fragment>
                             {this.state.isEditingKeyPartition !== record.key && (
-                                <span>
-                                {text}
-                                </span>
+                                <div className={"clsPartitionNames"}>
+                                    {record.partitionNames.map((item, index) => {
+                                        return <div className={"clsPartitionName"}>
+                                            <div>{item}</div>
+                                        </div>
+                                    })}
+                                </div>
                             )}
                             {this.state.isEditingKeyPartition === record.key && (
-                                <span style={{display: this.state.isShownButtonAddPartition}}>
-                                {text}
-                                </span>
+                                <div className={"clsPartitionNames"}
+                                     style={{display: this.state.isShownButtonAddPartition}}>
+                                    {record.partitionNames.map((item, index) => {
+                                        return <div className={"clsPartitionName"}>
+                                            <div>{item}</div>
+                                        </div>
+                                    })}
+                                </div>
+
                             )}
                             {this.state.isEditingKeyPartition === record.key && (
                                 <Input
@@ -2148,24 +2191,50 @@ export default class DatabaseMaintain extends React.Component {
                 }
             },
             {
-                title: '操作符',
-                dataIndex: 'partition_operator',
-                key: 'partition_operator',
+                title: <KColumnTitle content='分区表达式' className={'clsColumnTitle'}/>,
+                dataIndex: 'partitionHighValues',
+                key: 'partitionHighValues',
+                width: 800,
+                render: (text, record, index) => {
+                    console.log(record);
+                    return (
+                        <Fragment>
+                            {this.state.isEditingKeyPartition !== record.key && (
+                                <div className={"clsPartitionHighValues"}>
+                                    {record.partitionHighValues.map((item, index) => {
+                                        return <div className={"clsPartitionHighValue"}>
+                                            <div>{item}</div>
+                                        </div>
+                                    })}
+                                </div>
+                            )}
+                            {this.state.isEditingKeyPartition === record.key && (
+                                <div className={"clsPartitionHighValues"}
+                                     style={{display: this.state.isShownButtonAddPartition}}>
+                                    {record.partitionHighValues.map((item, index) => {
+                                        return <div className={"clsPartitionHighValue"}>
+                                            <div>{item}</div>
+                                        </div>
+                                    })}
+                                </div>
+
+                            )}
+                            {this.state.isEditingKeyPartition === record.key && (
+                                <Input
+                                    style={{display: this.state.isShownButtonAlterPartitionConfirm}}
+                                    value={this.state.editingPartition.name}
+                                    onChange={this.onInputPartitionNameChanged}
+                                />
+                            )}
+                        </Fragment>
+                    )
+                }
             },
             {
-                title: '表达式',
-                dataIndex: 'partition_expression',
-                key: 'partition_expression',
-            },
-            {
-                title: '表空间名称',
-                dataIndex: 'partition_tablespace',
-                key: 'partition_tablespace',
-            },
-            {
-                title: '分区简述',
+                title: <KColumnTitle content='分区简述' className={'clsColumnTitle'}/>,
                 dataIndex: 'partition_desc',
                 key: 'partition_desc',
+                width: 200,
             },
         ];
         const columnsRelation = [
@@ -2347,8 +2416,9 @@ export default class DatabaseMaintain extends React.Component {
                                 <div className={"BoxTableIndexProperties"}>
                                     <div className={"BoxToolbar"}>
                                         <div className={"BoxLabel"}>&nbsp;</div>
-                                        <Button onClick={this.onButtonAddIndexClicked}
-                                                style={{display: this.state.isShownButtonAddIndex}}>新增</Button>
+                                        <Button
+                                            onClick={this.onButtonAddIndexClicked}
+                                            style={{display: this.state.isShownButtonAddIndex}}>新增</Button>
                                         <Button
                                             onClick={this.onButtonAlterIndexClicked}
                                             disabled={this.state.isShownButtonAlterIndexConfirm === "block"}>修改</Button>
@@ -2384,23 +2454,27 @@ export default class DatabaseMaintain extends React.Component {
                                 <div className={"BoxTablePartitionProperties"}>
                                     <div className={"BoxToolbar"}>
                                         <div className={"BoxLabel"}>&nbsp;</div>
-                                        <Button onClick={this.onButtonAddPartitionClicked}
-                                                style={{display: this.state.isShownButtonAddPartition}}>新增</Button>
+                                        <Button
+                                            onClick={this.onButtonAddPartitionClicked}
+                                            style={{display: this.state.isShownButtonAddPartition}}>新增</Button>
                                         <Button
                                             onClick={this.onButtonAlterPartitionClicked}
                                             disabled={this.state.isShownButtonAlterPartitionConfirm === "block"}>修改</Button>
-                                        <Button onClick={this.onButtonDeletePartitionClicked}
-                                                style={{display: this.state.isShownButtonDeletePartition}}>删除</Button>
-                                        <Button onClick={this.onButtonAlterPartitionConfirmClicked}
-                                                style={{display: this.state.isShownButtonAlterPartitionConfirm}}>确认</Button>
-                                        <Button onClick={this.onButtonAlterPartitionCancelClicked}
-                                                style={{display: this.state.isShownButtonAlterPartitionCancel}}>放弃</Button>
+                                        <Button
+                                            onClick={this.onButtonDeletePartitionClicked}
+                                            style={{display: this.state.isShownButtonDeletePartition}}>删除</Button>
+                                        <Button
+                                            onClick={this.onButtonAlterPartitionConfirmClicked}
+                                            style={{display: this.state.isShownButtonAlterPartitionConfirm}}>确认</Button>
+                                        <Button
+                                            onClick={this.onButtonAlterPartitionCancelClicked}
+                                            style={{display: this.state.isShownButtonAlterPartitionCancel}}>放弃</Button>
                                     </div>
                                     <div className={"BoxDetail"}>
                                         <Table
                                             dataSource={this.state.dsPartitions}
                                             columns={columnsPartition}
-                                            scroll={{y: 400}}
+                                            scroll={{x: 1920, y: this.state.tablePropertiesScrollY}}
                                             bordered={true}
                                             size={"small"}
                                             pagination={{
@@ -2482,13 +2556,15 @@ export default class DatabaseMaintain extends React.Component {
                                     </div>
                                 </div>
                             </TabPane>
-                            <TabPane tab="表DDL" key="6">
-                                <div className={"BoxTableRelationProperties"}>
-                                    <pre>{this.state.tableDDL}</pre>
-                                    <div>
-                                        {this.state.domTableDDL.map((item, index) => {
-                                            return item
-                                        })}
+                            <TabPane tab="表SQL" key="6">
+                                <div className={"BoxTableSqlProperties"}>
+                                    <div className={"BoxDetail"}>
+                                        <pre>{this.state.tableSql}</pre>
+                                        {/*<div>*/}
+                                        {/*    {this.state.domTableSql.map((item, index) => {*/}
+                                        {/*        return item*/}
+                                        {/*    })}*/}
+                                        {/*</div>*/}
                                     </div>
                                 </div>
                             </TabPane>

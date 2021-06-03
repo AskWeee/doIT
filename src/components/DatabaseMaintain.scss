@@ -27,6 +27,32 @@ $colorComponentToolbar: rgb(175,225,255);
 
 }
 
+.clsPartitionNames {
+    display: grid;
+    //background: yellow;
+
+    .clsPartitionName {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        //background: red;
+        margin: 3px;
+    }
+
+}
+
+.clsPartitionHighValues {
+    display: grid;
+    //background: yellow;
+
+    .clsPartitionHighValue {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        //background: red;
+        margin: 3px;
+    }
+
+}
+
 .DatabaseMaintain {
     display: grid;
     background: rgba(55, 175, 255, 0.2);
@@ -265,6 +291,30 @@ $colorComponentToolbar: rgb(175,225,255);
                 }
 
                 .BoxTablePartitionProperties {
+                    margin: 5px;
+                    display: grid;
+                    grid-template-rows: auto 1fr;
+                    grid-gap: 5px;
+                    overflow: hidden;
+
+                    .BoxToolbar {
+                        display: grid;
+                        grid-template-columns: 1fr auto auto auto;
+                        grid-gap: 5px;
+
+                        .BoxLabel {
+                            display: grid;
+                            align-content: end;
+                        }
+                    }
+                    .BoxDetail {
+                        //display: grid;
+                        overflow: hidden;
+                        //border: 1px solid red;
+                    }
+                }
+
+                .BoxTableRelationProperties {
                     padding-right: 5px;
                     margin-top: 5px;
                     display: grid;
@@ -287,12 +337,12 @@ $colorComponentToolbar: rgb(175,225,255);
 
                 }
 
-                .BoxTableRelationProperties {
-                    padding-right: 5px;
+                .BoxTableSqlProperties {
                     margin-top: 5px;
                     display: grid;
-                    grid-template-rows: auto 1fr;
-                    grid-gap: 3px;
+                    //grid-template-rows: 1fr;
+                    //grid-gap: 3px;
+                    overflow: hidden;
 
                     .BoxToolbar {
                         display: grid;
@@ -306,6 +356,8 @@ $colorComponentToolbar: rgb(175,225,255);
                     }
                     .BoxDetail {
                         display: grid;
+                        overflow: auto;
+                        margin: 5px;
                     }
 
                 }
