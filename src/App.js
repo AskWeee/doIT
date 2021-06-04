@@ -120,6 +120,9 @@ class App extends React.Component {
         });
     }
 
+    // ****************************************************************************************************
+    // 点击子菜单项，调用相应功能模块
+    // ****************************************************************************************************
     onSubMenuClicked(e, s) {
         switch (s) {
             case 'menu_lowcode_single_table':
@@ -139,6 +142,9 @@ class App extends React.Component {
                 break
             case 'menu_database_config':
                 this.ComContent.showComponentDatabaseConfig();
+                break
+            case 'menu_service_performance':
+                this.ComContent.showComponentServicePerformance();
                 break
             default:
                 break

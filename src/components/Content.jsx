@@ -7,6 +7,7 @@ import DatabaseCompare from "./DatabaseCompare";
 import DatabaseExport from "./DatabaseExport";
 import DatabaseConfig from "./DatabaseConfig";
 import LowcodeSingleTable from "./LowcodeSingleTable";
+import ServicePerformance from "./ServicePerformance";
 
 class Content extends React.Component {
   static contextType = GCtx;
@@ -69,6 +70,18 @@ class Content extends React.Component {
   showComponentLowcodeSingleTable() {
     let children = [];
     children.push(<LowcodeSingleTable key="menu_lowcode_single_table"/>);
+
+    this.setState({
+      children: children
+    })
+  }
+
+  // ****************************************************************************************************
+  // 装载功能模块：指标服务（性能指标相关服务）
+  // ****************************************************************************************************
+  showComponentServicePerformance() {
+    let children = [];
+    children.push(<ServicePerformance key="menu_service_performance"/>);
 
     this.setState({
       children: children
