@@ -1060,7 +1060,7 @@ export default class DatabaseMaintain extends React.Component {
                     indexSql += 'CREATE INDEX "' + item.index_name + '" ON "' + table.table_name + '" (\n';
                     for (let i = 0; i < indexColumns.data.data.length; i++) {
                         let indexName = indexColumns.data.data[i].index_name;
-                        if (indexName == item.index_name) {
+                        if (indexName === item.index_name) {
                             let columnName = indexColumns.data.data[i].column_name;
                             let descend = indexColumns.data.data[i].descend;
                             let columnPosition = indexColumns.data.data[i].column_position;

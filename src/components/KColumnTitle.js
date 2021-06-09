@@ -1,9 +1,9 @@
 import React from 'react'
 
 export default class KColumnTitle extends React.Component {
-    constructor(props) {
-        super(props);
-    }
+    // constructor(props) {
+    //     super(props);
+    // }
 
     render() {
         let { content, className } = this.props;

@@ -9,6 +9,7 @@
     "@testing-library/user-event": "^12.1.10",
     "antd": "^4.15.3",
     "axios": "^0.21.1",
+    "file-saver": "^2.0.5",
     "mockjs": "^1.1.0",
     "moment": "^2.29.1",
     "node-sass": "^5.0.0",
@@ -18,7 +19,8 @@
     "react-svg": "^13.0.3",
     "recoil": "^0.2.0",
     "sass-loader": "^11.0.1",
-    "web-vitals": "^1.0.1"
+    "web-vitals": "^1.0.1",
+    "xlsx": "^0.17.0"
   },
   "scripts": {
     "start": "set PORT=8088 && react-scripts start",

@@ -870,28 +870,28 @@ export default class DatabaseImport extends React.Component {
 
         if (tableNames.length <= 0) return myResult;
 
-        let tables;
+        //let tables;
         let letterSelected;
         let tablesTreeData;
 
         switch (source) {
             case "known":
-                tables = this.gMap.tablesKnownByLetter;
+                //tables = this.gMap.tablesKnownByLetter;
                 letterSelected = this.gCurrent.letterKnownSelected;
                 tablesTreeData = JSON.parse(JSON.stringify(this.state.tablesKnownTreeData));
                 break
             case "unknown":
-                tables = this.gMap.tablesUnknownByLetter;
+                //tables = this.gMap.tablesUnknownByLetter;
                 letterSelected = this.gCurrent.letterUnknownSelected;
                 tablesTreeData = JSON.parse(JSON.stringify(this.state.tablesUnknownTreeData));
                 break
             case "archived":
-                tables = this.gMap.tablesArchivedByLetter;
+                //tables = this.gMap.tablesArchivedByLetter;
                 letterSelected = this.gCurrent.letterArchivedSelected;
                 tablesTreeData = JSON.parse(JSON.stringify(this.state.tablesArchivedTreeData));
                 break
             case "ignored":
-                tables = this.gMap.tablesIgnoredByLetter;
+                //tables = this.gMap.tablesIgnoredByLetter;
                 letterSelected = this.gCurrent.letterIgnoredSelected;
                 tablesTreeData = JSON.parse(JSON.stringify(this.state.tablesIgnoredTreeData));
                 break
@@ -899,7 +899,7 @@ export default class DatabaseImport extends React.Component {
                 break
         }
 
-        for(let i = 0; i < tableNames.length; i++) {
+        for (let i = 0; i < tableNames.length; i++) {
             let tableName = tableNames[i];
             let letter = tableName[0];
             if (letter !== letterSelected) continue
@@ -950,28 +950,28 @@ export default class DatabaseImport extends React.Component {
 
         if (tableNames.length <= 0) return myResult;
 
-        let tables;
+        //let tables;
         let letterSelected;
         let tablesTreeData;
 
         switch (source) {
             case "known":
-                tables = this.gMap.tablesKnownByLetter;
+                //tables = this.gMap.tablesKnownByLetter;
                 letterSelected = this.gCurrent.letterKnownSelected;
                 tablesTreeData = JSON.parse(JSON.stringify(this.state.tablesKnownTreeData));
                 break
             case "unknown":
-                tables = this.gMap.tablesUnknownByLetter;
+                //tables = this.gMap.tablesUnknownByLetter;
                 letterSelected = this.gCurrent.letterUnknownSelected;
                 tablesTreeData = JSON.parse(JSON.stringify(this.state.tablesUnknownTreeData));
                 break
             case "archived":
-                tables = this.gMap.tablesArchivedByLetter;
+                //tables = this.gMap.tablesArchivedByLetter;
                 letterSelected = this.gCurrent.letterArchivedSelected;
                 tablesTreeData = JSON.parse(JSON.stringify(this.state.tablesArchivedTreeData));
                 break
             case "ignored":
-                tables = this.gMap.tablesIgnoredByLetter;
+                //tables = this.gMap.tablesIgnoredByLetter;
                 letterSelected = this.gCurrent.letterIgnoredSelected;
                 tablesTreeData = JSON.parse(JSON.stringify(this.state.tablesIgnoredTreeData));
                 break
@@ -980,7 +980,7 @@ export default class DatabaseImport extends React.Component {
         }
 
         console.log(tablesTreeData);
-        for(let i = 0; i < tableNames.length; i++) {
+        for (let i = 0; i < tableNames.length; i++) {
             let tableName = tableNames[i];
             let letter = tableName[0];
             if (letter !== letterSelected) continue
@@ -1029,7 +1029,7 @@ export default class DatabaseImport extends React.Component {
 
         let myResult = undefined;
 
-        for(let i = 0; i < this.gData.tables.length; i++) {
+        for (let i = 0; i < this.gData.tables.length; i++) {
             let table = this.gData.tables[i];
             if (table.table_name === tableName) {
                 myResult = table.table_id;
@@ -1879,7 +1879,7 @@ export default class DatabaseImport extends React.Component {
                 <Button onClick={this.onButtonOutClicked} icon={<RightOutlined/>}>移除结构</Button>
                 <Button onClick={this.onButtonDeleteClicked} icon={<DoubleRightOutlined/>}>移除数据</Button>
                 <Button onClick={this.onButtonIsTempClicked} icon={<DeleteOutlined/>}>忽略</Button>
-                <Button onClick={this.onButtonIsNotTempClicked} icon={<CheckOutlined />}>还原</Button>
+                <Button onClick={this.onButtonIsNotTempClicked} icon={<CheckOutlined/>}>还原</Button>
             </div>
             <div className={"BoxUnknown"}>
                 <Select
@@ -1901,13 +1901,13 @@ export default class DatabaseImport extends React.Component {
                                 <div className={"BoxUnknownList"}>
                                     {this.state.lettersUnknownTreeData.length ? (
                                         <Tree
-                                        blockNode={true}
-                                        showLine={{showLeafIcon: false}}
-                                        showIcon={false}
-                                        defaultSelectedKeys={this.state.lettersUnknownSelectedKeys}
-                                        onSelect={this.onTreeLettersUnknownSelected}
-                                        treeData={this.state.lettersUnknownTreeData}
-                                    />
+                                            blockNode={true}
+                                            showLine={{showLeafIcon: false}}
+                                            showIcon={false}
+                                            defaultSelectedKeys={this.state.lettersUnknownSelectedKeys}
+                                            onSelect={this.onTreeLettersUnknownSelected}
+                                            treeData={this.state.lettersUnknownTreeData}
+                                        />
                                     ) : (<div>&nbsp;</div>)}
                                 </div>
                                 <div className={"BoxUnknownTree"}>
@@ -1933,14 +1933,14 @@ export default class DatabaseImport extends React.Component {
                             <div className={"BoxUnknownListAndTree"}>
                                 <div className={"BoxUnknownList"}>
                                     {this.state.lettersArchivedTreeData.length ? (
-                                    <Tree className={"TreeLetters"}
-                                          blockNode={true}
-                                          showLine={{showLeafIcon: false}}
-                                          showIcon={false}
-                                          defaultSelectedKeys={this.state.lettersArchivedSelectedKeys}
-                                          onSelect={this.onTreeLettersArchivedSelected}
-                                          treeData={this.state.lettersArchivedTreeData}
-                                    />
+                                        <Tree className={"TreeLetters"}
+                                              blockNode={true}
+                                              showLine={{showLeafIcon: false}}
+                                              showIcon={false}
+                                              defaultSelectedKeys={this.state.lettersArchivedSelectedKeys}
+                                              onSelect={this.onTreeLettersArchivedSelected}
+                                              treeData={this.state.lettersArchivedTreeData}
+                                        />
                                     ) : (<div>&nbsp;</div>)}
                                 </div>
                                 <div className={"BoxUnknownTree"}>
@@ -1962,14 +1962,14 @@ export default class DatabaseImport extends React.Component {
                             <div className={"BoxUnknownListAndTree"}>
                                 <div className={"BoxUnknownList"}>
                                     {this.state.lettersIgnoredTreeData.length ? (
-                                    <Tree className={"TreeLetters"}
-                                          blockNode={true}
-                                          showLine={{showLeafIcon: false}}
-                                          showIcon={false}
-                                          defaultSelectedKeys={this.state.lettersIgnoredSelectedKeys}
-                                          onSelect={this.onTreeLettersIgnoredSelected}
-                                          treeData={this.state.lettersIgnoredTreeData}
-                                    />
+                                        <Tree className={"TreeLetters"}
+                                              blockNode={true}
+                                              showLine={{showLeafIcon: false}}
+                                              showIcon={false}
+                                              defaultSelectedKeys={this.state.lettersIgnoredSelectedKeys}
+                                              onSelect={this.onTreeLettersIgnoredSelected}
+                                              treeData={this.state.lettersIgnoredTreeData}
+                                        />
                                     ) : (<div>&nbsp;</div>)}
                                 </div>
                                 <div className={"BoxUnknownTree"}>

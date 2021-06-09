@@ -2,14 +2,28 @@ import React, {Fragment} from 'react'
 import './ServicePerformance.scss'
 import axios from "axios";
 import GCtx from "../GCtx";
-import {Button, Select, Tree, Checkbox, Table, Input, Tabs} from 'antd'
-import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined} from '@ant-design/icons'
+import {message, Button, Tree, Input, Table, Select} from 'antd'
+import {
+    CaretDownOutlined,
+    CaretLeftOutlined,
+    CaretRightOutlined,
+    PlusSquareOutlined,
+    CopyOutlined,
+    MinusSquareOutlined,
+    EllipsisOutlined,
+    CloudDownloadOutlined,
+    CaretUpOutlined,
+    BranchesOutlined,
+    CloudUploadOutlined,
+} from '@ant-design/icons'
 import Mock from 'mockjs'
 import TadDbConnection from "../entity/TadDbConnection";
 import TadKpiSchema from "../entity/TadKpiSchema";
 import TadKpi from "../entity/TadKpi";
+import XLSX from 'xlsx';
+import TadIndicator from "../entity/TadIndicator";
 
-const {TabPane} = Tabs;
+const {Option} = Select;
 
 export default class ServicePerformance extends React.Component {
     static contextType = GCtx;
@@ -19,14 +33,32 @@ export default class ServicePerformance extends React.Component {
     gData = {};
     gCurrent = {};
     gRef = {};
+    refBoxDetail = React.createRef();
+    gIndex = 10000;
 
     constructor(props) {
         super(props);
 
         this.state = {
             styleLayout: "NNN",
+            styleLayoutUpDown: "NN",
             treeDataKpiSchemas: [],
+            pageSizeIndicators: 50,
             treeDataKpis: [],
+            dsIndicators: [],
+            selected: {
+                schemaName: "",
+                kpiId: "",
+                kpiZhName: "",
+                kpiEnName: "",
+                kpiField: "",
+                kpiExp: "",
+                kpiAlarm: "",
+                kpiFormat: "",
+                kpiMinValue: "",
+                kpiMaxValue: "",
+            },
+            tablePropertiesScrollY: 200,
         }
 
         this.test = this.test.bind(this);
@@ -35,12 +67,26 @@ export default class ServicePerformance extends React.Component {
         this.doInit = this.doInit.bind(this);
         this.doGetAll = this.doGetAll.bind(this);
         this.doGetKpis = this.doGetKpis.bind(this);
+        this.doGetKpiSchemas = this.doGetKpiSchemas.bind(this);
+        this.doGetIndicators = this.doGetIndicators.bind(this);
+        this.doGetExcel = this.doGetExcel.bind(this);
 
         this.onTreeKpiSchemasSelected = this.onTreeKpiSchemasSelected.bind(this);
+        this.onTreeKpisSelected = this.onTreeKpisSelected.bind(this);
+        this.onTreeKpiSchemasChecked = this.onTreeKpiSchemasChecked.bind(this);
+        this.onTreeKpisChecked = this.onTreeKpisChecked.bind(this);
+
+        this.onButtonProductsChangeComponentSizeClicked = this.onButtonProductsChangeComponentSizeClicked.bind(this);
+        this.onButtonChangeComponentLayoutUpDownClicked = this.onButtonChangeComponentLayoutUpDownClicked.bind(this);
+        this.onButtonSchemasCopyPasteClicked = this.onButtonSchemasCopyPasteClicked.bind(this);
+        this.onButtonKpisCopyPasteClicked = this.onButtonKpisCopyPasteClicked.bind(this);
+
+        this.onInputSearchSchemaChange = this.onInputSearchSchemaChange.bind(this);
+        this.onInputSearchKpiChange = this.onInputSearchKpiChange.bind(this);
     }
 
-    test(s) {
-        console.log(s);
+    test() {
+
     }
 
     componentDidMount() {
@@ -62,22 +108,50 @@ export default class ServicePerformance extends React.Component {
     }
 
     doInit() {
+        this.setState({
+            tablePropertiesScrollY: this.refBoxDetail.current.scrollHeight - 40,
+        })
     }
 
     doGetAll() {
         axios.all([
-            this.doGetKpis()
+            this.doGetKpis(),
+            this.doGetKpiSchemas(),
+            this.doGetIndicators(),
         ]).then(axios.spread((
-            kpis) => {
+            kpis,
+            schemas,
+            indicators) => {
             let mapSchemas = new Map();
+            let mapKpis = new Map();
             let uiSchemas = [];
 
-            this.gData.kpiSchemas = kpis.data.data;
+            this.gData.kpis = kpis.data.data;
+            this.gData.schemas = schemas.data.data;
+            this.gData.indicators = indicators.data.data;
+
+            let dsIndicators = [];
+            let pageSizeIndicators = this.gData.indicators.length;
+            this.gData.indicators.forEach((item) => {
+                let indicator = new TadIndicator();
+                indicator.indicator_code = item.indicator_code;
+                indicator.indicator_name = item.indicator_name;
+                indicator.counter_code = item.counter_code;
+                indicator.counter_zhname = item.counter_zhname;
+                indicator.counter_enname = item.counter_enname;
+
+                dsIndicators.push(indicator);
+            });
+
+            this.setState({
+                pageSizeIndicators: pageSizeIndicators,
+                dsIndicators: dsIndicators
+            })
 
             let n = 0;
-            kpis.data.data[0].data.rows.forEach(function (item) {
-                let schemaId = item[0] === null ? -1 : item[0];
-                let schemaName = item[2] === null ? "" : item[2];
+            this.gData.schemas.forEach(function (item) {
+                let schemaId = item.schema_id === null ? -1 : item.schema_id;
+                let schemaName = item.schema_zhname === null ? "" : item.schema_zhname;
 
                 if (schemaId !== -1 &&
                     schemaName !== "" &&
@@ -85,88 +159,57 @@ export default class ServicePerformance extends React.Component {
                     schemaName[0] !== "?" &&
                     schemaName[schemaName.length - 1] !== "?") {
 
-                    let myKpi = new TadKpi();
-                    myKpi.kpi_id = item[10] === null ? -1 : item[10];
-                    myKpi.schema_id = schemaId;
-                    myKpi.kpi_zhname = item[11] === null ? "" : item[11];
-                    myKpi.kpi_enname = item[12] === null ? "" : item[12];
-                    myKpi.kpi_field = item[13] === null ? "" : item[13];
-                    myKpi.kpi_exp = item[14] === null ? "" : item[14];
-                    myKpi.kpi_alarm = item[15] === null ? "" : item[15];
-                    myKpi.kpi_format = item[16] === null ? "" : item[16];
-                    myKpi.kpi_min_value = item[17] === null ? "" : item[17];
-                    myKpi.kpi_max_value = item[18] === null ? "" : item[18];
-
                     if (!mapSchemas.has(schemaId)) {
-                        let mySchema = new TadKpiSchema();
-                        mySchema.schema_id = schemaId;
-                        mySchema.schema_ns = item[1] === null ? "" : item[1];
-                        mySchema.schema_zhname = item[2] === null ? "" : item[2];
-                        mySchema.schema_enname = item[3] === null ? "" : item[3];
-                        mySchema.counter_tab_name = item[4] === null ? "" : item[4];
-                        mySchema.tab_name = item[5] === null ? "" : item[5];
-                        mySchema.vendor_id = item[6] === null ? "" : item[6];
-                        mySchema.object_class = item[7] === null ? "" : item[7];
-                        mySchema.sub_class = item[8] === null ? "" : item[8];
-                        mySchema.interval_flag = item[9] === null ? "" : item[9];
-                        if (myKpi.kpi_id !== -1) {
-                            mySchema.kpis.push(myKpi);
-                            mapSchemas.set(schemaId, mySchema)
+                        let mySchema = item;
 
-                            n++;
-                            let uiSchema = {
-                                key: mySchema.schema_id,
-                                title: n + " - " + mySchema.schema_zhname,
-                                children: [
-                                    // {key: mySchema.schema_id + "_schema_ns", title: mySchema.schema_ns, children: []},
-                                    // {key: mySchema.schema_id + "_schema_enname", title: mySchema.schema_enname, children: []},
-                                    // {
-                                    //     key: mySchema.schema_id + "_tab_name",
-                                    //     title: "kpi表：" + mySchema.tab_name,
-                                    //     children: []
-                                    // },
-                                    // {
-                                    //     key: mySchema.schema_id + "_counter_tab_name",
-                                    //     title: "counter表：" + mySchema.counter_tab_name,
-                                    //     children: []
-                                    // },
-                                    // {
-                                    //     key: mySchema.schema_id + "_object_class",
-                                    //     title: "网元类型：" + mySchema.object_class + " 细分类型：" + mySchema.sub_class,
-                                    //     children: []
-                                    // },
-                                    // {
-                                    //     key: mySchema.schema_id + "_vendor_id",
-                                    //     title: "设备厂家：" + mySchema.vendor_id,
-                                    //     children: []
-                                    // },
-                                    // {
-                                    //     key: mySchema.schema_id + "_interval_flag",
-                                    //     title: "采集粒度：" + mySchema.interval_flag,
-                                    //     children: []
-                                    // },
-                                ]
-                            }
-                            uiSchemas.push(uiSchema);
+                        mySchema.kpis = [];
+                        mapSchemas.set(schemaId, mySchema)
+
+                        n++;
+                        let uiSchema = {
+                            key: n + "_" + mySchema.schema_id,
+                            title: n + " - " + mySchema.schema_id + "-" + mySchema.schema_zhname,
+                            children: []
                         }
-                    } else {
-                        mapSchemas.get(schemaId).kpis.push(myKpi);
+                        uiSchemas.push(uiSchema);
                     }
                 }
             });
 
-            this.gMap.kpiSchemas = mapSchemas;
+            this.gData.kpis.forEach(function (item) {
+                let kpiId = item.kpi_id === null ? -1 : item.kpi_id;
+                let kpiName = item.kpi_zhname === null ? "" : item.kpi_zhname;
+
+                if (kpiId !== -1 &&
+                    kpiName !== "" &&
+                    kpiName.length > 0 &&
+                    kpiName[0] !== "?" &&
+                    kpiName[kpiName.length - 1] !== "?") {
+
+                    let myKpi = item;
+
+                    if (!mapKpis.has(kpiId)) {
+                        mapKpis.set(kpiId, myKpi);
+                    }
+
+                    if (mapSchemas.has(item.schema_id)) {
+                        mapSchemas.get(item.schema_id).kpis.push(myKpi)
+                    }
+                }
+            });
+
+            this.gMap.schemas = mapSchemas;
+            this.gMap.kpis = mapKpis;
 
             this.setState({
                 treeDataKpiSchemas: uiSchemas
             })
-
         })).then(() => {
             this.doInit();
         });
     }
 
-    doGetKpis() {
+    doGetKpisOracle() {
         let params = new TadDbConnection();
         params.db_type = "oracle";
         params.db_host = "10.10.1.170";
@@ -177,6 +220,96 @@ export default class ServicePerformance extends React.Component {
 
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpis", params,
             {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetKpis() {
+        let params = new TadKpi();
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpis", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetKpiSchemas() {
+        let params = new TadKpiSchema();
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpi_schemas", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetIndicators() {
+        let params = {};
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_indicators", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetExcel() {
+        axios.get('data/counter_001.xlsx', {responseType: 'arraybuffer'}).then(res => {
+            let wb = XLSX.read(res.data, {type: 'array'});
+            let range = XLSX.utils.decode_range(wb.Sheets[wb.SheetNames[2]]['!ref']);
+            let lastIndicator = new TadIndicator();
+
+            for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+                let myIndicator = new TadIndicator();
+                myIndicator.indicator_code = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 0, r: R})]);
+                myIndicator.indicator_name = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 1, r: R})]);
+                myIndicator.indicator_desc = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 2, r: R})]);
+                myIndicator.indicator_definition = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 3, r: R})]);
+                myIndicator.counter_code = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 4, r: R})]);
+                myIndicator.counter_enname = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 5, r: R})]);
+                myIndicator.counter_zhname = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 6, r: R})]);
+                myIndicator.real_tab_name = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 7, r: R})]);
+                myIndicator.real_tab_col_name = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 8, r: R})]);
+                myIndicator.counter_time_type = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 9, r: R})]);
+                myIndicator.counter_geo_type = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 10, r: R})]);
+                myIndicator.counter_tab_name = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 11, r: R})]);
+                myIndicator.kpi_tab_name = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 12, r: R})]);
+                myIndicator.kpi_tab_col_name = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 14, r: R})]);
+                myIndicator.kpi_exp = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 15, r: R})]);
+                myIndicator.kpi_exp_desc = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 16, r: R})]);
+                myIndicator.counter_zhexp = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 17, r: R})]);
+                myIndicator.counter_enexp = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 18, r: R})]);
+                myIndicator.counter_unit = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 19, r: R})]);
+                myIndicator.counter_geo = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 20, r: R})]);
+                myIndicator.counter_time = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 21, r: R})]);
+                myIndicator.counter_desc = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 22, r: R})]);
+                myIndicator.kpi_index = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 23, r: R})]);
+                myIndicator.kpi_value_format = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 24, r: R})]);
+                // myIndicator.kpi_value_min = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c:22, r:R})]);
+                myIndicator.kpi_value_max = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 25, r: R})]);
+
+                if (myIndicator.indicator_code !== null) lastIndicator.indicator_code = myIndicator.indicator_code; else myIndicator.indicator_code = lastIndicator.indicator_code;
+                if (myIndicator.indicator_name !== null) lastIndicator.indicator_name = myIndicator.indicator_name; else myIndicator.indicator_name = lastIndicator.indicator_name;
+                if (myIndicator.indicator_desc !== null) lastIndicator.indicator_desc = myIndicator.indicator_desc; else myIndicator.indicator_desc = lastIndicator.indicator_desc;
+                if (myIndicator.indicator_definition !== null) lastIndicator.indicator_definition = myIndicator.indicator_definition; else myIndicator.indicator_definition = lastIndicator.indicator_definition;
+                if (myIndicator.counter_zhexp !== null) lastIndicator.counter_zhexp = myIndicator.counter_zhexp; else myIndicator.counter_zhexp = lastIndicator.counter_zhexp;
+                if (myIndicator.counter_enexp !== null) lastIndicator.counter_enexp = myIndicator.counter_enexp; else myIndicator.counter_enexp = lastIndicator.counter_enexp;
+                if (myIndicator.counter_unit !== null) lastIndicator.counter_unit = myIndicator.counter_unit; else myIndicator.counter_unit = lastIndicator.counter_unit;
+                if (myIndicator.counter_geo !== null) lastIndicator.counter_geo = myIndicator.counter_geo; else myIndicator.counter_geo = lastIndicator.counter_geo;
+                if (myIndicator.counter_time !== null) lastIndicator.counter_time = myIndicator.counter_time; else myIndicator.counter_time = lastIndicator.counter_time;
+                if (myIndicator.counter_desc !== null) lastIndicator.counter_desc = myIndicator.counter_desc; else myIndicator.counter_desc = lastIndicator.counter_desc;
+
+                axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/add_indicator",
+                    myIndicator,
+                    {headers: {'Content-Type': 'application/json'}}
+                ).then((response) => {
+                    let data = response.data;
+
+                    if (data.success) {
+                        message.info("成功导入指标：" + data.data.indicator_name);
+                    }
+                });
+            }
+        })
+
+    }
+
+    toCellValue(cell) {
+        let myValue = null;
+
+        if (cell && cell.t) myValue = XLSX.utils.format_cell(cell);
+
+        return myValue;
     }
 
     // ****************************************************************************************************
@@ -190,44 +323,100 @@ export default class ServicePerformance extends React.Component {
     onTreeKpiSchemasSelected(selectedKeys, info) {
 
         if (info.selected) {
-            let schemaId = selectedKeys[0];
+            let schemaId = parseInt(selectedKeys[0].split("_")[1]);
+            let schemaName = "";
+            let vendorId = -1;
+            let objectClass = -1;
+            let subClass = -1;
             let uiKpis = [];
 
-            if (this.gMap.kpiSchemas.has(schemaId)) {
-                this.gMap.kpiSchemas.get(schemaId).kpis.forEach((item) => {
-                    // myKpi.kpi_enname = item[12] === null ? "" : item[12];
-                    // myKpi.kpi_field = item[13] === null ? "" : item[13];
+            if (this.gMap.schemas.has(schemaId)) {
+                schemaName = this.gMap.schemas.get(schemaId).schema_zhname;
+                vendorId = this.gMap.schemas.get(schemaId).vendor_id;
+                objectClass = this.gMap.schemas.get(schemaId).object_class;
+                subClass = this.gMap.schemas.get(schemaId).sub_class;
+
+                this.gMap.schemas.get(schemaId).kpis.forEach((item) => {
                     let uiKpi = {
                         key: item.kpi_id,
-                        title: item.kpi_id + " - " + item.kpi_zhname, // + "(" + item.kpi_alarm + ")",
-                        children: [
-                            // {
-                            //     key: item.kpi_id + "_kpi_exp",
-                            //     title: "数值运算：" + item.kpi_exp,
-                            //     children: []
-                            // },
-                            // {
-                            //     key: item.kpi_id + "_kpi_value",
-                            //     title: "数据格式：" + item.kpi_format + " 最小值：" + item.kpi_min_value + " 最大值：" + item.kpi_max_value,
-                            //     children: []
-                            // },
-                        ]
+                        title: item.kpi_id + " - " + item.kpi_zhname,
+                        children: []
                     }
                     uiKpis.push(uiKpi);
                 });
             }
 
             this.setState({
-                treeDataKpis: uiKpis
+                treeDataKpis: uiKpis,
+                selected: {
+                    schemaName: schemaName,
+                    vendorId: vendorId,
+                    objectClass: objectClass,
+                    subClass: subClass,
+                    kpiName: "",
+                }
             })
         } else {
             this.setState({
-                treeDataKpis: []
+                treeDataKpis: [],
+                selected: {
+                    schemaName: "",
+                    vendorId: -1,
+                    objectClass: -1,
+                    subClass: -1,
+                    kpiName: "",
+                }
             })
         }
 
 
     };
+
+    onTreeKpisSelected(selectedKeys, info) {
+        if (info.selected) {
+            let kpiId = selectedKeys[0];
+
+            if (this.gMap.kpis.has(kpiId)) {
+                let selected = JSON.parse(JSON.stringify(this.state.selected));
+                selected.kpiId = kpiId;
+                selected.kpiZhName = this.gMap.kpis.get(kpiId).kpi_zhname;
+                selected.kpiEnName = this.gMap.kpis.get(kpiId).kpi_enname;
+                selected.kpiField = this.gMap.kpis.get(kpiId).kpi_field;
+                selected.kpiExp = this.gMap.kpis.get(kpiId).kpi_exp;
+                selected.kpiAlarm = this.gMap.kpis.get(kpiId).kpi_alarm;
+                selected.kpiFormat = this.gMap.kpis.get(kpiId).kpi_format;
+                selected.kpiMinValue = this.gMap.kpis.get(kpiId).kpi_min_value;
+                selected.kpiMaxValue = this.gMap.kpis.get(kpiId).kpi_max_value;
+
+                this.setState({
+                    selected: selected
+                })
+            } else {
+                let selected = JSON.parse(JSON.stringify(this.state.selected));
+                selected.kpiId = kpiId;
+                selected.kpiZhName = "";
+                selected.kpiEnName = "";
+                selected.kpiField = "";
+                selected.kpiExp = "";
+                selected.kpiAlarm = "";
+                selected.kpiFormat = "";
+                selected.kpiMinValue = "";
+                selected.kpiMaxValue = "";
+
+                this.setState({
+                    selected: selected
+                })
+            }
+        }
+    }
+
+    onTreeKpiSchemasChecked(checkedKeys, info) {
+        this.gCurrent.schemasChecked = info.checkedNodes;
+    }
+
+    onTreeKpisChecked(checkedKeys, info) {
+        this.gCurrent.kpisChecked = info.checkedNodes;
+    }
 
     // ****************************************************************************************************
     // SELECT...
@@ -241,6 +430,100 @@ export default class ServicePerformance extends React.Component {
     // BUTTON...
     // ****************************************************************************************************
 
+    onButtonProductsChangeComponentSizeClicked(e) {
+
+        let styleLayout = "NNN";
+
+        if (this.state.styleLayout !== "SNN") styleLayout = "SNN";
+
+        this.setState({
+            styleLayout: styleLayout
+        })
+    }
+
+    onButtonChangeComponentLayoutUpDownClicked(e) {
+
+        let styleLayoutUpDown = "NN";
+
+        if (this.state.styleLayoutUpDown !== "SN") styleLayoutUpDown = "SN";
+
+        this.setState({
+            styleLayoutUpDown: styleLayoutUpDown
+        })
+    }
+
+    // onButtonTablesChangeComponentSizeClicked(e) {
+    //
+    //     let styleLayout = "NNN";
+    //
+    //     if (this.state.styleLayout !== "SSN") styleLayout = "SSN";
+    //
+    //     this.setState({
+    //         styleLayout: styleLayout
+    //     })
+    // }
+
+    onButtonImportExcel() {
+
+    }
+
+    onButtonSchemasCopyPasteClicked(e) {
+        let treeDataKpiSchemas = JSON.parse(JSON.stringify(this.state.treeDataKpiSchemas));
+
+        let n = treeDataKpiSchemas.length;
+        this.gCurrent.schemasChecked.forEach((itemSchema) => {
+            let schemaId = itemSchema.key.split("_")[1];
+            let ids = schemaId.split("260");
+            let idObjectClassFirst = ids[0];
+            let idFixed = "260";
+            let idType = ids[1][0];
+            let idTime = ids[1][1];
+            let regionClass = "";
+            let idObjectClassSecond = ids[1].substr(2, 2);
+            let idIndex = ids[1].substr(4, 2);
+            let objectClass = parseInt(idObjectClassFirst + idObjectClassSecond);
+            if (((objectClass >= 50) && (objectClass <= 59)) || ((objectClass >= 50) && (objectClass <= 59)) || (objectClass === 99) || (objectClass === 199)) {
+                regionClass = objectClass;
+                objectClass = idIndex;
+                idIndex = "";
+            }
+            let schemaIdNew = "";
+            if (regionClass === "") {
+                schemaIdNew = idObjectClassFirst + "260" + idType + "X" + idObjectClassSecond + idIndex;
+            } else {
+                schemaIdNew = idObjectClassFirst + "260" + idType + "X" + idObjectClassSecond + idIndex;
+            }
+
+            schemaId = parseInt(schemaId);
+
+            let schema = this.gMap.schemas.get(schemaId);
+            console.log("add schema...", idType, idTime, idObjectClassFirst + idObjectClassSecond, idIndex, schemaIdNew);
+            n++;
+            treeDataKpiSchemas.push({
+                key: n + "_" + schemaId,
+                title: n + " - " + schemaId + " - " + schema.schema_zhname + " - 副本",
+                children: []
+            })
+
+
+            schema.kpis.forEach((kpi) => {
+                //let kpiId = itemKpi.kpi_id;
+                //let kpi = this.gMap.kpis.get(kpiId)
+                //console.log("add", kpi);
+                //let kpiIdNew = idObjectClassFirst + idType + "X" + idObjectClassSecond + idIndex + ;
+                console.log("add kpi...", kpi.kpi_id);
+            })
+        });
+
+        this.setState({
+            treeDataKpiSchemas: treeDataKpiSchemas
+        });
+    }
+
+    onButtonKpisCopyPasteClicked(e) {
+        console.log(this.gCurrent);
+    }
+
     // ****************************************************************************************************
     // TABLE ROW...
     // ****************************************************************************************************
@@ -249,87 +532,369 @@ export default class ServicePerformance extends React.Component {
     // INPUT...
     // ****************************************************************************************************
 
+    onInputSearchSchemaChange(e) {
+        const {value} = e.target;
+
+        let uiSchemas = [];
+        let n = 0;
+        this.gData.schemas.forEach(function (item) {
+            let schemaId = item.schema_id === null ? -1 : item.schema_id;
+            let schemaName = item.schema_zhname === null ? "" : item.schema_zhname;
+
+            if (schemaId !== -1 &&
+                schemaName !== "" &&
+                schemaName.length > 0 &&
+                schemaName[0] !== "?" &&
+                schemaName[schemaName.length - 1] !== "?") {
+                if ((schemaName.indexOf(value) >= 0) || (item.schema_id.toString().indexOf(value) >= 0)) {
+                    n++;
+                    let uiSchema = {
+                        key: n + "_" + item.schema_id,
+                        title: n + " - " + item.schema_id + "-" + item.schema_zhname,
+                        children: []
+                    }
+                    uiSchemas.push(uiSchema);
+                }
+            }
+        });
+
+        this.setState({
+            treeDataKpiSchemas: uiSchemas
+        })
+        // const expandedKeys = dataList
+        //     .map(item => {
+        //         if (item.title.indexOf(value) > -1) {
+        //             return getParentKey(item.key, gData);
+        //         }
+        //         return null;
+        //     })
+        //     .filter((item, i, self) => item && self.indexOf(item) === i);
+        // this.setState({
+        //     searchValueSchemaName: value
+        // });
+    }
+
+    onInputSearchKpiChange(e) {
+        const {value} = e.target;
+
+        let uiSchemas = [];
+        let uiKpis = [];
+        let n = 0;
+        let setSchemas = new Set();
+
+        if (value !== "") {
+            this.gData.kpis.forEach(function (item) {
+                let kpiId = item.kpi_id === null ? -1 : item.kpi_id;
+                let kpiName = item.kpi_zhname === null ? "" : item.kpi_zhname;
+                let schemaId = item.schema_id === null ? -1 : item.schema_id;
+                // let schemaName = item.schema_zhname === null ? "" : item.schema_zhname;
+
+                if (kpiId !== -1 &&
+                    schemaId !== -1 &&
+                    kpiName !== "" &&
+                    kpiName.length > 0 &&
+                    kpiName[0] !== "?" &&
+                    kpiName[kpiName.length - 1] !== "?") {
+                    if ((kpiName.indexOf(value) >= 0) || (kpiId.toString().indexOf(value) >= 0)) {
+                        setSchemas.add(schemaId);
+                        let uiKpi = {
+                            key: kpiId,
+                            title: kpiId + " - " + kpiName,
+                            children: []
+                        }
+                        uiKpis.push(uiKpi);
+                    }
+                }
+            });
+
+            setSchemas.forEach((value, key) => {
+                n++;
+                if (this.gMap.schemas.has(key)) {
+                    let schema = this.gMap.schemas.get(key);
+                    let uiSchema = {
+                        key: n + "_" + key,
+                        title: n + " - " + schema.schema_id + "-" + schema.schema_zhname,
+                        children: []
+                    }
+                    uiSchemas.push(uiSchema);
+                }
+            })
+            this.setState({
+                treeDataKpiSchemas: uiSchemas,
+                treeDataKpis: uiKpis,
+            })
+        } else {
+            this.gMap.schemas.forEach((value, key) => {
+                n++;
+                //let schema = this.gMap.schemas.get(key);
+                let uiSchema = {
+                    key: n + "_" + key,
+                    title: n + " - " + value.schema_id + "-" + value.schema_zhname,
+                    children: []
+                }
+                uiSchemas.push(uiSchema);
+            })
+            this.setState({
+                treeDataKpiSchemas: uiSchemas,
+                treeDataKpis: uiKpis,
+            })
+
+        }
+
+        // const expandedKeys = dataList
+        //     .map(item => {
+        //         if (item.title.indexOf(value) > -1) {
+        //             return getParentKey(item.key, gData);
+        //         }
+        //         return null;
+        //     })
+        //     .filter((item, i, self) => item && self.indexOf(item) === i);
+        // this.setState({
+        //     searchValueSchemaName: value
+        // });
+    }
+
     render() {
+        const columnsIndicator = [
+            {
+                title: '指标名称',
+                dataIndex: 'indicator_name',
+                key: 'indicator_name',
+            },
+            {
+                title: '统计数据中文名称',
+                dataIndex: 'counter_zhname',
+                key: 'counter_zhname',
+            },
+            {
+                title: '统计数据英文名称',
+                dataIndex: 'counter_enname',
+                key: 'counter_enname',
+            },
+        ];
+
         return <Fragment>
-            <div className={this.state.styleLayout === "NNN" ? "ServicePerformance BoxNormal" :
-                this.state.styleLayout === "SNN" ? "ServicePerformance BoxSmall" :
-                    this.state.styleLayout === "SSN" ? "ServicePerformance BoxSmallSmall" : "ServicePerformance BoxNormal"}>
+            <div className={this.state.styleLayout === "NNN" ? "ServicePerformance BoxServicePerformanceNormal" : "ServicePerformance BoxServicePerformanceSmall"}>
                 <div className={"BoxKpiSchemas"}>
                     <div className={"BoxTitleBar"}>
-                        <Button
-                            size={"small"}
-                            type={"ghost"}
-                            icon={this.state.styleLayout === "NNN" ? <CaretLeftOutlined/> : <CaretRightOutlined/>}
-                            onClick={this.onButtonProductsChangeComponentSizeClicked}/>
+                        {this.state.styleLayout === "NNN" ? (
+                            <Fragment>
+                                <div className={"BoxTitle"}>指标组</div>
+                                <div className={"BoxButtons"}>
+                                    <Button
+                                        size={"small"}
+                                        type={"primary"}
+                                        icon={<BranchesOutlined/>}>提交变更</Button>
+                                    <Button
+                                        size={"small"}
+                                        type={"primary"}
+                                        icon={<PlusSquareOutlined/>}>新增</Button>
+                                    <Button
+                                        size={"small"}
+                                        type={"primary"}
+                                        icon={<CopyOutlined/>}
+                                        onClick={this.onButtonSchemasCopyPasteClicked}>复制</Button>
+                                    <Button
+                                        size={"small"}
+                                        type={"primary"}
+                                        icon={<MinusSquareOutlined/>}>删除</Button>
+                                    <Button
+                                        size={"small"}
+                                        type={"primary"}
+                                        icon={<CloudDownloadOutlined/>}>导出</Button>
+                                </div>
+                            </Fragment>) : (
+                            <Fragment>
+                                <div></div>
+                                <div></div>
+                            </Fragment>
+                        )}
+                        <div>
+                            <Button
+                                size={"small"}
+                                type={"ghost"}
+                                icon={this.state.styleLayout === "NNN" ? <CaretLeftOutlined/> : <CaretRightOutlined/>}
+                                onClick={this.onButtonProductsChangeComponentSizeClicked}/>
+                        </div>
                     </div>
                     {this.state.styleLayout === "NNN" ? (
                         <Fragment>
                             <div className={"BoxTree"}>
-                                <Tree
-                                    blockNode={true}
-                                    showLine={{showLeafIcon: false}}
-                                    showIcon={true}
-                                    switcherIcon={<CaretDownOutlined/>}
-                                    onSelect={this.onTreeKpiSchemasSelected}
-                                    treeData={this.state.treeDataKpiSchemas}
-                                />
-                            </div>
-                        </Fragment>
-                    ) : (
-                        <Fragment>
-                            <div>&nbsp;</div>
-                            <div>&nbsp;</div>
-                        </Fragment>
-                    )}
-                < /div>
-                <div className={"BoxKpis"}>
-                    <div className={"BoxTitleBar"}>
-                        <Button
-                            size={"small"}
-                            type={"ghost"}
-                            icon={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ?
-                                <CaretLeftOutlined/> : <CaretRightOutlined/>}
-                            onClick={this.onButtonTablesChangeComponentSizeClicked}/>
-                    </div>
-                    {(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? (
-                        <Fragment>
-                            <div className={"BoxTree"}>
-                                <div className={"BoxTree2"}>
+                                <Select defaultValue="-1">
+                                    <Option value="-1">变更：全集</Option>
+                                    <Option value="1">变更：K - 新增话务指标 - 2021-07-01</Option>
+                                </Select>
+                                <Input.Search className={"BoxSearch"} placeholder="Search" onChange={this.onInputSearchSchemaChange}/>
+                                <div className={"BoxTreeInstance"}>
                                     <Tree
+                                        checkable
                                         blockNode={true}
                                         showLine={{showLeafIcon: false}}
                                         showIcon={true}
                                         switcherIcon={<CaretDownOutlined/>}
-                                        // onSelect={this.onTreeTablesKnownSelected}
-                                        treeData={this.state.treeDataKpis}
-                                    /></div>
+                                        onSelect={this.onTreeKpiSchemasSelected}
+                                        onCheck={this.onTreeKpiSchemasChecked}
+                                        treeData={this.state.treeDataKpiSchemas}
+                                    />
+                                </div>
                             </div>
                         </Fragment>
                     ) : (<Fragment>
-                        <div>&nbsp;</div>
-                        <div>&nbsp;</div>
-                        <div>&nbsp;</div>
-                    </Fragment>)}
-                </div>
-                <div className={"BoxPropertiesBorder"}>
-                    <div>
-                        1 schema_name
+                            <div>&nbsp;</div>
+                        </Fragment>
+                    )}
+                < /div>
+                <div className={this.state.styleLayoutUpDown === "NN" ? "BoxKpiRelated BoxKpiRelatedNormal" :
+                    this.state.styleLayoutUpDown === "SN" ? "BoxKpiRelated BoxKpiRelatedSmall" : "BoxKpiRelated BoxKpiRelatedNormal"}>
+                    <div className={"BoxKpisAndProperties"}>
+                        <div className={"BoxKpis"}>
+                            <div className={"BoxTitleBar"}>
+                                <div className={"BoxTitle"}>指标</div>
+                                {(this.state.styleLayoutUpDown === "NN") ? (
+                                    <Fragment>
+                                        <div className={"BoxButtons"}>
+                                            <Button
+                                                size={"small"}
+                                                type={"primary"}
+                                                icon={<PlusSquareOutlined/>}>新增</Button>
+                                            <Button
+                                                size={"small"}
+                                                type={"primary"}
+                                                icon={<CopyOutlined/>}
+                                                onClick={this.onButtonKpisCopyPasteClicked}>复制</Button>
+                                            <Button
+                                                size={"small"}
+                                                type={"primary"}
+                                                icon={<MinusSquareOutlined/>}>删除</Button>
+                                        </div>
+                                    </Fragment>) : (<Fragment>
+                                        <div>&nbsp;</div>
+                                    </Fragment>
+                                )}
+                                <div>
+                                    <Button size={"small"} type={"ghost"} icon={<EllipsisOutlined/>}/>
+                                </div>
+                            </div>
+                            {(this.state.styleLayoutUpDown === "NN") ? (
+                                <Fragment>
+                                    <div className={"BoxTree"}>
+                                        <Input.Search placeholder="Search" onChange={this.onInputSearchKpiChange}/>
+                                        <div className={"BoxTree2"}>
+                                            <Tree
+                                                checkable
+                                                blockNode={true}
+                                                showLine={{showLeafIcon: false}}
+                                                showIcon={true}
+                                                switcherIcon={<CaretDownOutlined/>}
+                                                onSelect={this.onTreeKpisSelected}
+                                                onCheck={this.onTreeKpisChecked}
+                                                treeData={this.state.treeDataKpis}
+                                            /></div>
+                                    </div>
+                                </Fragment>
+                            ) : (<Fragment>
+                                <div>&nbsp;</div>
+                            </Fragment>)}
+                        </div>
+                        <div className={"BoxPropertiesBorder"}>
+                            <div className={"BoxTitleBar"}>
+                                <div className={"BoxTitle"}>指标组属性</div>
+                                <div>
+                                    <Button
+                                        size={"small"}
+                                        type={"ghost"}
+                                        icon={<EllipsisOutlined/>}/></div>
+                            </div>
+                            {(this.state.styleLayoutUpDown === "NN") ? (
+                                <Fragment>
+                                    <div className={"BoxPropertiesSchema"}>
+                                        <div>
+                                            <Input value={this.state.selected.schemaName}/>
+                                        </div>
+                                        <div className={"BoxVendorObjectClass"}>
+                                            <Input value={this.state.selected.vendorId}/>
+                                            <Input value={this.state.selected.objectClass}/>
+                                            <Input value={this.state.selected.subClass}/>
+                                        </div>
+                                    </div>
+                                    <div className={"BoxTitleBar"}>
+                                        <div className={"BoxTitle"}>指标属性</div>
+                                        <div>
+                                            <Button
+                                                size={"small"}
+                                                type={"ghost"}
+                                                icon={<EllipsisOutlined/>}/></div>
+                                    </div>
+                                    <div className={"BoxPropertiesKpi"}>
+                                        <div className={"BoxKpiIds"}>
+                                            <Input value={this.state.selected.kpiId}/>
+                                            <Input value={this.state.selected.kpiField}/>
+                                        </div>
+                                        <div>
+                                            <Input value={this.state.selected.kpiZhName}/>
+                                        </div>
+                                        <div>
+                                            <Input value={this.state.selected.kpiEnName}/>
+                                        </div>
+                                        <div className={"BoxKpiValues"}>
+                                            <Input value={this.state.selected.kpiFormat}/>
+                                            <Input value={this.state.selected.kpiMinValue}/>
+                                            <Input value={this.state.selected.kpiMaxValue}/>
+                                        </div>
+                                    </div>
+                                    <div className={"BoxKpiExp"}>
+                                        <Input.TextArea value={this.state.selected.kpiExp}/>
+                                    </div>
+                                </Fragment>
+                            ) : (<Fragment>
+                                <div>&nbsp;</div>
+                            </Fragment>)}
+                        </div>
                     </div>
-                    <div>
-                        2 vendor_id, object_class, sub_class
-                    </div>
-                    <div>
-                        3 kpi_name：
-                    </div>
-                    <div>
-                        4 字段数值运算：
-                    </div>
-                    <div>
-                        5 kpi_format, kpi_min_value, kpi_max_value
-                    </div>
-                    <div>
-                        6 real_table_name/table desc (column desc)/columns/...
-                        提供模糊搜索！！！
+                    <div className={"BoxKpisStandard"}>
+                        <div className={"BoxTitleBar"}>
+                            <div className={"BoxTitle"}>规范指标信息</div>
+                            <div className={"BoxButtons"}>
+                                <Button
+                                    size={"small"}
+                                    type={"primary"}
+                                    icon={<CloudUploadOutlined/>}>导入</Button>
+                                <Button
+                                    size={"small"}
+                                    type={"primary"}
+                                    icon={<CloudDownloadOutlined/>}>导出</Button>
+                            </div>
+                            <div>
+                                <Button
+                                    size={"small"}
+                                    type={"ghost"}
+                                    icon={<CaretUpOutlined/>}
+                                    onClick={this.onButtonChangeComponentLayoutUpDownClicked}/>
+                            </div>
+                        </div>
+                        <div className={"BoxTableIndicators"}>
+                            <Input.Search className={"BoxSearch"} placeholder="Search" onChange={this.onChange}/>
+                            <div ref={this.refBoxDetail} className={"BoxAuto"}>
+                                <Table
+                                    dataSource={this.state.dsIndicators}
+                                    columns={columnsIndicator}
+                                    bordered={true}
+                                    size={"small"}
+                                    scroll={{
+                                        // x: this.state.tablePropertiesScrollX,
+                                        y: this.state.tablePropertiesScrollY
+                                    }}
+                                    pagination={{
+                                        pageSize: this.state.pageSizeIndicators,
+                                        position: ["none", "none"]
+                                    }}
+                                    // rowSelection={{
+                                    //     type: "radio",
+                                    //     ...this.onRowRelationSelected
+                                    // }}
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
