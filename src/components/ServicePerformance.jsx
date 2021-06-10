@@ -1,5 +1,6 @@
 import React, {Fragment} from 'react'
 import './ServicePerformance.scss'
+import moment from 'moment';
 import axios from "axios";
 import GCtx from "../GCtx";
 import {message, Button, Tree, Input, Table, Select} from 'antd'
@@ -25,6 +26,7 @@ import TadKpiSchema from "../entity/TadKpiSchema";
 import TadKpi from "../entity/TadKpi";
 import XLSX from 'xlsx';
 import TadIndicator from "../entity/TadIndicator";
+import TadIndicatorCounter from "../entity/TadIndicatorCounter";
 
 const {Option} = Select;
 const {TextArea} = Input;
@@ -82,6 +84,7 @@ export default class ServicePerformance extends React.Component {
         this.doGetKpis = this.doGetKpis.bind(this);
         this.doGetKpiSchemas = this.doGetKpiSchemas.bind(this);
         this.doGetIndicators = this.doGetIndicators.bind(this);
+        this.doGetIndicatorCounters = this.doGetIndicatorCounters.bind(this);
         this.doGetKpiCounters = this.doGetKpiCounters.bind(this);
         this.doGetExcel = this.doGetExcel.bind(this);
 
@@ -94,6 +97,7 @@ export default class ServicePerformance extends React.Component {
         this.onButtonChangeComponentLayoutUpDownClicked = this.onButtonChangeComponentLayoutUpDownClicked.bind(this);
         this.onButtonSchemasCopyPasteClicked = this.onButtonSchemasCopyPasteClicked.bind(this);
         this.onButtonKpisCopyPasteClicked = this.onButtonKpisCopyPasteClicked.bind(this);
+        this.onButtonImportExcel = this.onButtonImportExcel.bind(this);
 
         this.onInputSearchSchemaChange = this.onInputSearchSchemaChange.bind(this);
         this.onInputSearchKpiChange = this.onInputSearchKpiChange.bind(this);
@@ -133,11 +137,13 @@ export default class ServicePerformance extends React.Component {
             this.doGetKpiSchemas(),
             this.doGetKpiCounters(),
             this.doGetIndicators(),
+            this.doGetIndicatorCounters(),
         ]).then(axios.spread((
             kpis,
             schemas,
             counters,
-            indicators) => {
+            indicators,
+            indicatorCounters) => {
             let mapSchemas = new Map();
             let mapKpis = new Map();
             let uiSchemas = [];
@@ -146,24 +152,32 @@ export default class ServicePerformance extends React.Component {
             this.gData.schemas = schemas.data.data;
             this.gData.counters = counters.data.data;
             this.gData.indicators = indicators.data.data;
+            this.gData.indicatorCounters = indicatorCounters.data.data;
 
             let dsIndicators = [];
-            let pageSizeIndicators = this.gData.indicators.length;
+            let nKey = 0;
             this.gData.indicators.forEach((item) => {
-                let indicator = new TadIndicator();
-                indicator.indicator_code = item.indicator_code;
-                indicator.indicator_name = item.indicator_name;
-                indicator.counter_code = item.counter_code;
-                indicator.counter_zhname = item.counter_zhname;
-                indicator.counter_enname = item.counter_enname;
+                let indicator = item;
+                nKey++;
 
-                dsIndicators.push(indicator);
+                this.gData.indicatorCounters.forEach((counter) => {
+                    if (counter.indicator_id === item.id) {
+                        nKey++;
+                        indicator.key = item.id + "_" + counter.id;
+                        indicator.counter_zhname = counter.counter_zhname;
+                        indicator.counter_enname = counter.counter_enname;
+                        dsIndicators.push(indicator);
+                    }
+                });
             });
+            let pageSizeIndicators = dsIndicators.length;
 
             this.setState({
                 pageSizeIndicators: pageSizeIndicators,
                 dsIndicators: dsIndicators
             })
+
+            console.log(dsIndicators);
 
             let n = 0;
             this.gData.schemas.forEach(function (item) {
@@ -267,52 +281,151 @@ export default class ServicePerformance extends React.Component {
             {headers: {'Content-Type': 'application/json'}})
     }
 
+    doGetIndicatorCounters() {
+        let params = {};
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_indicator_counters", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    getColumnIndex(columnName, mapColumns) {
+        let myResult = -1;
+        let names = columnName.split(",");
+
+        for(let i = 0; i < names.length; i++) {
+            if (mapColumns.has(names[i])) {
+                myResult = mapColumns.get(names[i]);
+                break
+            }
+        }
+
+        return myResult;
+    }
+
     doGetExcel() {
         axios.get('data/counter_001.xlsx', {responseType: 'arraybuffer'}).then(res => {
             let wb = XLSX.read(res.data, {type: 'array'});
-            let range = XLSX.utils.decode_range(wb.Sheets[wb.SheetNames[2]]['!ref']);
-            let lastIndicator = new TadIndicator();
+            console.log(wb);
+            let mapColumns = new Map();
+            let mapIndicators = new Map();
 
-            for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-                let myIndicator = new TadIndicator();
-                myIndicator.indicator_code = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 0, r: R})]);
-                myIndicator.indicator_name = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 1, r: R})]);
-                myIndicator.indicator_desc = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 2, r: R})]);
-                myIndicator.indicator_definition = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 3, r: R})]);
-                myIndicator.counter_code = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 4, r: R})]);
-                myIndicator.counter_enname = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 5, r: R})]);
-                myIndicator.counter_zhname = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 6, r: R})]);
-                myIndicator.real_tab_name = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 7, r: R})]);
-                myIndicator.real_tab_col_name = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 8, r: R})]);
-                myIndicator.counter_time_type = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 9, r: R})]);
-                myIndicator.counter_geo_type = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 10, r: R})]);
-                myIndicator.counter_tab_name = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 11, r: R})]);
-                myIndicator.kpi_tab_name = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 12, r: R})]);
-                myIndicator.kpi_tab_col_name = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 14, r: R})]);
-                myIndicator.kpi_exp = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 15, r: R})]);
-                myIndicator.kpi_exp_desc = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 16, r: R})]);
-                myIndicator.counter_zhexp = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 17, r: R})]);
-                myIndicator.counter_enexp = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 18, r: R})]);
-                myIndicator.counter_unit = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 19, r: R})]);
-                myIndicator.counter_geo = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 20, r: R})]);
-                myIndicator.counter_time = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 21, r: R})]);
-                myIndicator.counter_desc = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 22, r: R})]);
-                myIndicator.kpi_index = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 23, r: R})]);
-                myIndicator.kpi_value_format = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 24, r: R})]);
-                // myIndicator.kpi_value_min = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c:22, r:R})]);
-                myIndicator.kpi_value_max = this.toCellValue(wb.Sheets[wb.SheetNames[2]][XLSX.utils.encode_cell({c: 25, r: R})]);
+            for(let i = 0; i < wb.SheetNames.length; i++) {
+                let range = XLSX.utils.decode_range(wb.Sheets[wb.SheetNames[i]]['!ref']);
+                for(let C = range.s.c; C <= range.e.c; ++C) {
+                    mapColumns.set(this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: 0})]), C);
+                }
 
-                if (myIndicator.indicator_code !== null) lastIndicator.indicator_code = myIndicator.indicator_code; else myIndicator.indicator_code = lastIndicator.indicator_code;
-                if (myIndicator.indicator_name !== null) lastIndicator.indicator_name = myIndicator.indicator_name; else myIndicator.indicator_name = lastIndicator.indicator_name;
-                if (myIndicator.indicator_desc !== null) lastIndicator.indicator_desc = myIndicator.indicator_desc; else myIndicator.indicator_desc = lastIndicator.indicator_desc;
-                if (myIndicator.indicator_definition !== null) lastIndicator.indicator_definition = myIndicator.indicator_definition; else myIndicator.indicator_definition = lastIndicator.indicator_definition;
-                if (myIndicator.counter_zhexp !== null) lastIndicator.counter_zhexp = myIndicator.counter_zhexp; else myIndicator.counter_zhexp = lastIndicator.counter_zhexp;
-                if (myIndicator.counter_enexp !== null) lastIndicator.counter_enexp = myIndicator.counter_enexp; else myIndicator.counter_enexp = lastIndicator.counter_enexp;
-                if (myIndicator.counter_unit !== null) lastIndicator.counter_unit = myIndicator.counter_unit; else myIndicator.counter_unit = lastIndicator.counter_unit;
-                if (myIndicator.counter_geo !== null) lastIndicator.counter_geo = myIndicator.counter_geo; else myIndicator.counter_geo = lastIndicator.counter_geo;
-                if (myIndicator.counter_time !== null) lastIndicator.counter_time = myIndicator.counter_time; else myIndicator.counter_time = lastIndicator.counter_time;
-                if (myIndicator.counter_desc !== null) lastIndicator.counter_desc = myIndicator.counter_desc; else myIndicator.counter_desc = lastIndicator.counter_desc;
+                let C;
+                let lastIndicator = new TadIndicator();
+                for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+                    let myIndicator = new TadIndicator();
+                    let myIndicatorCounter = new TadIndicatorCounter();
 
+                    myIndicator.excel_name = "counter_001.xlsx";
+                    myIndicator.excel_sheet_name = wb.SheetNames[i];
+                    C = this.getColumnIndex("设备类型,网元类型", mapColumns);
+                    myIndicator.indicator_object_class = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("指标来源,字段：VoLTE引入指标=是", mapColumns);
+                    myIndicator.indicator_datasource = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("指标分级", mapColumns);
+                    myIndicator.indicator_level = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("指标编码", mapColumns);
+                    myIndicator.indicator_code = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("指标名称", mapColumns);
+                    myIndicator.indicator_zhname = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("英文名称", mapColumns);
+                    myIndicator.indicator_enname = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("业务需求", mapColumns);
+                    myIndicator.indicator_desc = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("指标定义", mapColumns);
+                    myIndicator.indicator_definition = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("中文映射算法", mapColumns);
+                    myIndicator.indicator_zhexp = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("英文映射算法", mapColumns);
+                    myIndicator.indicator_enexp = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("单位", mapColumns);
+                    myIndicator.indicator_unit = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("空间粒度", mapColumns);
+                    myIndicator.indicator_geo_type = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("时间粒度", mapColumns);
+                    myIndicator.indicator_time_type = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("备注", mapColumns);
+                    myIndicator.indicator_memo = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("KPI表", mapColumns);
+                    myIndicator.kpi_tab_name = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("指标名称（待删除）", mapColumns);
+                    myIndicator.kpi_zhname = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("KPI_DB映射,KPI指标", mapColumns);
+                    myIndicator.kpi_enname = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("DB映射算法,KPI映射算法", mapColumns);
+                    myIndicator.kpi_exp = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("DB映射备注", mapColumns);
+                    myIndicator.kpi_exp_desc = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("自动编号", mapColumns);
+                    myIndicator.kpi_index = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("KPI数据格式", mapColumns);
+                    myIndicator.kpi_value_format = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("KPI最小值", mapColumns);
+                    myIndicator.kpi_value_min = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("KPI最大值", mapColumns);
+                    myIndicator.kpi_value_max = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.import_time = moment().format("yyyy-MM-DD HH:mm:ss");
+                    myIndicator.import_desc = "版本：" + myIndicator.import_time;
+
+                    myIndicatorCounter.indicator_id = "???";
+                    C = this.getColumnIndex("统计数据编码,统计编码", mapColumns);
+                    myIndicatorCounter.counter_code = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("统计数据中文名称", mapColumns);
+                    myIndicatorCounter.counter_zhname = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("统计数据英文名称", mapColumns);
+                    myIndicatorCounter.counter_enname = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("主表", mapColumns);
+                    myIndicatorCounter.base_tab_name = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("DB映射,字段", mapColumns);
+                    myIndicatorCounter.base_tab_col_name = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("COUNTER时间汇总算法", mapColumns);
+                    myIndicatorCounter.counter_time_type = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("COUNTER空间汇总算法", mapColumns);
+                    myIndicatorCounter.counter_geo_type = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("COUNTER表", mapColumns);
+                    myIndicatorCounter.counter_tab_name = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    C = this.getColumnIndex("COUNTER表对应字段", mapColumns);
+                    myIndicatorCounter.counter_tab_col_name = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicatorCounter.import_time = myIndicator.import_time;
+
+                    if (myIndicator.indicator_object_class !== null) lastIndicator.indicator_object_class = myIndicator.indicator_object_class; else myIndicator.indicator_object_class = lastIndicator.indicator_object_class;
+                    if (myIndicator.indicator_datasource !== null) lastIndicator.indicator_datasource = myIndicator.indicator_datasource; else myIndicator.indicator_datasource = lastIndicator.indicator_datasource;
+                    if (myIndicator.indicator_level !== null) lastIndicator.indicator_level = myIndicator.indicator_level; else myIndicator.indicator_level = lastIndicator.indicator_level;
+                    if (myIndicator.indicator_code !== null) lastIndicator.indicator_code = myIndicator.indicator_code; else myIndicator.indicator_code = lastIndicator.indicator_code;
+                    if (myIndicator.indicator_zhname !== null) lastIndicator.indicator_zhname = myIndicator.indicator_zhname; else myIndicator.indicator_zhname = lastIndicator.indicator_zhname;
+                    if (myIndicator.indicator_enname !== null) lastIndicator.indicator_enname = myIndicator.indicator_enname; else myIndicator.indicator_enname = lastIndicator.indicator_enname;
+                    if (myIndicator.indicator_desc !== null) lastIndicator.indicator_desc = myIndicator.indicator_desc; else myIndicator.indicator_desc = lastIndicator.indicator_desc;
+                    if (myIndicator.indicator_definition !== null) lastIndicator.indicator_definition = myIndicator.indicator_definition; else myIndicator.indicator_definition = lastIndicator.indicator_definition;
+                    if (myIndicator.indicator_zhexp !== null) lastIndicator.indicator_zhexp = myIndicator.indicator_zhexp; else myIndicator.indicator_zhexp = lastIndicator.indicator_zhexp;
+                    if (myIndicator.indicator_enexp !== null) lastIndicator.indicator_enexp = myIndicator.indicator_enexp; else myIndicator.indicator_enexp = lastIndicator.indicator_enexp;
+                    if (myIndicator.indicator_unit !== null) lastIndicator.indicator_unit = myIndicator.indicator_unit; else myIndicator.indicator_unit = lastIndicator.indicator_unit;
+                    if (myIndicator.indicator_geo_type !== null) lastIndicator.indicator_geo_type = myIndicator.indicator_geo_type; else myIndicator.indicator_geo_type = lastIndicator.indicator_geo_type;
+                    if (myIndicator.indicator_time_type !== null) lastIndicator.indicator_time_type = myIndicator.indicator_time_type; else myIndicator.indicator_time_type = lastIndicator.indicator_time_type;
+                    if (myIndicator.kpi_tab_name !== null) lastIndicator.kpi_tab_name = myIndicator.kpi_tab_name; else myIndicator.kpi_tab_name = lastIndicator.kpi_tab_name;
+                    if (myIndicator.kpi_zhname !== null) lastIndicator.kpi_zhname = myIndicator.kpi_zhname; else myIndicator.kpi_zhname = lastIndicator.kpi_zhname;
+                    if (myIndicator.kpi_enname !== null) lastIndicator.kpi_enname = myIndicator.kpi_enname; else myIndicator.kpi_enname = lastIndicator.kpi_enname;
+                    if (myIndicator.kpi_exp !== null) lastIndicator.kpi_exp = myIndicator.kpi_exp; else myIndicator.kpi_exp = lastIndicator.kpi_exp;
+                    if (myIndicator.kpi_exp_desc !== null) lastIndicator.kpi_exp_desc = myIndicator.kpi_exp_desc; else myIndicator.kpi_exp_desc = lastIndicator.kpi_exp_desc;
+                    if (myIndicator.kpi_index !== null) lastIndicator.kpi_index = myIndicator.kpi_index; else myIndicator.kpi_index = lastIndicator.kpi_index;
+                    if (myIndicator.kpi_value_format !== null) lastIndicator.kpi_value_format = myIndicator.kpi_value_format; else myIndicator.kpi_value_format = lastIndicator.kpi_value_format;
+                    if (myIndicator.kpi_value_min !== null) lastIndicator.kpi_value_min = myIndicator.kpi_value_min; else myIndicator.kpi_value_min = lastIndicator.kpi_value_min;
+                    if (myIndicator.kpi_value_max !== null) lastIndicator.kpi_value_max = myIndicator.kpi_value_max; else myIndicator.kpi_value_max = lastIndicator.kpi_value_max;
+
+                    if (!mapIndicators.has(myIndicator.indicator_zhname)) {
+                        mapIndicators.set(myIndicator.indicator_zhname, {indicator: myIndicator, counters: [myIndicatorCounter]});
+                    } else {
+                        mapIndicators.get(myIndicator.indicator_zhname).counters.push(myIndicatorCounter);
+                    }
+                }
+            }
+
+            mapIndicators.forEach((value, key) => {
+                let myIndicator = value.indicator;
                 axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/add_indicator",
                     myIndicator,
                     {headers: {'Content-Type': 'application/json'}}
@@ -320,12 +433,32 @@ export default class ServicePerformance extends React.Component {
                     let data = response.data;
 
                     if (data.success) {
-                        message.info("成功导入指标：" + data.data.indicator_name);
+                        let indicatorZhName = data.data.indicator_zhname;
+                        let indicatorId = data.data.id;
+                        if (mapIndicators.has(indicatorZhName)) {
+                            mapIndicators.get(indicatorZhName).counters.forEach((counter) => {
+                                let myCounter = counter;
+                                myCounter.indicator_id = indicatorId;
+
+                                axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/add_indicator_counter",
+                                    myCounter,
+                                    {headers: {'Content-Type': 'application/json'}}
+                                ).then((response) => {
+                                    let data = response.data;
+
+                                    if (data.success) {
+                                        // message.info("成功导入指标COUNTER：" + data.data.counter_zhname).then(r => {});
+                                        console.log("成功导入指标COUNTER：" + data.data.counter_zhname);
+                                    }
+                                });
+                            })
+                        }
+                        // message.info("成功导入指标：" + data.data.indicator_zhname).then(r => {});
+                        console.log("成功导入指标：" + data.data.indicator_zhname);
                     }
                 });
-            }
-        })
-
+            })
+        });
     }
 
     toCellValue(cell) {
@@ -559,7 +692,7 @@ export default class ServicePerformance extends React.Component {
     }
 
     onButtonImportExcel() {
-
+        this.doGetExcel();
     }
 
     onButtonSchemasCopyPasteClicked(e) {
@@ -749,19 +882,49 @@ export default class ServicePerformance extends React.Component {
     render() {
         const columnsIndicator = [
             {
-                title: '指标名称',
-                dataIndex: 'indicator_name',
-                key: 'indicator_name',
+                title: 'ID',
+                dataIndex: 'key',
+                key: 'key',
+                width: 100,
+            },
+            {
+                title: '来自表单',
+                dataIndex: 'excel_sheet_name',
+                key: 'excel_sheet_name',
+                width: 100,
+            },
+            {
+                title: '指标中文名称',
+                dataIndex: 'indicator_zhname',
+                key: 'indicator_zhname',
+                width: 200,
             },
             {
                 title: '统计数据中文名称',
                 dataIndex: 'counter_zhname',
                 key: 'counter_zhname',
+                width: 200,
             },
             {
                 title: '统计数据英文名称',
                 dataIndex: 'counter_enname',
                 key: 'counter_enname',
+                width: 200,
+            },
+            {
+                title: '指标业务需求',
+                dataIndex: 'indicator_desc',
+                key: 'indicator_desc',
+            },
+            {
+                title: '指标定义',
+                dataIndex: 'indicator_definition',
+                key: 'indicator_definition',
+            },
+            {
+                title: '中文映射算法',
+                dataIndex: 'indicator_zhexp',
+                key: 'indicator_zhexp',
             },
         ];
 
@@ -1057,7 +1220,9 @@ export default class ServicePerformance extends React.Component {
                                 <Button
                                     size={"small"}
                                     type={"primary"}
-                                    icon={<CloudUploadOutlined/>}>导入</Button>
+                                    icon={<CloudUploadOutlined/>}
+                                    // onClick={this.onButtonImportExcel}
+                                >导入</Button>
                                 <Button
                                     size={"small"}
                                     type={"primary"}
@@ -1080,7 +1245,7 @@ export default class ServicePerformance extends React.Component {
                                     bordered={true}
                                     size={"small"}
                                     scroll={{
-                                        // x: this.state.tablePropertiesScrollX,
+                                        x: 1920,
                                         y: this.state.tablePropertiesScrollY
                                     }}
                                     pagination={{
