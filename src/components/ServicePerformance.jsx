@@ -147,8 +147,6 @@ export default class ServicePerformance extends React.Component {
             this.gData.counters = counters.data.data;
             this.gData.indicators = indicators.data.data;
 
-            console.log(counters);
-
             let dsIndicators = [];
             let pageSizeIndicators = this.gData.indicators.length;
             this.gData.indicators.forEach((item) => {
@@ -374,10 +372,8 @@ export default class ServicePerformance extends React.Component {
                     uiKpis.push(uiKpi);
                 });
 
-                console.log(this.gData.counters);
                 this.gData.counters.forEach((item) => {
                     if (item.schema_id === schemaId) {
-                        console.log(schemaId);
                         uiKpiCounters.push({
                             key: item.counter_enname,
                             title: item.counter_zhname + " - " + item.counter_enname,
@@ -477,17 +473,8 @@ export default class ServicePerformance extends React.Component {
 
             if (this.gMap.kpis.has(kpiId)) {
                 let selected = JSON.parse(JSON.stringify(this.state.selected));
-                //selected.kpiId = kpiId;
                 let kpi = this.gMap.kpis.get(kpiId);
-                console.log(kpi);
-                // selected.kpiZhName = this.gMap.kpis.get(kpiId).kpi_zhname;
-                // selected.kpiEnName = this.gMap.kpis.get(kpiId).kpi_enname;
-                // selected.kpiField = this.gMap.kpis.get(kpiId).kpi_field;
-                // selected.kpiExp = this.gMap.kpis.get(kpiId).kpi_exp;
-                // selected.kpiAlarm = this.gMap.kpis.get(kpiId).kpi_alarm;
-                // selected.kpiFormat = this.gMap.kpis.get(kpiId).kpi_format;
-                // selected.kpiMinValue = this.gMap.kpis.get(kpiId).kpi_min_value;
-                // selected.kpiMaxValue = this.gMap.kpis.get(kpiId).kpi_max_value;
+
                 selected.kpi_id = kpiId;
                 selected.kpi_zhname = kpi.kpi_zhname;
                 selected.kpi_enname = kpi.kpi_enname;
@@ -615,11 +602,8 @@ export default class ServicePerformance extends React.Component {
 
 
             schema.kpis.forEach((kpi) => {
-                //let kpiId = itemKpi.kpi_id;
-                //let kpi = this.gMap.kpis.get(kpiId)
-                //console.log("add", kpi);
-                //let kpiIdNew = idObjectClassFirst + idType + "X" + idObjectClassSecond + idIndex + ;
                 console.log("add kpi...", kpi.kpi_id);
+                // todo:: add kpi
             })
         });
 
@@ -629,7 +613,7 @@ export default class ServicePerformance extends React.Component {
     }
 
     onButtonKpisCopyPasteClicked(e) {
-        console.log(this.gCurrent);
+
     }
 
     // ****************************************************************************************************
