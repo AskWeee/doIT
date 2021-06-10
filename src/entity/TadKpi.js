@@ -11,6 +11,7 @@ export default class TadKpi{
         this.kpi_format = null;
         this.kpi_min_value = null;
         this.kpi_max_value = null;
+        this.used_info = null;
 
         let t = "TadKpi_" + Math.floor(Math.random()*100000);
         this.key = t;

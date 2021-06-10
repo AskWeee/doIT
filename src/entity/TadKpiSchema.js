@@ -11,6 +11,7 @@ export default class TadKpiSchema{
         this.object_class = null;
         this.sub_class = null;
         this.interval_flag = null;
+        this.used_type = null;
 
         this.kpis = [];
 
