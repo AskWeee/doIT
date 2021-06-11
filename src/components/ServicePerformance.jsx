@@ -27,9 +27,11 @@ import TadKpi from "../entity/TadKpi";
 import XLSX from 'xlsx';
 import TadIndicator from "../entity/TadIndicator";
 import TadIndicatorCounter from "../entity/TadIndicatorCounter";
+import KColumnTitle from "./KColumnTitle";
 
 const {Option} = Select;
 const {TextArea} = Input;
+const {Column} = Table;
 
 export default class ServicePerformance extends React.Component {
     static contextType = GCtx;
@@ -52,6 +54,20 @@ export default class ServicePerformance extends React.Component {
             pageSizeIndicators: 50,
             treeDataKpis: [],
             treeDataKpiCounters: [],
+            columnsIndicator: [],
+            columnWidths: {
+                key: 80,
+                esn: 100,
+                izn: 200,
+                c: 200,
+                czn: 500,
+                cen: 200,
+                idef: 300,
+                idesc: 300,
+                iu: 100,
+                itt: 100,
+                igt: 100,
+            },
             dsIndicators: [],
             selected: {
                 schema_id: "",
@@ -73,12 +89,14 @@ export default class ServicePerformance extends React.Component {
                 kpi_used_module: -1,
                 kpi_used_title: "请输入界面呈现标题",
             },
+            tablePropertiesScrollX: 1920,
             tablePropertiesScrollY: 200,
         }
 
         this.test = this.test.bind(this);
         this.doMock = this.doMock.bind(this);
 
+        this.doPrepare = this.doPrepare.bind(this);
         this.doInit = this.doInit.bind(this);
         this.doGetAll = this.doGetAll.bind(this);
         this.doGetKpis = this.doGetKpis.bind(this);
@@ -109,6 +127,7 @@ export default class ServicePerformance extends React.Component {
 
     componentDidMount() {
         // this.doMock();
+        this.doPrepare();
         this.doGetAll();
     }
 
@@ -125,9 +144,30 @@ export default class ServicePerformance extends React.Component {
         });
     }
 
+    doPrepare() {
+
+    }
+
     doInit() {
+        let columnWidths = JSON.parse(JSON.stringify(this.state.columnWidths));
+
+        columnWidths.izn = this.gCurrent.arrWidths.izn * 15;
+        columnWidths.czn = this.gCurrent.arrWidths.czn * 15;
+        columnWidths.cen = this.gCurrent.arrWidths.cen * 10;
+        columnWidths.c = columnWidths.czn + columnWidths.cen + 200 + 200;
+        let tablePropertiesScrollX = columnWidths.key +
+            columnWidths.esn +
+            columnWidths.izn +
+            columnWidths.c +
+            columnWidths.idef +
+            columnWidths.idesc + 500;
+
+        console.log(tablePropertiesScrollX);
+
         this.setState({
-            tablePropertiesScrollY: this.refBoxDetail.current.scrollHeight - 40,
+            columnWidths: columnWidths,
+            tablePropertiesScrollX: tablePropertiesScrollX,
+            tablePropertiesScrollY: this.refBoxDetail.current.scrollHeight - 39 - 16,
         })
     }
 
@@ -156,28 +196,39 @@ export default class ServicePerformance extends React.Component {
 
             let dsIndicators = [];
             let nKey = 0;
-            this.gData.indicators.forEach((item) => {
-                let indicator = item;
-                nKey++;
-
-                this.gData.indicatorCounters.forEach((counter) => {
-                    if (counter.indicator_id === item.id) {
-                        nKey++;
-                        indicator.key = item.id + "_" + counter.id;
-                        indicator.counter_zhname = counter.counter_zhname;
-                        indicator.counter_enname = counter.counter_enname;
-                        dsIndicators.push(indicator);
+            let arrWidths = {izn: 13, czn: 13, cen: 13};
+            this.gData.indicators.forEach((indicator) => {
+                if (indicator.indicator_zhname && indicator.indicator_zhname !== "") {
+                    let myIndicator = Object.assign(Object.create(Object.getPrototypeOf(indicator)), indicator);
+                    myIndicator.counters = [];
+                    myIndicator.index = ++nKey;
+                    if (myIndicator.indicator_zhname && myIndicator.indicator_zhname.length > arrWidths.izn) {
+                        arrWidths.izn = myIndicator.indicator_zhname.length
                     }
-                });
+                    this.gData.indicatorCounters.forEach((counter) => {
+                        if (counter.indicator_id === indicator.id) {
+                            let myCounter = Object.assign(Object.create(Object.getPrototypeOf(counter)), counter);
+                            // myIndicator.counter_zhname = counter.counter_zhname;
+                            // myIndicator.counter_enname = counter.counter_enname;
+                            if (myCounter.counter_zhname && myCounter.counter_zhname.length > arrWidths.czn) {
+                                arrWidths.czn = myCounter.counter_zhname.length
+                            }
+                            if (myCounter.counter_enname && myCounter.counter_enname.length > arrWidths.cen) {
+                                arrWidths.cen = myCounter.counter_enname.length
+                            }
+                            myIndicator.counters.push(myCounter);
+                        }
+                    });
+                    dsIndicators.push(myIndicator);
+                }
             });
+            this.gCurrent.arrWidths = arrWidths;
             let pageSizeIndicators = dsIndicators.length;
 
             this.setState({
                 pageSizeIndicators: pageSizeIndicators,
                 dsIndicators: dsIndicators
             })
-
-            console.log(dsIndicators);
 
             let n = 0;
             this.gData.schemas.forEach(function (item) {
@@ -292,7 +343,7 @@ export default class ServicePerformance extends React.Component {
         let myResult = -1;
         let names = columnName.split(",");
 
-        for(let i = 0; i < names.length; i++) {
+        for (let i = 0; i < names.length; i++) {
             if (mapColumns.has(names[i])) {
                 myResult = mapColumns.get(names[i]);
                 break
@@ -309,9 +360,9 @@ export default class ServicePerformance extends React.Component {
             let mapColumns = new Map();
             let mapIndicators = new Map();
 
-            for(let i = 0; i < wb.SheetNames.length; i++) {
+            for (let i = 0; i < wb.SheetNames.length; i++) {
                 let range = XLSX.utils.decode_range(wb.Sheets[wb.SheetNames[i]]['!ref']);
-                for(let C = range.s.c; C <= range.e.c; ++C) {
+                for (let C = range.s.c; C <= range.e.c; ++C) {
                     mapColumns.set(this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: 0})]), C);
                 }
 
@@ -686,7 +737,7 @@ export default class ServicePerformance extends React.Component {
             styleLayoutUpDown: styleLayoutUpDown
         }, () => {
             this.setState({
-                tablePropertiesScrollY: this.refBoxDetail.current.scrollHeight - 40,
+                tablePropertiesScrollY: this.refBoxDetail.current.scrollHeight - 39 - 16,
             })
         })
     }
@@ -752,6 +803,16 @@ export default class ServicePerformance extends React.Component {
     // ****************************************************************************************************
     // TABLE ROW...
     // ****************************************************************************************************
+
+    onRowIndicatorCounterSelected = {
+        onChange: (selectedRowKeys, selectedRows) => {
+            console.log(`selectedRowKeys: ${selectedRowKeys}`, 'selectedRows: ', selectedRows);
+        },
+        getCheckboxProps: record => ({
+            disabled: record.name === 'Disabled User', // Column configuration not to be checked
+            name: record.name,
+        }),
+    };
 
     // ****************************************************************************************************
     // INPUT...
@@ -880,53 +941,6 @@ export default class ServicePerformance extends React.Component {
     }
 
     render() {
-        const columnsIndicator = [
-            {
-                title: 'ID',
-                dataIndex: 'key',
-                key: 'key',
-                width: 100,
-            },
-            {
-                title: '来自表单',
-                dataIndex: 'excel_sheet_name',
-                key: 'excel_sheet_name',
-                width: 100,
-            },
-            {
-                title: '指标中文名称',
-                dataIndex: 'indicator_zhname',
-                key: 'indicator_zhname',
-                width: 200,
-            },
-            {
-                title: '统计数据中文名称',
-                dataIndex: 'counter_zhname',
-                key: 'counter_zhname',
-                width: 200,
-            },
-            {
-                title: '统计数据英文名称',
-                dataIndex: 'counter_enname',
-                key: 'counter_enname',
-                width: 200,
-            },
-            {
-                title: '指标业务需求',
-                dataIndex: 'indicator_desc',
-                key: 'indicator_desc',
-            },
-            {
-                title: '指标定义',
-                dataIndex: 'indicator_definition',
-                key: 'indicator_definition',
-            },
-            {
-                title: '中文映射算法',
-                dataIndex: 'indicator_zhexp',
-                key: 'indicator_zhexp',
-            },
-        ];
 
         return <Fragment>
             <div className={this.state.styleLayout === "NNN" ? "ServicePerformance BoxServicePerformanceNormal" : "ServicePerformance BoxServicePerformanceSmall"}>
@@ -1237,26 +1251,113 @@ export default class ServicePerformance extends React.Component {
                             </div>
                         </div>
                         <div className={"BoxTableIndicators"}>
-                            <Input.Search className={"BoxSearch"} placeholder="Search" onChange={this.onChange}/>
+                            <div className={"BoxSearch"}>
+                                <Input.Search placeholder="Search" onChange={this.onChange}/>
+                            </div>
                             <div ref={this.refBoxDetail} className={"BoxAuto"}>
-                                <Table
-                                    dataSource={this.state.dsIndicators}
-                                    columns={columnsIndicator}
-                                    bordered={true}
-                                    size={"small"}
-                                    scroll={{
-                                        x: 1920,
-                                        y: this.state.tablePropertiesScrollY
-                                    }}
-                                    pagination={{
-                                        pageSize: this.state.pageSizeIndicators,
-                                        position: ["none", "none"]
-                                    }}
-                                    // rowSelection={{
-                                    //     type: "radio",
-                                    //     ...this.onRowRelationSelected
-                                    // }}
-                                />
+                                <div className={"Box2"}>
+                                    <Table rowKey="id"
+                                           dataSource={this.state.dsIndicators}
+                                        // columns={this.state.columnsIndicator}
+                                           bordered={true}
+                                           size={"small"}
+                                           scroll={{
+                                               x: this.state.tablePropertiesScrollX,
+                                               y: this.state.tablePropertiesScrollY
+                                           }}
+                                           pagination={{
+                                               pageSize: this.state.pageSizeIndicators,
+                                               position: ["none", "none"]
+                                           }}
+                                           rowSelection={{
+                                               type: "checkbox",
+                                               ...this.onRowIndicatorCounterSelected
+                                           }}
+                                        // expandedRowRender={record => <div className="BoxRecordDetail">
+                                        //     <div>{record.indicator_definition}</div>
+                                        //     <div>{record.indicator_desc}</div>
+                                        // </div>}
+                                    >
+                                        <Column title=<KColumnTitle content="序号" className="clsColumnTitle"/>
+                                        className="ColumnKey"
+                                        dataIndex='index'
+                                        key='index'
+                                        width={this.state.columnWidths.key}
+                                        fixed='left'
+                                        />
+                                        <Column title=<KColumnTitle content="来自表单" className="clsColumnTitle"/>
+                                        className="ColumnIesn"
+                                        dataIndex='excel_sheet_name'
+                                        key='excel_sheet_name'
+                                        width={this.state.columnWidths.esn}
+                                        fixed='left'
+                                        />
+                                        <Column title=<KColumnTitle content="指标中文名称" className="clsColumnTitle"/>
+                                        dataIndex='indicator_zhname'
+                                        key='indicator_zhname'
+                                        width={this.state.columnWidths.izn}
+                                        sorter={(a, b) => a.indicator_zhname > b.indicator_zhname}
+                                        sortDirections={['descend', 'ascend']}
+                                        fixed='left'
+                                        />
+                                        <Column title=<KColumnTitle content="指标单位" className="clsColumnTitle"/>
+                                        dataIndex='indicator_unit'
+                                        key='indicator_unit'
+                                        width={this.state.columnWidths.iu}/>
+                                        <Column title=<KColumnTitle content="时间粒度" className="clsColumnTitle"/>
+                                        dataIndex='indicator_time_type'
+                                        key='indicator_time_type'
+                                        width={this.state.columnWidths.itt}/>
+                                        <Column title=<KColumnTitle content="空间粒度" className="clsColumnTitle"/>
+                                        dataIndex='indicator_geo_type'
+                                        key='indicator_geo_type'
+                                        width={this.state.columnWidths.igt}/>
+                                        <Column title=<KColumnTitle content="统计数据" className="clsColumnTitle"/>
+                                        dataIndex='counters'
+                                        key='counters'
+                                        width={this.state.columnWidths.c}
+                                        render={(counters) => counters.length > 0 ? (
+                                        <div className="BoxTableIndicatorCounters">
+                                            <Table rowKey="id"
+                                                   columns={[
+                                                       {title: "统计数据中文名称", dataIndex: "counter_zhname", key: "counter_zhname"},
+                                                       {title: "统计数据中文名称", dataIndex: "counter_enname", key: "counter_enname"},
+                                                       {title: "主表", dataIndex: "base_tab_name", key: "base_tab_name"},
+                                                       {title: "主表列", dataIndex: "base_tab__col_name", key: "base_tab__col_name"},
+                                                       {title: "COUNTER表", dataIndex: "counter_tab_name", key: "counter_tab_name"},
+                                                       {title: "COUNTER表列", dataIndex: "counter_tab__col_name", key: "counter_tab__col_name"},
+                                                       {title: "时间汇总算法", dataIndex: "counter_time_type", key: "counter_time_type"},
+                                                       {title: "空间汇总算法", dataIndex: "counter_geo_type", key: "counter_geo_type"},
+                                                   ]}
+                                                   dataSource={counters}
+                                                   bordered={true}
+                                                   size={"small"}
+                                                   pagination={{
+                                                       pageSize: counters.length,
+                                                       position: ["none", "none"]
+                                                   }}
+                                                   rowSelection={{
+                                                       type: "checkbox",
+                                                       ...this.onRowIndicatorCounterSelected
+                                                   }}
+                                            />
+                                        </div>) : (<div>&nbsp;</div>)}
+                                        />
+                                        <Column title=<KColumnTitle content="指标定义" className="clsColumnTitle"/>
+                                        dataIndex='indicator_definition' key='indicator_definition' width={this.state.columnWidths.idef}/>
+                                        {/*<Column title=<KColumnTitle content="指标业务需求" className="clsColumnTitle"/>*/}
+                                        {/*dataIndex='indicator_desc' key='indicator_desc' width={this.state.columnWidths.idesc}/>*/}
+                                        <Column title=<KColumnTitle content="中文映射算法" className="clsColumnTitle"/>
+                                        dataIndex='indicator_zhexp'
+                                        key='indicator_zhexp'
+                                        render={(zhexp, record) => {
+                                        return <div>
+                                            <div>{record.indicator_zhexp}</div>
+                                            <div>{record.indicator_enexp}</div>
+                                        </div>}}
+                                        />
+                                    </Table>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1265,3 +1366,4 @@ export default class ServicePerformance extends React.Component {
         </Fragment>
     }
 }
+
