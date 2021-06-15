@@ -59,7 +59,7 @@ $colorComponentToolbar: rgb(175, 225, 255);
     overflow: hidden;
 
     .BoxKpiRelatedNormal {
-        grid-template-rows: 3fr 2fr;
+        grid-template-rows: 7fr 4fr;
         grid-gap: 5px;
     }
 
@@ -134,7 +134,7 @@ $colorComponentToolbar: rgb(175, 225, 255);
 
         .BoxKpisAndProperties {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 5fr 6fr;
             grid-gap: 5px;
             overflow: hidden;
 
@@ -396,7 +396,7 @@ $colorComponentToolbar: rgb(175, 225, 255);
 
                 .BoxButtons {
                     display: grid;
-                    grid-template-columns: auto auto auto;
+                    grid-template-columns: auto auto auto auto;
                     grid-gap: 3px;
 
                     Button {

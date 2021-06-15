@@ -3,31 +3,32 @@ import './ServicePerformance.scss'
 import moment from 'moment';
 import axios from "axios";
 import GCtx from "../GCtx";
-import {message, Button, Tree, Input, Table, Select} from 'antd'
+import {Button, Input, Select, Table, Tree, Badge, Menu, Dropdown, Space} from 'antd'
 import {
+    BranchesOutlined,
     CaretDownOutlined,
     CaretLeftOutlined,
     CaretRightOutlined,
-    PlusSquareOutlined,
-    CopyOutlined,
-    MinusSquareOutlined,
-    EllipsisOutlined,
-    CloudDownloadOutlined,
     CaretUpOutlined,
-    BranchesOutlined,
+    CloudDownloadOutlined,
     CloudUploadOutlined,
+    CopyOutlined,
+    DownOutlined,
+    EllipsisOutlined,
+    MinusSquareOutlined,
     PlusOutlined,
-    UndoOutlined,
+    PlusSquareOutlined,
     SaveOutlined,
+    UndoOutlined,
 } from '@ant-design/icons'
 import Mock from 'mockjs'
+import XLSX from 'xlsx';
+import KColumnTitle from "./KColumnTitle";
 import TadDbConnection from "../entity/TadDbConnection";
 import TadKpiSchema from "../entity/TadKpiSchema";
 import TadKpi from "../entity/TadKpi";
-import XLSX from 'xlsx';
 import TadIndicator from "../entity/TadIndicator";
 import TadIndicatorCounter from "../entity/TadIndicatorCounter";
-import KColumnTitle from "./KColumnTitle";
 
 const {Option} = Select;
 const {TextArea} = Input;
@@ -36,7 +37,26 @@ const {Column} = Table;
 export default class ServicePerformance extends React.Component {
     static contextType = GCtx;
 
-    gUi = {};
+    gUi = {
+        tableIndicatorsColumnWidths: {
+            key: 4,
+            esn: 5,
+            izn: 20,
+            iu: 5,
+            itt: 5,
+            igt: 5,
+            idef: 50,
+            iexp: 50,
+            czn: 10,
+            cen: 10,
+            cbtn: 10,
+            cbtcn: 10,
+            ctn: 10,
+            ctcn: 10,
+            ctt: 7,
+            cgt: 7,
+        },
+    };
     gMap = {};
     gData = {};
     gCurrent = {};
@@ -48,48 +68,56 @@ export default class ServicePerformance extends React.Component {
         super(props);
 
         this.state = {
-            styleLayout: "NNN",
-            styleLayoutUpDown: "NN",
+            styleLayoutLeftRight: "SN",
+            styleLayoutUpDown: "SN",
             treeDataKpiSchemas: [],
             pageSizeIndicators: 50,
             treeDataKpis: [],
             treeDataKpiCounters: [],
             columnsIndicator: [],
             columnWidths: {
-                key: 80,
-                esn: 100,
-                izn: 200,
-                c: 200,
-                czn: 500,
-                cen: 200,
-                idef: 300,
-                idesc: 300,
-                iu: 100,
-                itt: 100,
-                igt: 100,
+                key: 4*15,
+                esn: 5*15,
+                izn: 20*15,
+                iu: 5*15,
+                itt: 5*15,
+                igt: 5*15,
+                idef: 50*15,
+                iexp: 50*15,
+                czn: 20*15,
+                cen: 20*15,
+                cbtn: 20*15,
+                cbtcn: 20*15,
+                ctn: 20*15,
+                ctcn: 20*15,
+                ctt: 7*15,
+                cgt: 7*15,
             },
+            tableIndicatorsIsLoading: true,
+            // tableIndicatorsTitle: "hello world",
             dsIndicators: [],
             selected: {
                 schema_id: "",
-                schema_zhname: "请输入指标组名称",
+                schema_zhname: "指标组名称",
                 schema_vendor_id: -1,
                 schema_object_class: -1,
                 schema_sub_class: -1,
                 schema_interval_flag: -1,
-                schema_counter_tab_name: "请输入COUNTER表名称",
+                schema_counter_tab_name: "COUNTER表名称",
                 kpi_id: "",
-                kpi_zhname: "请输入指标中文名称",
-                kpi_enname: "请输入指标英文名称",
-                kpi_exp: "请输入指标计算表达式",
+                kpi_zhname: "指标中文名称",
+                kpi_enname: "指标英文名称",
+                kpi_exp: "指标计算表达式",
                 kpi_alarm: 1, // 默认告警
                 kpi_format: 1, // 默认格式R2
-                kpi_min_value: "请输入最小值",
-                kpi_max_value: "请输入最大值",
+                kpi_min_value: "最小值",
+                kpi_max_value: "最大值",
                 kpi_used_product: -1,
                 kpi_used_module: -1,
-                kpi_used_title: "请输入界面呈现标题",
+                kpi_used_title: "界面呈现标题",
             },
             tablePropertiesScrollX: 1920,
+            tableIndicatorCountersScrollX: 1920,
             tablePropertiesScrollY: 200,
         }
 
@@ -116,9 +144,17 @@ export default class ServicePerformance extends React.Component {
         this.onButtonSchemasCopyPasteClicked = this.onButtonSchemasCopyPasteClicked.bind(this);
         this.onButtonKpisCopyPasteClicked = this.onButtonKpisCopyPasteClicked.bind(this);
         this.onButtonImportExcel = this.onButtonImportExcel.bind(this);
+        this.onButtonIndicatorsRefreshClicked =this.onButtonIndicatorsRefreshClicked.bind(this);
 
         this.onInputSearchSchemaChange = this.onInputSearchSchemaChange.bind(this);
+        this.onInputSearchSchemasSearched = this.onInputSearchSchemasSearched.bind(this);
         this.onInputSearchKpiChange = this.onInputSearchKpiChange.bind(this);
+        this.onInputSearchIndicatorsChanged = this.onInputSearchIndicatorsChanged.bind(this);
+        this.onInputSearchIndicatorsSearched = this.onInputSearchIndicatorsSearched.bind(this);
+
+        this.onTableIndicatorsExpandedRowRender = this.onTableIndicatorsExpandedRowRender.bind(this);
+
+        this.data2UiTable = this.data2UiTable.bind(this);
     }
 
     test() {
@@ -149,23 +185,47 @@ export default class ServicePerformance extends React.Component {
     }
 
     doInit() {
-        let columnWidths = JSON.parse(JSON.stringify(this.state.columnWidths));
+        let columnWidths = JSON.parse(JSON.stringify(this.gUi.tableIndicatorsColumnWidths));
+        console.log(columnWidths);
 
-        columnWidths.izn = this.gCurrent.arrWidths.izn * 15;
-        columnWidths.czn = this.gCurrent.arrWidths.czn * 15;
-        columnWidths.cen = this.gCurrent.arrWidths.cen * 10;
-        columnWidths.c = columnWidths.czn + columnWidths.cen + 200 + 200;
+        columnWidths.key = columnWidths.key*15;
+        columnWidths.esn = columnWidths.esn*15;
+        columnWidths.izn = columnWidths.izn*15;
+        columnWidths.iu = columnWidths.iu*15;
+        columnWidths.itt = columnWidths.itt*15;
+        columnWidths.igt = columnWidths.igt*15;
+        columnWidths.idef = columnWidths.idef*15;
+        columnWidths.iexp = columnWidths.iexp*15;
+        columnWidths.czn = columnWidths.czn*15;
+        columnWidths.cen = columnWidths.cen*15;
+        columnWidths.cbtn = columnWidths.cbtn*15;
+        columnWidths.cbtcn = columnWidths.cbtcn*15;
+        columnWidths.ctn = columnWidths.ctn*15;
+        columnWidths.ctcn = columnWidths.ctcn*15;
+        columnWidths.ctt = columnWidths.ctt*15;
+        columnWidths.cgt = columnWidths.cgt*15;
+
         let tablePropertiesScrollX = columnWidths.key +
             columnWidths.esn +
             columnWidths.izn +
-            columnWidths.c +
+            columnWidths.iu +
+            columnWidths.itt +
+            columnWidths.igt +
             columnWidths.idef +
-            columnWidths.idesc + 500;
+            columnWidths.iexp + 500;
 
-        console.log(tablePropertiesScrollX);
+        let tableIndicatorCountersScrollX = columnWidths.czn +
+            columnWidths.cen +
+            columnWidths.cbtn +
+            columnWidths.cbtcn +
+            columnWidths.ctn +
+            columnWidths.ctcn +
+            columnWidths.ctt +
+            columnWidths.cgt + 200;
 
         this.setState({
             columnWidths: columnWidths,
+            tableIndicatorCountersScrollX: tableIndicatorCountersScrollX,
             tablePropertiesScrollX: tablePropertiesScrollX,
             tablePropertiesScrollY: this.refBoxDetail.current.scrollHeight - 39 - 16,
         })
@@ -186,6 +246,7 @@ export default class ServicePerformance extends React.Component {
             indicatorCounters) => {
             let mapSchemas = new Map();
             let mapKpis = new Map();
+            let mapIndicators = new Map();
             let uiSchemas = [];
 
             this.gData.kpis = kpis.data.data;
@@ -196,38 +257,54 @@ export default class ServicePerformance extends React.Component {
 
             let dsIndicators = [];
             let nKey = 0;
-            let arrWidths = {izn: 13, czn: 13, cen: 13};
-            this.gData.indicators.forEach((indicator) => {
+            //let arrWidths = {izn: 13, czn: 13, cen: 13};
+            let columnWidths = JSON.parse(JSON.stringify(this.gUi.tableIndicatorsColumnWidths));
+            for(let i = 0; i < this.gData.indicators.length; i++) {
+                let indicator = this.gData.indicators[i];
+
+                indicator.counters = [];
                 if (indicator.indicator_zhname && indicator.indicator_zhname !== "") {
                     let myIndicator = Object.assign(Object.create(Object.getPrototypeOf(indicator)), indicator);
                     myIndicator.counters = [];
                     myIndicator.index = ++nKey;
-                    if (myIndicator.indicator_zhname && myIndicator.indicator_zhname.length > arrWidths.izn) {
-                        arrWidths.izn = myIndicator.indicator_zhname.length
+                    if (myIndicator.indicator_zhname && myIndicator.indicator_zhname.length > columnWidths.izn) {
+                        columnWidths.izn = myIndicator.indicator_zhname.length
                     }
+
                     this.gData.indicatorCounters.forEach((counter) => {
                         if (counter.indicator_id === indicator.id) {
                             let myCounter = Object.assign(Object.create(Object.getPrototypeOf(counter)), counter);
                             // myIndicator.counter_zhname = counter.counter_zhname;
                             // myIndicator.counter_enname = counter.counter_enname;
-                            if (myCounter.counter_zhname && myCounter.counter_zhname.length > arrWidths.czn) {
-                                arrWidths.czn = myCounter.counter_zhname.length
+                            if (myCounter.counter_zhname && myCounter.counter_zhname.length > columnWidths.czn) {
+                                columnWidths.czn = myCounter.counter_zhname.length
                             }
-                            if (myCounter.counter_enname && myCounter.counter_enname.length > arrWidths.cen) {
-                                arrWidths.cen = myCounter.counter_enname.length
+                            if (myCounter.counter_enname && myCounter.counter_enname.length > columnWidths.cen) {
+                                columnWidths.cen = myCounter.counter_enname.length
                             }
+                            myCounter.key = ++nKey;
+                            indicator.counters.push(myCounter);
                             myIndicator.counters.push(myCounter);
                         }
                     });
+                    mapIndicators.set(myIndicator.id, myIndicator);
                     dsIndicators.push(myIndicator);
                 }
-            });
-            this.gCurrent.arrWidths = arrWidths;
+            }
+
+            this.gUi.dsIndicators = dsIndicators;
+            this.gMap.indicators = mapIndicators;
+            this.gUi.tableIndicatorsColumnWidths = columnWidths;
             let pageSizeIndicators = dsIndicators.length;
 
             this.setState({
                 pageSizeIndicators: pageSizeIndicators,
-                dsIndicators: dsIndicators
+                dsIndicators: this.gUi.dsIndicators
+            }, () => {
+                this.setState({
+                    tableIndicatorsIsLoading: false,
+                    // tableIndicatorsTitle: "共：" + this.state.dsIndicators.length + " 个指标"
+                })
             })
 
             let n = 0;
@@ -283,6 +360,7 @@ export default class ServicePerformance extends React.Component {
             this.gMap.schemas = mapSchemas;
             this.gMap.kpis = mapKpis;
 
+            this.gUi.schemas = uiSchemas;
             this.setState({
                 treeDataKpiSchemas: uiSchemas
             })
@@ -579,16 +657,16 @@ export default class ServicePerformance extends React.Component {
                     schema_interval_flag: schema.interval_flag,  // 必填
                     schema_counter_tab_name: schema.counter_tab_name, // 必填
                     kpi_id: "",
-                    kpi_zhname: "请输入指标中文名称",
-                    kpi_enname: "请输入指标英文名称",
-                    kpi_exp: "请输入指标计算表达式",
+                    kpi_zhname: "指标中文名称",
+                    kpi_enname: "指标英文名称",
+                    kpi_exp: "指标计算表达式",
                     kpi_alarm: 1, // 默认告警
                     kpi_format: 1, // 默认格式R2
-                    kpi_min_value: "请输入最小值",
-                    kpi_max_value: "请输入最大值",
+                    kpi_min_value: "最小值",
+                    kpi_max_value: "最大值",
                     kpi_used_product: -1,
                     kpi_used_module: -1,
-                    kpi_used_title: "请输入界面呈现标题",
+                    kpi_used_title: "界面呈现标题",
                     // schema_used_type: schema.used_type, // ???
                     // kpi_used_type: -1, // ???
                     // schema.schema_ns 内部产生
@@ -627,23 +705,23 @@ export default class ServicePerformance extends React.Component {
                 treeDataKpiCounters: [],
                 selected: {
                     schema_id: "",
-                    schema_zhname: "请输入指标组名称",
+                    schema_zhname: "指标组名称",
                     schema_vendor_id: -1,
                     schema_object_class: -1,
                     schema_sub_class: -1,
                     schema_interval_flag: -1,
-                    schema_counter_tab_name: "请输入COUNTER表名称",
+                    schema_counter_tab_name: "COUNTER表名称",
                     kpi_id: "",
-                    kpi_zhname: "请输入指标中文名称",
-                    kpi_enname: "请输入指标英文名称",
-                    kpi_exp: "请输入指标计算表达式",
+                    kpi_zhname: "指标中文名称",
+                    kpi_enname: "指标英文名称",
+                    kpi_exp: "指标计算表达式",
                     kpi_alarm: 1, // 默认告警
                     kpi_format: 1, // 默认格式R2
-                    kpi_min_value: "请输入最小值",
-                    kpi_max_value: "请输入最大值",
+                    kpi_min_value: "最小值",
+                    kpi_max_value: "最大值",
                     kpi_used_product: -1,
                     kpi_used_module: -1,
-                    kpi_used_title: "请输入界面呈现标题",
+                    kpi_used_title: "界面呈现标题",
                 }
             })
         }
@@ -669,7 +747,7 @@ export default class ServicePerformance extends React.Component {
                 selected.kpi_max_value = kpi.kpi_max_value;
                 selected.kpi_used_product = -1;
                 selected.kpi_used_module = -1;
-                selected.kpi_used_title = "请输入界面呈现标题";
+                selected.kpi_used_title = "界面呈现标题";
 
                 this.setState({
                     selected: selected
@@ -678,16 +756,16 @@ export default class ServicePerformance extends React.Component {
         } else {
             let selected = JSON.parse(JSON.stringify(this.state.selected));
             selected.kpi_id = "";
-            selected.kpi_zhname = "请输入指标中文名称";
-            selected.kpi_enname = "请输入指标英文名称";
-            selected.kpi_exp = "请输入指标计算表达式";
+            selected.kpi_zhname = "指标中文名称";
+            selected.kpi_enname = "指标英文名称";
+            selected.kpi_exp = "指标计算表达式";
             selected.kpi_alarm = 1;
             selected.kpi_format = 1;
-            selected.kpi_min_value = "请输入最小值";
-            selected.kpi_max_value = "请输入最大值";
+            selected.kpi_min_value = "最小值";
+            selected.kpi_max_value = "最大值";
             selected.kpi_used_product = -1;
             selected.kpi_used_module = -1;
-            selected.kpi_used_title = "请输入界面呈现标题";
+            selected.kpi_used_title = "界面呈现标题";
 
             this.setState({
                     selected: selected
@@ -718,12 +796,12 @@ export default class ServicePerformance extends React.Component {
 
     onButtonProductsChangeComponentSizeClicked(e) {
 
-        let styleLayout = "NNN";
+        let styleLayoutLeftRight = "NN";
 
-        if (this.state.styleLayout !== "SNN") styleLayout = "SNN";
+        if (this.state.styleLayoutLeftRight !== "SN") styleLayoutLeftRight = "SN";
 
         this.setState({
-            styleLayout: styleLayout
+            styleLayoutLeftRight: styleLayoutLeftRight
         })
     }
 
@@ -800,8 +878,15 @@ export default class ServicePerformance extends React.Component {
 
     }
 
+    onButtonIndicatorsRefreshClicked(e) {
+        this.setState({
+            tablePropertiesScrollY: this.refBoxDetail.current.scrollHeight - 39 - 16,
+        })
+
+    }
+
     // ****************************************************************************************************
-    // TABLE ROW...
+    // TABLE...
     // ****************************************************************************************************
 
     onRowIndicatorCounterSelected = {
@@ -814,50 +899,51 @@ export default class ServicePerformance extends React.Component {
         }),
     };
 
+    onTableIndicatorsExpandedRowRender(record) {
+        if (record.counters.length > 0) {
+            const columns = [
+                {title: "统计数据中文名称", dataIndex: "counter_zhname", key: "counter_zhname", width: this.state.columnWidths.czn},
+                {title: "统计数据中文名称", dataIndex: "counter_enname", key: "counter_enname", width: this.state.columnWidths.cen},
+                {title: "主表", dataIndex: "base_tab_name", key: "base_tab_name", width: this.state.columnWidths.cbtn},
+                {title: "主表列", dataIndex: "base_tab__col_name", key: "base_tab__col_name", width: this.state.columnWidths.cbtcn},
+                {title: "COUNTER表", dataIndex: "counter_tab_name", key: "counter_tab_name", width: this.state.columnWidths.ctn},
+                {title: "COUNTER表列", dataIndex: "counter_tab__col_name", key: "counter_tab__col_name", width: this.state.columnWidths.ctcn},
+                {title: "时间汇总算法", dataIndex: "counter_time_type", key: "counter_time_type", width: this.state.columnWidths.ctt},
+                {title: "空间汇总算法", dataIndex: "counter_geo_type", key: "counter_geo_type", width: this.state.columnWidths.cgt},
+                // {title: "统计数据中文名称", dataIndex: "counter_zhname", key: "counter_zhname"},
+                // {title: "统计数据中文名称", dataIndex: "counter_enname", key: "counter_enname"},
+                // {title: "主表", dataIndex: "base_tab_name", key: "base_tab_name"},
+                // {title: "主表列", dataIndex: "base_tab__col_name", key: "base_tab__col_name"},
+                // {title: "COUNTER表", dataIndex: "counter_tab_name", key: "counter_tab_name"},
+                // {title: "COUNTER表列", dataIndex: "counter_tab__col_name", key: "counter_tab__col_name"},
+                // {title: "时间汇总算法", dataIndex: "counter_time_type", key: "counter_time_type"},
+                // {title: "空间汇总算法", dataIndex: "counter_geo_type", key: "counter_geo_type"},
+                {title: "导入时间", dataIndex: "import_time", key: "import_time"},
+            ]
+
+            return <Table
+                bordered={true}
+                size={"small"}
+                columns={columns}
+                dataSource={record.counters}
+                pagination={false}
+                scroll={{
+                    x: this.state.tableIndicatorCountersScrollX}}
+                rowSelection={{
+                    type: "checkbox",
+                    ...this.onRowIndicatorCounterSelected}}
+            />;
+        } else {
+            return null;
+        }
+    }
+
     // ****************************************************************************************************
     // INPUT...
     // ****************************************************************************************************
 
     onInputSearchSchemaChange(e) {
-        const {value} = e.target;
 
-        let uiSchemas = [];
-        let n = 0;
-        this.gData.schemas.forEach(function (item) {
-            let schemaId = item.schema_id === null ? -1 : item.schema_id;
-            let schemaName = item.schema_zhname === null ? "" : item.schema_zhname;
-
-            if (schemaId !== -1 &&
-                schemaName !== "" &&
-                schemaName.length > 0 &&
-                schemaName[0] !== "?" &&
-                schemaName[schemaName.length - 1] !== "?") {
-                if ((schemaName.indexOf(value) >= 0) || (item.schema_id.toString().indexOf(value) >= 0)) {
-                    n++;
-                    let uiSchema = {
-                        key: n + "_" + item.schema_id,
-                        title: n + " - " + item.schema_id + "-" + item.schema_zhname,
-                        children: []
-                    }
-                    uiSchemas.push(uiSchema);
-                }
-            }
-        });
-
-        this.setState({
-            treeDataKpiSchemas: uiSchemas
-        })
-        // const expandedKeys = dataList
-        //     .map(item => {
-        //         if (item.title.indexOf(value) > -1) {
-        //             return getParentKey(item.key, gData);
-        //         }
-        //         return null;
-        //     })
-        //     .filter((item, i, self) => item && self.indexOf(item) === i);
-        // this.setState({
-        //     searchValueSchemaName: value
-        // });
     }
 
     onInputSearchKpiChange(e) {
@@ -940,13 +1026,153 @@ export default class ServicePerformance extends React.Component {
         // });
     }
 
+    onInputSearchIndicatorsChanged(e) {
+        const {value} = e.target;
+
+        this.gCurrent.searchTextOfIndicators = value;
+    }
+
+    data2UiTable(data) {
+        let myResult = [];
+
+        let arrWidths = {izn: 13, czn: 13, cen: 13};
+        let nKey = 0;
+        data.forEach((item) => {
+            let myIndicator = Object.assign(Object.create(Object.getPrototypeOf(item)), item);
+            //myIndicator.counters = [];
+            myIndicator.index = ++nKey;
+            if (myIndicator.indicator_zhname && myIndicator.indicator_zhname.length > arrWidths.izn) {
+                arrWidths.izn = myIndicator.indicator_zhname.length
+            }
+            // let mKey = 0;
+            // this.gData.indicatorCounters.forEach((counter) => {
+            //     if (counter.indicator_id === indicator.id) {
+            //         let myCounter = Object.assign(Object.create(Object.getPrototypeOf(counter)), counter);
+            //         // myIndicator.counter_zhname = counter.counter_zhname;
+            //         // myIndicator.counter_enname = counter.counter_enname;
+            //         if (myCounter.counter_zhname && myCounter.counter_zhname.length > arrWidths.czn) {
+            //             arrWidths.czn = myCounter.counter_zhname.length
+            //         }
+            //         if (myCounter.counter_enname && myCounter.counter_enname.length > arrWidths.cen) {
+            //             arrWidths.cen = myCounter.counter_enname.length
+            //         }
+            //         myCounter.key = ++nKey;
+            //         myIndicator.counters.push(myCounter);
+            //     }
+            // });
+            myResult.push(myIndicator);
+
+        })
+
+        return myResult;
+    }
+
+    onInputSearchIndicatorsSearched(value, event) {
+        let sv = value;
+        let mapIndicators = this.gMap.indicators;
+        let dsIndicators = [];
+        let setIndicators = new Set();
+
+        if (sv && sv !== "") {
+            sv = sv.toLowerCase();
+            this.gData.indicators.forEach(function (item) {
+                let iZhName = item.indicator_zhname === null ? "" : item.indicator_zhname.toLowerCase();
+                let iEnName = item.indicator_enname === null ? "" : item.indicator_enname.toLowerCase();
+                let iDef = item.indicator_definition === null ? "" : item.indicator_definition.toLowerCase();
+                let iZhExp = item.indicator_zhexp === null ? "" : item.indicator_zhexp.toLowerCase();
+                let iEnExp = item.indicator_enexp === null ? "" : item.indicator_enexp.toLowerCase();
+                let ikZhName = item.kpi_zhname === null ? "" : item.kpi_zhname.toLowerCase();
+                let ikEnName = item.kpi_enname === null ? "" : item.kpi_enname.toLowerCase();
+                let ikExp = item.kpi_exp === null ? "" : item.kpi_exp.toLowerCase();
+                let ikExpDesc = item.kpi_exp_desc === null ? "" : item.kpi_exp_desc.toLowerCase();
+
+                if ((iZhName.indexOf(sv) >= 0) ||
+                    (iEnName.indexOf(sv) >= 0) ||
+                    (iDef.indexOf(sv) >= 0) ||
+                    (iZhExp.indexOf(sv) >= 0) ||
+                    (iEnExp.indexOf(sv) >= 0) ||
+                    (ikZhName.indexOf(sv) >= 0) ||
+                    (ikEnName.indexOf(sv) >= 0) ||
+                    (ikExp.indexOf(sv) >= 0) ||
+                    (ikExpDesc.indexOf(sv) >= 0)) {
+                    dsIndicators.push(item);
+                    setIndicators.add(item.id);
+                }
+            });
+
+            for(let i = 0; i < this.gData.indicatorCounters.length; i++) {
+                let item = this.gData.indicatorCounters[i];
+                let iId = item.indicator_id;
+                let cZhName = item.counter_zhname === null ? "" : item.counter_zhname.toLowerCase();
+                let cEnName = item.counter_enname === null ? "" : item.counter_enname.toLowerCase();
+
+                if ((cZhName.indexOf(sv) >= 0) || (cEnName.indexOf(sv) >= 0)) {
+                    let indicator = mapIndicators.has(iId) ? mapIndicators.get(iId) : null;
+                    if (indicator) {
+                        if (!setIndicators.has(iId)) {
+                            console.log(item);
+                            dsIndicators.push(indicator);
+                            setIndicators.add(iId);
+                        }
+                    }
+                }
+            }
+
+            this.setState({
+                dsIndicators: dsIndicators
+            })
+        } else {
+            this.setState({
+                dsIndicators: this.gUi.dsIndicators
+            })
+        }
+
+    }
+
+    onInputSearchSchemasSearched(value, event) {
+        let sv = value;
+
+        if (sv && sv !== "") {
+            let uiSchemas = [];
+            let n = 0;
+            this.gData.schemas.forEach(function (item) {
+                let schemaId = item.schema_id === null ? -1 : item.schema_id;
+                let schemaName = item.schema_zhname === null ? "" : item.schema_zhname;
+
+                if (schemaId !== -1 &&
+                    schemaName !== "" &&
+                    schemaName.length > 0 &&
+                    schemaName[0] !== "?" &&
+                    schemaName[schemaName.length - 1] !== "?") {
+                    if ((schemaName.indexOf(value) >= 0) || (item.schema_id.toString().indexOf(value) >= 0)) {
+                        n++;
+                        let uiSchema = {
+                            key: n + "_" + item.schema_id,
+                            title: n + " - " + item.schema_id + "-" + item.schema_zhname,
+                            children: []
+                        }
+                        uiSchemas.push(uiSchema);
+                    }
+                }
+            });
+
+            this.setState({
+                treeDataKpiSchemas: uiSchemas
+            })
+        } else {
+            this.setState({
+                treeDataKpiSchemas: this.gUi.schemas
+            })
+        }
+    }
+
     render() {
 
         return <Fragment>
-            <div className={this.state.styleLayout === "NNN" ? "ServicePerformance BoxServicePerformanceNormal" : "ServicePerformance BoxServicePerformanceSmall"}>
+            <div className={this.state.styleLayoutLeftRight === "NN" ? "ServicePerformance BoxServicePerformanceNormal" : "ServicePerformance BoxServicePerformanceSmall"}>
                 <div className={"BoxKpiSchemas"}>
                     <div className={"BoxTitleBar"}>
-                        {this.state.styleLayout === "NNN" ? (
+                        {this.state.styleLayoutLeftRight === "NN" ? (
                             <Fragment>
                                 <div className={"BoxTitle"}>指标组</div>
                                 <div className={"BoxButtons"}>
@@ -982,18 +1208,23 @@ export default class ServicePerformance extends React.Component {
                             <Button
                                 size={"small"}
                                 type={"ghost"}
-                                icon={this.state.styleLayout === "NNN" ? <CaretLeftOutlined/> : <CaretRightOutlined/>}
+                                icon={this.state.styleLayoutLeftRight === "NN" ? <CaretLeftOutlined/> : <CaretRightOutlined/>}
                                 onClick={this.onButtonProductsChangeComponentSizeClicked}/>
                         </div>
                     </div>
-                    {this.state.styleLayout === "NNN" ? (
+                    {this.state.styleLayoutLeftRight === "NN" ? (
                         <Fragment>
                             <div className={"BoxTree"}>
                                 <Select defaultValue="-1">
                                     <Option value="-1">变更：全集</Option>
                                     <Option value="1">变更：K - 新增话务指标 - 2021-07-01</Option>
                                 </Select>
-                                <Input.Search className={"BoxSearch"} placeholder="Search" onChange={this.onInputSearchSchemaChange}/>
+                                <Input.Search
+                                    className={"BoxSearch"}
+                                    placeholder="Search"
+                                    onChange={this.onInputSearchSchemaChange}
+                                    onSearch={this.onInputSearchSchemasSearched}
+                                />
                                 <div className={"BoxTreeInstance"}>
                                     <Tree
                                         checkable
@@ -1133,16 +1364,16 @@ export default class ServicePerformance extends React.Component {
                                     <div className={"BoxPropertiesSchema"}>
                                         <div className={"BoxSchemaIds"}>
                                             <Select defaultValue="-1">
-                                                <Option value="-1">请选择分类</Option>
+                                                <Option value="-1">分类</Option>
                                             </Select>
                                             <Select defaultValue="-1">
-                                                <Option value="-1">请选择时间粒度</Option>
+                                                <Option value="-1">时间粒度</Option>
                                             </Select>
                                             <Select defaultValue="-1">
-                                                <Option value="-1">请选择空间粒度</Option>
+                                                <Option value="-1">空间粒度</Option>
                                             </Select>
                                             <Select defaultValue="-1">
-                                                <Option value="-1">请选择组网元类型</Option>
+                                                <Option value="-1">组网元类型</Option>
                                             </Select>
                                         </div>
                                         <div>
@@ -1153,10 +1384,10 @@ export default class ServicePerformance extends React.Component {
                                                 <Option value="-1">不区分厂家</Option>
                                             </Select>
                                             <Select defaultValue="-1">
-                                                <Option value="-1">请选择网元类型</Option>
+                                                <Option value="-1">网元类型</Option>
                                             </Select>
                                             <Select defaultValue="-1">
-                                                <Option value="-1">请选择网元细分类型</Option>
+                                                <Option value="-1">网元细分类型</Option>
                                             </Select>
                                             <Select defaultValue="-1">
                                                 <Option value="-1">采集粒度</Option>
@@ -1204,10 +1435,10 @@ export default class ServicePerformance extends React.Component {
                                         <div className={"BoxUsedInfo"}>
                                             <div className={"BoxProductModuleName"}>
                                                 <Select defaultValue="-1">
-                                                    <Option value="-1">请选择使用该指标的产品</Option>
+                                                    <Option value="-1">使用该指标的产品</Option>
                                                 </Select>
                                                 <Select defaultValue="-1">
-                                                    <Option value="-1">请选择使用该指标的模块</Option>
+                                                    <Option value="-1">使用该指标的模块</Option>
                                                 </Select>
                                                 <Input value={this.state.selected.kpi_used_title}/>
                                                 <Button icon={<PlusOutlined/>}/>
@@ -1235,6 +1466,12 @@ export default class ServicePerformance extends React.Component {
                                     size={"small"}
                                     type={"primary"}
                                     icon={<CloudUploadOutlined/>}
+                                    onClick={this.onButtonIndicatorsRefreshClicked}
+                                >刷新</Button>
+                                <Button
+                                    size={"small"}
+                                    type={"primary"}
+                                    icon={<CloudUploadOutlined/>}
                                     // onClick={this.onButtonImportExcel}
                                 >导入</Button>
                                 <Button
@@ -1252,11 +1489,17 @@ export default class ServicePerformance extends React.Component {
                         </div>
                         <div className={"BoxTableIndicators"}>
                             <div className={"BoxSearch"}>
-                                <Input.Search placeholder="Search" onChange={this.onChange}/>
+                                <Input.Search
+                                    placeholder="Search"
+                                    onChange={this.onInputSearchIndicatorsChanged}
+                                    onSearch={this.onInputSearchIndicatorsSearched}
+                                />
                             </div>
                             <div ref={this.refBoxDetail} className={"BoxAuto"}>
                                 <div className={"Box2"}>
                                     <Table rowKey="id"
+                                           // title={() => this.state.tableIndicatorsTitle}
+                                           loading={this.state.tableIndicatorsIsLoading}
                                            dataSource={this.state.dsIndicators}
                                         // columns={this.state.columnsIndicator}
                                            bordered={true}
@@ -1273,17 +1516,17 @@ export default class ServicePerformance extends React.Component {
                                                type: "checkbox",
                                                ...this.onRowIndicatorCounterSelected
                                            }}
-                                        // expandedRowRender={record => <div className="BoxRecordDetail">
-                                        //     <div>{record.indicator_definition}</div>
-                                        //     <div>{record.indicator_desc}</div>
-                                        // </div>}
+                                           expandedRowRender={this.onTableIndicatorsExpandedRowRender}
+                                           expandable={{
+                                               rowExpandable: (record) => record.counters.length > 0
+                                           }}
                                     >
                                         <Column title=<KColumnTitle content="序号" className="clsColumnTitle"/>
                                         className="ColumnKey"
                                         dataIndex='index'
                                         key='index'
                                         width={this.state.columnWidths.key}
-                                        fixed='left'
+                                        fixed={true}
                                         />
                                         <Column title=<KColumnTitle content="来自表单" className="clsColumnTitle"/>
                                         className="ColumnIesn"
@@ -1312,37 +1555,6 @@ export default class ServicePerformance extends React.Component {
                                         dataIndex='indicator_geo_type'
                                         key='indicator_geo_type'
                                         width={this.state.columnWidths.igt}/>
-                                        <Column title=<KColumnTitle content="统计数据" className="clsColumnTitle"/>
-                                        dataIndex='counters'
-                                        key='counters'
-                                        width={this.state.columnWidths.c}
-                                        render={(counters) => counters.length > 0 ? (
-                                        <div className="BoxTableIndicatorCounters">
-                                            <Table rowKey="id"
-                                                   columns={[
-                                                       {title: "统计数据中文名称", dataIndex: "counter_zhname", key: "counter_zhname"},
-                                                       {title: "统计数据中文名称", dataIndex: "counter_enname", key: "counter_enname"},
-                                                       {title: "主表", dataIndex: "base_tab_name", key: "base_tab_name"},
-                                                       {title: "主表列", dataIndex: "base_tab__col_name", key: "base_tab__col_name"},
-                                                       {title: "COUNTER表", dataIndex: "counter_tab_name", key: "counter_tab_name"},
-                                                       {title: "COUNTER表列", dataIndex: "counter_tab__col_name", key: "counter_tab__col_name"},
-                                                       {title: "时间汇总算法", dataIndex: "counter_time_type", key: "counter_time_type"},
-                                                       {title: "空间汇总算法", dataIndex: "counter_geo_type", key: "counter_geo_type"},
-                                                   ]}
-                                                   dataSource={counters}
-                                                   bordered={true}
-                                                   size={"small"}
-                                                   pagination={{
-                                                       pageSize: counters.length,
-                                                       position: ["none", "none"]
-                                                   }}
-                                                   rowSelection={{
-                                                       type: "checkbox",
-                                                       ...this.onRowIndicatorCounterSelected
-                                                   }}
-                                            />
-                                        </div>) : (<div>&nbsp;</div>)}
-                                        />
                                         <Column title=<KColumnTitle content="指标定义" className="clsColumnTitle"/>
                                         dataIndex='indicator_definition' key='indicator_definition' width={this.state.columnWidths.idef}/>
                                         {/*<Column title=<KColumnTitle content="指标业务需求" className="clsColumnTitle"/>*/}
@@ -1354,7 +1566,8 @@ export default class ServicePerformance extends React.Component {
                                         return <div>
                                             <div>{record.indicator_zhexp}</div>
                                             <div>{record.indicator_enexp}</div>
-                                        </div>}}
+                                        </div>
+                                    }}
                                         />
                                     </Table>
                                 </div>
