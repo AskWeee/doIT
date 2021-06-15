@@ -1525,6 +1525,7 @@ export default class ServicePerformance extends React.Component {
                                         className="ColumnKey"
                                         dataIndex='index'
                                         key='index'
+                                        align='center'
                                         width={this.state.columnWidths.key}
                                         fixed={true}
                                         />
@@ -1532,8 +1533,9 @@ export default class ServicePerformance extends React.Component {
                                         className="ColumnIesn"
                                         dataIndex='excel_sheet_name'
                                         key='excel_sheet_name'
+                                        align='center'
                                         width={this.state.columnWidths.esn}
-                                        fixed='left'
+                                        fixed={true}
                                         />
                                         <Column title=<KColumnTitle content="指标中文名称" className="clsColumnTitle"/>
                                         dataIndex='indicator_zhname'
@@ -1541,19 +1543,22 @@ export default class ServicePerformance extends React.Component {
                                         width={this.state.columnWidths.izn}
                                         sorter={(a, b) => a.indicator_zhname > b.indicator_zhname}
                                         sortDirections={['descend', 'ascend']}
-                                        fixed='left'
+                                        fixed={true}
                                         />
                                         <Column title=<KColumnTitle content="指标单位" className="clsColumnTitle"/>
                                         dataIndex='indicator_unit'
                                         key='indicator_unit'
+                                        align='center'
                                         width={this.state.columnWidths.iu}/>
                                         <Column title=<KColumnTitle content="时间粒度" className="clsColumnTitle"/>
                                         dataIndex='indicator_time_type'
                                         key='indicator_time_type'
+                                        align='center'
                                         width={this.state.columnWidths.itt}/>
                                         <Column title=<KColumnTitle content="空间粒度" className="clsColumnTitle"/>
                                         dataIndex='indicator_geo_type'
                                         key='indicator_geo_type'
+                                        align='center'
                                         width={this.state.columnWidths.igt}/>
                                         <Column title=<KColumnTitle content="指标定义" className="clsColumnTitle"/>
                                         dataIndex='indicator_definition' key='indicator_definition' width={this.state.columnWidths.idef}/>
