@@ -3,7 +3,7 @@ import './ServicePerformance.scss'
 import moment from 'moment';
 import axios from "axios";
 import GCtx from "../GCtx";
-import {Button, Input, Select, Table, Tree, Badge, Menu, Dropdown, Space} from 'antd'
+import {Button, Input, Select, Table, Tree} from 'antd'
 import {
     BranchesOutlined,
     CaretDownOutlined,
@@ -13,7 +13,6 @@ import {
     CloudDownloadOutlined,
     CloudUploadOutlined,
     CopyOutlined,
-    DownOutlined,
     EllipsisOutlined,
     MinusSquareOutlined,
     PlusOutlined,
@@ -62,39 +61,55 @@ export default class ServicePerformance extends React.Component {
     gCurrent = {};
     gRef = {};
     refBoxDetail = React.createRef();
-    gIndex = 10000;
+    gDynamic = {
+        schemaId: {
+            a1: -99999,
+            a2: -99999,
+            b1: -99999,
+            b2: -99999,
+            index: 0
+        }
+    }
+    ids = [50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 99, 150, 151, 152, 153, 154, 155, 156, 157, 199];
 
     constructor(props) {
         super(props);
 
         this.state = {
-            styleLayoutLeftRight: "SN",
-            styleLayoutUpDown: "SN",
+            message: "",
+
+            styleLayoutLeftRight: "NN",
+            styleLayoutUpDown: "NN",
+
             treeDataKpiSchemas: [],
-            pageSizeIndicators: 50,
             treeDataKpis: [],
             treeDataKpiCounters: [],
+
+            optionsSchemaIdA1: [{label: "业务分类", value: -99999}],
+            optionsSchemaIdA2: [{label: "时间粒度", value: -99999}],
+            optionsSchemaIdB1: [{label: "空间粒度", value: -99999}],
+            optionsSchemaIdB2: [{label: "网元类型", value: -99999}],
+            pageSizeIndicators: 50,
             columnsIndicator: [],
             columnWidths: {
-                key: 4*15,
-                esn: 5*15,
-                izn: 20*15,
-                iu: 5*15,
-                itt: 5*15,
-                igt: 5*15,
-                idef: 50*15,
-                iexp: 50*15,
-                czn: 20*15,
-                cen: 20*15,
-                cbtn: 20*15,
-                cbtcn: 20*15,
-                ctn: 20*15,
-                ctcn: 20*15,
-                ctt: 7*15,
-                cgt: 7*15,
+                key: 4 * 15,
+                esn: 5 * 15,
+                izn: 20 * 15,
+                iu: 5 * 15,
+                itt: 5 * 15,
+                igt: 5 * 15,
+                idef: 50 * 15,
+                iexp: 50 * 15,
+                czn: 20 * 15,
+                cen: 20 * 15,
+                cbtn: 20 * 15,
+                cbtcn: 20 * 15,
+                ctn: 20 * 15,
+                ctcn: 20 * 15,
+                ctt: 7 * 15,
+                cgt: 7 * 15,
             },
             tableIndicatorsIsLoading: true,
-            // tableIndicatorsTitle: "hello world",
             dsIndicators: [],
             selected: {
                 schema_id: "",
@@ -127,6 +142,7 @@ export default class ServicePerformance extends React.Component {
         this.doPrepare = this.doPrepare.bind(this);
         this.doInit = this.doInit.bind(this);
         this.doGetAll = this.doGetAll.bind(this);
+        this.doGetKpiDict = this.doGetKpiDict.bind(this);
         this.doGetKpis = this.doGetKpis.bind(this);
         this.doGetKpiSchemas = this.doGetKpiSchemas.bind(this);
         this.doGetIndicators = this.doGetIndicators.bind(this);
@@ -144,7 +160,7 @@ export default class ServicePerformance extends React.Component {
         this.onButtonSchemasCopyPasteClicked = this.onButtonSchemasCopyPasteClicked.bind(this);
         this.onButtonKpisCopyPasteClicked = this.onButtonKpisCopyPasteClicked.bind(this);
         this.onButtonImportExcel = this.onButtonImportExcel.bind(this);
-        this.onButtonIndicatorsRefreshClicked =this.onButtonIndicatorsRefreshClicked.bind(this);
+        this.onButtonIndicatorsRefreshClicked = this.onButtonIndicatorsRefreshClicked.bind(this);
 
         this.onInputSearchSchemaChange = this.onInputSearchSchemaChange.bind(this);
         this.onInputSearchSchemasSearched = this.onInputSearchSchemasSearched.bind(this);
@@ -154,7 +170,11 @@ export default class ServicePerformance extends React.Component {
 
         this.onTableIndicatorsExpandedRowRender = this.onTableIndicatorsExpandedRowRender.bind(this);
 
+        this.onSelectSchemaIdChanged = this.onSelectSchemaIdChanged.bind(this);
+
         this.data2UiTable = this.data2UiTable.bind(this);
+        this.toUiSchemas = this.toUiSchemas.bind(this);
+        this.isFoundKpis = this.isFoundKpis.bind(this);
     }
 
     test() {
@@ -188,22 +208,22 @@ export default class ServicePerformance extends React.Component {
         let columnWidths = JSON.parse(JSON.stringify(this.gUi.tableIndicatorsColumnWidths));
         console.log(columnWidths);
 
-        columnWidths.key = columnWidths.key*15;
-        columnWidths.esn = columnWidths.esn*15;
-        columnWidths.izn = columnWidths.izn*15;
-        columnWidths.iu = columnWidths.iu*15;
-        columnWidths.itt = columnWidths.itt*15;
-        columnWidths.igt = columnWidths.igt*15;
-        columnWidths.idef = columnWidths.idef*15;
-        columnWidths.iexp = columnWidths.iexp*15;
-        columnWidths.czn = columnWidths.czn*15;
-        columnWidths.cen = columnWidths.cen*15;
-        columnWidths.cbtn = columnWidths.cbtn*15;
-        columnWidths.cbtcn = columnWidths.cbtcn*15;
-        columnWidths.ctn = columnWidths.ctn*15;
-        columnWidths.ctcn = columnWidths.ctcn*15;
-        columnWidths.ctt = columnWidths.ctt*15;
-        columnWidths.cgt = columnWidths.cgt*15;
+        columnWidths.key = columnWidths.key * 15;
+        columnWidths.esn = columnWidths.esn * 15;
+        columnWidths.izn = columnWidths.izn * 15;
+        columnWidths.iu = columnWidths.iu * 15;
+        columnWidths.itt = columnWidths.itt * 15;
+        columnWidths.igt = columnWidths.igt * 15;
+        columnWidths.idef = columnWidths.idef * 15;
+        columnWidths.iexp = columnWidths.iexp * 15;
+        columnWidths.czn = columnWidths.czn * 15;
+        columnWidths.cen = columnWidths.cen * 15;
+        columnWidths.cbtn = columnWidths.cbtn * 15;
+        columnWidths.cbtcn = columnWidths.cbtcn * 15;
+        columnWidths.ctn = columnWidths.ctn * 15;
+        columnWidths.ctcn = columnWidths.ctcn * 15;
+        columnWidths.ctt = columnWidths.ctt * 15;
+        columnWidths.cgt = columnWidths.cgt * 15;
 
         let tablePropertiesScrollX = columnWidths.key +
             columnWidths.esn +
@@ -231,35 +251,182 @@ export default class ServicePerformance extends React.Component {
         })
     }
 
+    isFoundKpis(ds, sv) {
+        let myResult = false;
+
+        for (let i = 0; i < ds.length; i++) {
+            if (ds[i].kpi_zhname?.toLowerCase().indexOf(sv) >= 0
+                || ds[i].kpi_enname?.toLowerCase().indexOf(sv) >= 0
+                || ds[i].kpi_id?.toString().indexOf(sv) >= 0) {
+                myResult = true;
+                break;
+            }
+        }
+
+        return myResult
+    }
+
+    toUiSchemas(ds, sv) {
+        let myResult = {mapDs: new Map(), uiDs: []}
+        let n = 0;
+
+        for (let i = 0; i < ds.length; i++) {
+            let item = ds[i];
+            let schemaId = item.schema_id === null ? -1 : item.schema_id;
+            let schemaName = item.schema_zhname === null ? "" : item.schema_zhname;
+
+            if (schemaId !== -1 &&
+                schemaName !== "" &&
+                schemaName.length > 0 &&
+                schemaName[0] !== "?" &&
+                schemaName[schemaName.length - 1] !== "?") {
+
+                if (sv
+                    && (sv !== "")
+                    && schemaName.toLowerCase().indexOf(sv) < 0
+                    && schemaId.toString().indexOf(sv) < 0) {
+                    if (this.gMap.schemas.has(schemaId)) {
+                        if (!this.isFoundKpis(this.gMap.schemas.get(schemaId).kpis, sv)) {
+                            continue;
+                        }
+                    } else {
+                        continue;
+                    }
+                }
+
+                if (!myResult.mapDs.has(schemaId)) {
+                    let mySchema = Object.assign(Object.create(Object.getPrototypeOf(item)), item);
+
+                    mySchema.kpis = [];
+                    myResult.mapDs.set(schemaId, mySchema)
+
+                    let uiSchema = {
+                        key: ++n + "_" + mySchema.schema_id,
+                        title: <div className={"BoxSchemaTitle"}>{n.toString().padStart(4, '0') + " - " + mySchema.schema_id + " - " + mySchema.schema_zhname}</div>,
+                        children: []
+                    }
+                    myResult.uiDs.push(uiSchema);
+                }
+            }
+        }
+
+        return myResult;
+    }
+
+    data2UiTable(data) {
+        let myResult = [];
+
+        let arrWidths = {izn: 13, czn: 13, cen: 13};
+        let nKey = 0;
+        data.forEach((item) => {
+            let myIndicator = Object.assign(Object.create(Object.getPrototypeOf(item)), item);
+            //myIndicator.counters = [];
+            myIndicator.index = ++nKey;
+            if (myIndicator.indicator_zhname && myIndicator.indicator_zhname.length > arrWidths.izn) {
+                arrWidths.izn = myIndicator.indicator_zhname.length
+            }
+            // let mKey = 0;
+            // this.gData.indicatorCounters.forEach((counter) => {
+            //     if (counter.indicator_id === indicator.id) {
+            //         let myCounter = Object.assign(Object.create(Object.getPrototypeOf(counter)), counter);
+            //         // myIndicator.counter_zhname = counter.counter_zhname;
+            //         // myIndicator.counter_enname = counter.counter_enname;
+            //         if (myCounter.counter_zhname && myCounter.counter_zhname.length > arrWidths.czn) {
+            //             arrWidths.czn = myCounter.counter_zhname.length
+            //         }
+            //         if (myCounter.counter_enname && myCounter.counter_enname.length > arrWidths.cen) {
+            //             arrWidths.cen = myCounter.counter_enname.length
+            //         }
+            //         myCounter.key = ++nKey;
+            //         myIndicator.counters.push(myCounter);
+            //     }
+            // });
+            myResult.push(myIndicator);
+
+        })
+
+        return myResult;
+    }
+
     doGetAll() {
         axios.all([
+            this.doGetKpiDict(),
             this.doGetKpis(),
             this.doGetKpiSchemas(),
             this.doGetKpiCounters(),
             this.doGetIndicators(),
             this.doGetIndicatorCounters(),
         ]).then(axios.spread((
+            kpiDict,
             kpis,
             schemas,
             counters,
             indicators,
             indicatorCounters) => {
-            let mapSchemas = new Map();
+            let mapKpiDict = new Map();
             let mapKpis = new Map();
             let mapIndicators = new Map();
-            let uiSchemas = [];
 
+            this.gData.kpiDict = kpiDict.data.data;
             this.gData.kpis = kpis.data.data;
             this.gData.schemas = schemas.data.data;
             this.gData.counters = counters.data.data;
             this.gData.indicators = indicators.data.data;
             this.gData.indicatorCounters = indicatorCounters.data.data;
 
+            this.gData.kpiDict.forEach((item) => {
+                if (!mapKpiDict.has(item.type)) {
+                    mapKpiDict.set(item.type, [item]);
+                } else {
+                    mapKpiDict.get(item.type).push(item);
+                }
+            });
+            this.gMap.kpiDict = mapKpiDict;
+            if (this.gMap.kpiDict.has(1021)) {
+                let options = [{label: "业务分类", value: -99999}];
+                this.gMap.kpiDict.get(1021).forEach((value, key) => {
+                    options.push({label: value.txt, value: value.id});
+                });
+                this.setState({
+                    optionsSchemaIdA1: options
+                })
+            }
+            if (this.gMap.kpiDict.has(1022)) {
+                let options = [{label: "时间粒度", value: -99999}];
+                this.gMap.kpiDict.get(1022).forEach((value, key) => {
+                    options.push({label: value.txt, value: value.id});
+                });
+                this.setState({
+                    optionsSchemaIdA2: options
+                })
+            }
+            if (this.gMap.kpiDict.has(1023)) {
+                let options = [{label: "空间粒度", value: -99999}];
+                this.gMap.kpiDict.get(1023).forEach((value, key) => {
+                    if (this.ids.includes(value.id)) {
+                        options.push({label: value.txt + "-" + value.id, value: value.id});
+                    }
+                });
+                this.setState({
+                    optionsSchemaIdB1: options
+                })
+            }
+
+            if (this.gMap.kpiDict.has(1023)) {
+                let options = [{label: "网元类型", value: -99999}];
+                this.gMap.kpiDict.get(1023).forEach((value, key) => {
+                    if (!this.ids.includes(value.id)) {
+                        options.push({label: value.txt, value: value.id});
+                    }
+                });
+                this.setState({
+                    optionsSchemaIdB2: options
+                })
+            }
             let dsIndicators = [];
             let nKey = 0;
-            //let arrWidths = {izn: 13, czn: 13, cen: 13};
             let columnWidths = JSON.parse(JSON.stringify(this.gUi.tableIndicatorsColumnWidths));
-            for(let i = 0; i < this.gData.indicators.length; i++) {
+            for (let i = 0; i < this.gData.indicators.length; i++) {
                 let indicator = this.gData.indicators[i];
 
                 indicator.counters = [];
@@ -295,45 +462,18 @@ export default class ServicePerformance extends React.Component {
             this.gUi.dsIndicators = dsIndicators;
             this.gMap.indicators = mapIndicators;
             this.gUi.tableIndicatorsColumnWidths = columnWidths;
-            let pageSizeIndicators = dsIndicators.length;
 
             this.setState({
-                pageSizeIndicators: pageSizeIndicators,
+                pageSizeIndicators: this.gUi.dsIndicators.length,
                 dsIndicators: this.gUi.dsIndicators
             }, () => {
                 this.setState({
                     tableIndicatorsIsLoading: false,
-                    // tableIndicatorsTitle: "共：" + this.state.dsIndicators.length + " 个指标"
+                    message: "共加载：" + this.state.dsIndicators.length + " 个指标"
                 })
             })
 
-            let n = 0;
-            this.gData.schemas.forEach(function (item) {
-                let schemaId = item.schema_id === null ? -1 : item.schema_id;
-                let schemaName = item.schema_zhname === null ? "" : item.schema_zhname;
-
-                if (schemaId !== -1 &&
-                    schemaName !== "" &&
-                    schemaName.length > 0 &&
-                    schemaName[0] !== "?" &&
-                    schemaName[schemaName.length - 1] !== "?") {
-
-                    if (!mapSchemas.has(schemaId)) {
-                        let mySchema = item;
-
-                        mySchema.kpis = [];
-                        mapSchemas.set(schemaId, mySchema)
-
-                        n++;
-                        let uiSchema = {
-                            key: n + "_" + mySchema.schema_id,
-                            title: n + " - " + mySchema.schema_id + "-" + mySchema.schema_zhname,
-                            children: []
-                        }
-                        uiSchemas.push(uiSchema);
-                    }
-                }
-            });
+            let mySchemas = this.toUiSchemas(this.gData.schemas);
 
             this.gData.kpis.forEach(function (item) {
                 let kpiId = item.kpi_id === null ? -1 : item.kpi_id;
@@ -351,18 +491,18 @@ export default class ServicePerformance extends React.Component {
                         mapKpis.set(kpiId, myKpi);
                     }
 
-                    if (mapSchemas.has(item.schema_id)) {
-                        mapSchemas.get(item.schema_id).kpis.push(myKpi)
+                    if (mySchemas.mapDs.has(item.schema_id)) {
+                        mySchemas.mapDs.get(item.schema_id).kpis.push(myKpi)
                     }
                 }
             });
 
-            this.gMap.schemas = mapSchemas;
+            this.gMap.schemas = mySchemas.mapDs;
             this.gMap.kpis = mapKpis;
+            this.gUi.schemas = mySchemas.uiDs;
 
-            this.gUi.schemas = uiSchemas;
             this.setState({
-                treeDataKpiSchemas: uiSchemas
+                treeDataKpiSchemas: mySchemas.uiDs
             })
         })).then(() => {
             this.doInit();
@@ -414,6 +554,13 @@ export default class ServicePerformance extends React.Component {
         let params = {};
 
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_indicator_counters", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetKpiDict() {
+        let params = {};
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpi_dict", params,
             {headers: {'Content-Type': 'application/json'}})
     }
 
@@ -611,24 +758,16 @@ export default class ServicePerformance extends React.Component {
         if (info.selected) {
             let schemaId = parseInt(selectedKeys[0].split("_")[1]);
             let schema;
-            // let schemaName = "";
-            // let vendorId = -1;
-            // let objectClass = -1;
-            // let subClass = -1;
             let uiKpis = [];
             let uiKpiCounters = [];
 
             if (this.gMap.schemas.has(schemaId)) {
                 schema = this.gMap.schemas.get(schemaId);
-                // schemaName = this.gMap.schemas.get(schemaId).schema_zhname;
-                // vendorId = this.gMap.schemas.get(schemaId).vendor_id;
-                // objectClass = this.gMap.schemas.get(schemaId).object_class;
-                // subClass = this.gMap.schemas.get(schemaId).sub_class;
 
                 schema.kpis.forEach((item) => {
                     let uiKpi = {
                         key: item.kpi_id,
-                        title: item.kpi_id + " - " + item.kpi_zhname,
+                        title: <div className={"BoxKpiTitle"}>{item.kpi_id + " - " + item.kpi_zhname}</div>,
                         children: []
                     }
                     uiKpis.push(uiKpi);
@@ -638,18 +777,59 @@ export default class ServicePerformance extends React.Component {
                     if (item.schema_id === schemaId) {
                         uiKpiCounters.push({
                             key: item.counter_enname,
-                            title: item.counter_zhname + " - " + item.counter_enname,
+                            title: <div className={"BoxCounterTitle"}>{item.counter_zhname + " - " + item.counter_enname}</div>,
                             children: []
                         })
                     }
                 })
             }
 
+            let schemaIdA1 = -99999;
+            let schemaIdA2 = -99999;
+            let schemaIdB1 = -99999;
+            let schemaIdB2 = -99999;
+            let schemaIdIndex = 0;
+            let ids = schemaId.toString().split("260");
+
+            if (ids[0] !== "") {
+                schemaIdA1 = parseInt(schemaId.toString().substr(4, 1));
+                schemaIdA2 = parseInt(schemaId.toString().substr(5, 1));
+                schemaIdB1 = parseInt(schemaId.toString().substr(0, 1) + schemaId.toString().substr(6, 2));
+                if (this.ids.includes(schemaIdB1)) {
+                    schemaIdB2 = parseInt(schemaId.toString().substr(8, 2));
+                } else {
+                    schemaIdB2 = schemaIdB1;
+                    schemaIdB1 = -99999;
+                    schemaIdIndex = parseInt(schemaId.toString().substr(8, 2));
+                }
+            } else {
+                schemaIdA1 = parseInt(schemaId.toString().substr(3, 1));
+                schemaIdA2 = parseInt(schemaId.toString().substr(4, 1));
+                schemaIdB1 = parseInt(schemaId.toString().substr(5, 2));
+                if (this.ids.includes(schemaIdB1)) {
+                    schemaIdB2 = parseInt(schemaId.toString().substr(7, 2));
+                } else {
+                    schemaIdB2 = schemaIdB1;
+                    schemaIdB1 = -99999;
+                    schemaIdIndex = parseInt(schemaId.toString().substr(7, 2));
+                }
+            }
+
+            this.gDynamic.schemaId.a1 = schemaIdA1;
+            this.gDynamic.schemaId.a2 = schemaIdA2;
+            this.gDynamic.schemaId.b1 = schemaIdB1;
+            this.gDynamic.schemaId.b2 = schemaIdB2;
+            this.gDynamic.schemaId.index = schemaIdIndex;
+
             this.setState({
                 treeDataKpis: uiKpis,
                 treeDataKpiCounters: uiKpiCounters,
                 selected: {
                     schema_id: schemaId, // 必填
+                    schemaIdA1: schemaIdA1,
+                    schemaIdA2: schemaIdA2,
+                    schemaIdB1: schemaIdB1,
+                    schemaIdB2: schemaIdB2,
                     schema_zhname: schema.schema_zhname, // 必填
                     schema_vendor_id: schema.vendor_id, // 默认 -1
                     schema_object_class: schema.object_class,  // 必填
@@ -705,6 +885,10 @@ export default class ServicePerformance extends React.Component {
                 treeDataKpiCounters: [],
                 selected: {
                     schema_id: "",
+                    schemaIdA1: -99999,
+                    schemaIdA2: -99999,
+                    schemaIdB1: -99999,
+                    schemaIdB2: -99999,
                     schema_zhname: "指标组名称",
                     schema_vendor_id: -1,
                     schema_object_class: -1,
@@ -785,6 +969,59 @@ export default class ServicePerformance extends React.Component {
     // ****************************************************************************************************
     // SELECT...
     // ****************************************************************************************************
+    onSelectSchemaIdChanged(e, sender) {
+        let schemaId = "";
+        const {selected} = this.state;
+
+        switch (sender) {
+            case "a1":
+                this.gDynamic.schemaId.a1 = e;
+                selected.schemaIdA1 = e;
+                break
+            case "a2":
+                this.gDynamic.schemaId.a2 = e;
+                selected.schemaIdA2 = e;
+                break
+            case "b1":
+                this.gDynamic.schemaId.b1 = e;
+                selected.schemaIdB1 = e;
+                break
+            case "b2":
+                this.gDynamic.schemaId.b2 = e;
+                selected.schemaIdB2 = e;
+                break
+            default:
+                break
+        }
+        let strA1 = "X", strA2 = "X", strBb = "", strB = "XX", strC = "XX";
+        if (this.gDynamic.schemaId.a1 !== -99999) strA1 = this.gDynamic.schemaId.a1.toString();
+        if (this.gDynamic.schemaId.a2 !== -99999) strA2 = this.gDynamic.schemaId.a2.toString();
+        if (this.gDynamic.schemaId.b1 !== -99999) {  // 空间 + 网元
+                if (this.gDynamic.schemaId.b1 > 99) {
+                    strBb = this.gDynamic.schemaId.b1.toString()[0];
+                    strB = this.gDynamic.schemaId.b1.toString().substr(1, 2);
+                } else {
+                    strB = this.gDynamic.schemaId.b1.toString();
+                }
+                if (this.gDynamic.schemaId.b2 !== -99999) {
+                    strC = this.gDynamic.schemaId.b2.toString()
+                }
+        } else if (this.gDynamic.schemaId.b2 !== -99999) { // 网元 + 序号
+            if (this.gDynamic.schemaId.b2 > 99) {
+                strBb = this.gDynamic.schemaId.b2.toString()[0];
+                strB = this.gDynamic.schemaId.b2.toString().substr(1, 2);
+            } else {
+                strB = this.gDynamic.schemaId.b2.toString();
+            }
+            strC = (++this.gDynamic.schemaId.index).toString();
+
+        }
+        schemaId = strBb + "-260-" + strA1 + "-" + strA2 + "-" + strB + "-" + strC;
+
+        selected.schema_id = schemaId;
+
+        this.setState({ selected: selected });
+    }
 
     // ****************************************************************************************************
     // CHECKBOX...
@@ -928,10 +1165,12 @@ export default class ServicePerformance extends React.Component {
                 dataSource={record.counters}
                 pagination={false}
                 scroll={{
-                    x: this.state.tableIndicatorCountersScrollX}}
+                    x: this.state.tableIndicatorCountersScrollX
+                }}
                 rowSelection={{
                     type: "checkbox",
-                    ...this.onRowIndicatorCounterSelected}}
+                    ...this.onRowIndicatorCounterSelected
+                }}
             />;
         } else {
             return null;
@@ -1032,41 +1271,6 @@ export default class ServicePerformance extends React.Component {
         this.gCurrent.searchTextOfIndicators = value;
     }
 
-    data2UiTable(data) {
-        let myResult = [];
-
-        let arrWidths = {izn: 13, czn: 13, cen: 13};
-        let nKey = 0;
-        data.forEach((item) => {
-            let myIndicator = Object.assign(Object.create(Object.getPrototypeOf(item)), item);
-            //myIndicator.counters = [];
-            myIndicator.index = ++nKey;
-            if (myIndicator.indicator_zhname && myIndicator.indicator_zhname.length > arrWidths.izn) {
-                arrWidths.izn = myIndicator.indicator_zhname.length
-            }
-            // let mKey = 0;
-            // this.gData.indicatorCounters.forEach((counter) => {
-            //     if (counter.indicator_id === indicator.id) {
-            //         let myCounter = Object.assign(Object.create(Object.getPrototypeOf(counter)), counter);
-            //         // myIndicator.counter_zhname = counter.counter_zhname;
-            //         // myIndicator.counter_enname = counter.counter_enname;
-            //         if (myCounter.counter_zhname && myCounter.counter_zhname.length > arrWidths.czn) {
-            //             arrWidths.czn = myCounter.counter_zhname.length
-            //         }
-            //         if (myCounter.counter_enname && myCounter.counter_enname.length > arrWidths.cen) {
-            //             arrWidths.cen = myCounter.counter_enname.length
-            //         }
-            //         myCounter.key = ++nKey;
-            //         myIndicator.counters.push(myCounter);
-            //     }
-            // });
-            myResult.push(myIndicator);
-
-        })
-
-        return myResult;
-    }
-
     onInputSearchIndicatorsSearched(value, event) {
         let sv = value;
         let mapIndicators = this.gMap.indicators;
@@ -1100,7 +1304,7 @@ export default class ServicePerformance extends React.Component {
                 }
             });
 
-            for(let i = 0; i < this.gData.indicatorCounters.length; i++) {
+            for (let i = 0; i < this.gData.indicatorCounters.length; i++) {
                 let item = this.gData.indicatorCounters[i];
                 let iId = item.indicator_id;
                 let cZhName = item.counter_zhname === null ? "" : item.counter_zhname.toLowerCase();
@@ -1133,31 +1337,33 @@ export default class ServicePerformance extends React.Component {
         let sv = value;
 
         if (sv && sv !== "") {
-            let uiSchemas = [];
-            let n = 0;
-            this.gData.schemas.forEach(function (item) {
-                let schemaId = item.schema_id === null ? -1 : item.schema_id;
-                let schemaName = item.schema_zhname === null ? "" : item.schema_zhname;
-
-                if (schemaId !== -1 &&
-                    schemaName !== "" &&
-                    schemaName.length > 0 &&
-                    schemaName[0] !== "?" &&
-                    schemaName[schemaName.length - 1] !== "?") {
-                    if ((schemaName.indexOf(value) >= 0) || (item.schema_id.toString().indexOf(value) >= 0)) {
-                        n++;
-                        let uiSchema = {
-                            key: n + "_" + item.schema_id,
-                            title: n + " - " + item.schema_id + "-" + item.schema_zhname,
-                            children: []
-                        }
-                        uiSchemas.push(uiSchema);
-                    }
-                }
-            });
+            sv = sv.toLowerCase();
+            let mySchemas = this.toUiSchemas(this.gData.schemas, sv);
+            // let uiSchemas = [];
+            // let n = 0;
+            // this.gData.schemas.forEach(function (item) {
+            //     let schemaId = item.schema_id === null ? -1 : item.schema_id;
+            //     let schemaName = item.schema_zhname === null ? "" : item.schema_zhname;
+            //
+            //     if (schemaId !== -1 &&
+            //         schemaName !== "" &&
+            //         schemaName.length > 0 &&
+            //         schemaName[0] !== "?" &&
+            //         schemaName[schemaName.length - 1] !== "?") {
+            //         if ((schemaName.indexOf(value) >= 0) || (item.schema_id.toString().indexOf(value) >= 0)) {
+            //             n++;
+            //             let uiSchema = {
+            //                 key: n + "_" + item.schema_id,
+            //                 title: n + " - " + item.schema_id + "-" + item.schema_zhname,
+            //                 children: []
+            //             }
+            //             uiSchemas.push(uiSchema);
+            //         }
+            //     }
+            // });
 
             this.setState({
-                treeDataKpiSchemas: uiSchemas
+                treeDataKpiSchemas: mySchemas.uiDs
             })
         } else {
             this.setState({
@@ -1176,10 +1382,6 @@ export default class ServicePerformance extends React.Component {
                             <Fragment>
                                 <div className={"BoxTitle"}>指标组</div>
                                 <div className={"BoxButtons"}>
-                                    <Button
-                                        size={"small"}
-                                        type={"primary"}
-                                        icon={<BranchesOutlined/>}>提交变更</Button>
                                     <Button
                                         size={"small"}
                                         type={"primary"}
@@ -1215,13 +1417,21 @@ export default class ServicePerformance extends React.Component {
                     {this.state.styleLayoutLeftRight === "NN" ? (
                         <Fragment>
                             <div className={"BoxTree"}>
-                                <Select defaultValue="-1">
-                                    <Option value="-1">变更：全集</Option>
-                                    <Option value="1">变更：K - 新增话务指标 - 2021-07-01</Option>
-                                </Select>
+                                <div className={"BoxCommit"}>
+                                    <Select defaultValue="-1">
+                                        <Option value="-1">变更：全集</Option>
+                                        <Option value="1">变更：K - 新增话务指标 - 2021-07-01</Option>
+                                    </Select>
+                                    <Button
+                                        // size={"small"}
+                                        type={"primary"}
+                                        icon={<BranchesOutlined/>}>提交变更</Button>
+
+                                </div>
                                 <Input.Search
                                     className={"BoxSearch"}
                                     placeholder="Search"
+                                    enterButton
                                     onChange={this.onInputSearchSchemaChange}
                                     onSearch={this.onInputSearchSchemasSearched}
                                 />
@@ -1363,18 +1573,34 @@ export default class ServicePerformance extends React.Component {
                                 <Fragment>
                                     <div className={"BoxPropertiesSchema"}>
                                         <div className={"BoxSchemaIds"}>
-                                            <Select defaultValue="-1">
-                                                <Option value="-1">分类</Option>
-                                            </Select>
-                                            <Select defaultValue="-1">
-                                                <Option value="-1">时间粒度</Option>
-                                            </Select>
-                                            <Select defaultValue="-1">
-                                                <Option value="-1">空间粒度</Option>
-                                            </Select>
-                                            <Select defaultValue="-1">
-                                                <Option value="-1">组网元类型</Option>
-                                            </Select>
+                                            <Select
+                                                defaultValue={-99999}
+                                                value={this.state.selected.schemaIdA1}
+                                                options={this.state.optionsSchemaIdA1}
+                                                onChange={(e) => {
+                                                    this.onSelectSchemaIdChanged(e, "a1")
+                                                }}/>
+                                            <Select
+                                                defaultValue={-99999}
+                                                value={this.state.selected.schemaIdA2}
+                                                options={this.state.optionsSchemaIdA2}
+                                                onChange={(e) => {
+                                                    this.onSelectSchemaIdChanged(e, "a2")
+                                                }}/>
+                                            <Select
+                                                defaultValue={-99999}
+                                                value={this.state.selected.schemaIdB1}
+                                                options={this.state.optionsSchemaIdB1}
+                                                onChange={(e) => {
+                                                    this.onSelectSchemaIdChanged(e, "b1")
+                                                }}/>
+                                            <Select
+                                                defaultValue={-99999}
+                                                value={this.state.selected.schemaIdB2}
+                                                options={this.state.optionsSchemaIdB2}
+                                                onChange={(e) => {
+                                                    this.onSelectSchemaIdChanged(e, "b2")
+                                                }}/>
                                         </div>
                                         <div>
                                             <Input value={this.state.selected.schema_zhname}/>
@@ -1498,7 +1724,7 @@ export default class ServicePerformance extends React.Component {
                             <div ref={this.refBoxDetail} className={"BoxAuto"}>
                                 <div className={"Box2"}>
                                     <Table rowKey="id"
-                                           // title={() => this.state.tableIndicatorsTitle}
+                                        // title={() => this.state.tableIndicatorsTitle}
                                            loading={this.state.tableIndicatorsIsLoading}
                                            dataSource={this.state.dsIndicators}
                                         // columns={this.state.columnsIndicator}
