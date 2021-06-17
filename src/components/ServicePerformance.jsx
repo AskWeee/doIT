@@ -13,12 +13,12 @@ import {
     CloudDownloadOutlined,
     CloudUploadOutlined,
     CopyOutlined,
-    EllipsisOutlined,
     MinusSquareOutlined,
     PlusOutlined,
     PlusSquareOutlined,
     SaveOutlined,
     UndoOutlined,
+    LayoutOutlined,
 } from '@ant-design/icons'
 import Mock from 'mockjs'
 import XLSX from 'xlsx';
@@ -80,6 +80,7 @@ export default class ServicePerformance extends React.Component {
 
             styleLayoutLeftRight: "NN",
             styleLayoutUpDown: "NN",
+            styleLayout4Edit: "NN",
 
             treeDataKpiSchemas: [],
             treeDataKpis: [],
@@ -157,10 +158,26 @@ export default class ServicePerformance extends React.Component {
 
         this.onButtonProductsChangeComponentSizeClicked = this.onButtonProductsChangeComponentSizeClicked.bind(this);
         this.onButtonChangeComponentLayoutUpDownClicked = this.onButtonChangeComponentLayoutUpDownClicked.bind(this);
+        this.onButtonChangeComponentLayout4EditClicked = this.onButtonChangeComponentLayout4EditClicked.bind(this);
+
+        this.onButtonSchemasAddClicked = this.onButtonSchemasAddClicked.bind(this);
         this.onButtonSchemasCopyPasteClicked = this.onButtonSchemasCopyPasteClicked.bind(this);
+        this.onButtonSchemasDeleteClicked = this.onButtonSchemasDeleteClicked.bind(this);
+        this.onButtonSchemasExportClicked = this.onButtonSchemasExportClicked.bind(this);
+        this.onButtonSchemasSaveClicked = this.onButtonSchemasSaveClicked.bind(this);
+        this.onButtonSchemasResetClicked = this.onButtonSchemasResetClicked.bind(this);
+        this.onButtonSchemasCommitClicked = this.onButtonSchemasCommitClicked.bind(this);
+
+        this.onButtonKpisAddClicked = this.onButtonKpisAddClicked.bind(this);
         this.onButtonKpisCopyPasteClicked = this.onButtonKpisCopyPasteClicked.bind(this);
-        this.onButtonImportExcel = this.onButtonImportExcel.bind(this);
+        this.onButtonKpisDeleteClicked = this.onButtonKpisDeleteClicked.bind(this);
+        this.onButtonKpisSaveClicked = this.onButtonKpisSaveClicked.bind(this);
+        this.onButtonKpisResetClicked = this.onButtonKpisResetClicked.bind(this);
+
+        this.onButtonIndicatorsCopy2CountersClicked = this.onButtonIndicatorsCopy2CountersClicked.bind(this);
         this.onButtonIndicatorsRefreshClicked = this.onButtonIndicatorsRefreshClicked.bind(this);
+        this.onButtonIndicatorsImportClicked = this.onButtonIndicatorsImportClicked.bind(this);
+        this.onButtonIndicatorsExportClicked = this.onButtonIndicatorsExportClicked.bind(this);
 
         this.onInputSearchSchemaChange = this.onInputSearchSchemaChange.bind(this);
         this.onInputSearchSchemasSearched = this.onInputSearchSchemasSearched.bind(this);
@@ -206,7 +223,6 @@ export default class ServicePerformance extends React.Component {
 
     doInit() {
         let columnWidths = JSON.parse(JSON.stringify(this.gUi.tableIndicatorsColumnWidths));
-        console.log(columnWidths);
 
         columnWidths.key = columnWidths.key * 15;
         columnWidths.esn = columnWidths.esn * 15;
@@ -315,35 +331,18 @@ export default class ServicePerformance extends React.Component {
 
     data2UiTable(data) {
         let myResult = [];
-
         let arrWidths = {izn: 13, czn: 13, cen: 13};
-        let nKey = 0;
-        data.forEach((item) => {
+
+        for(let i = 0; i < data.length; i++) {
+            let item = data[i];
             let myIndicator = Object.assign(Object.create(Object.getPrototypeOf(item)), item);
-            //myIndicator.counters = [];
-            myIndicator.index = ++nKey;
+
+            myIndicator.index = i;
             if (myIndicator.indicator_zhname && myIndicator.indicator_zhname.length > arrWidths.izn) {
                 arrWidths.izn = myIndicator.indicator_zhname.length
             }
-            // let mKey = 0;
-            // this.gData.indicatorCounters.forEach((counter) => {
-            //     if (counter.indicator_id === indicator.id) {
-            //         let myCounter = Object.assign(Object.create(Object.getPrototypeOf(counter)), counter);
-            //         // myIndicator.counter_zhname = counter.counter_zhname;
-            //         // myIndicator.counter_enname = counter.counter_enname;
-            //         if (myCounter.counter_zhname && myCounter.counter_zhname.length > arrWidths.czn) {
-            //             arrWidths.czn = myCounter.counter_zhname.length
-            //         }
-            //         if (myCounter.counter_enname && myCounter.counter_enname.length > arrWidths.cen) {
-            //             arrWidths.cen = myCounter.counter_enname.length
-            //         }
-            //         myCounter.key = ++nKey;
-            //         myIndicator.counters.push(myCounter);
-            //     }
-            // });
             myResult.push(myIndicator);
-
-        })
+        }
 
         return myResult;
     }
@@ -438,6 +437,7 @@ export default class ServicePerformance extends React.Component {
                         columnWidths.izn = myIndicator.indicator_zhname.length
                     }
 
+                    let mKey = 0;
                     this.gData.indicatorCounters.forEach((counter) => {
                         if (counter.indicator_id === indicator.id) {
                             let myCounter = Object.assign(Object.create(Object.getPrototypeOf(counter)), counter);
@@ -449,7 +449,7 @@ export default class ServicePerformance extends React.Component {
                             if (myCounter.counter_enname && myCounter.counter_enname.length > columnWidths.cen) {
                                 columnWidths.cen = myCounter.counter_enname.length
                             }
-                            myCounter.key = ++nKey;
+                            myCounter.key = ++mKey;
                             indicator.counters.push(myCounter);
                             myIndicator.counters.push(myCounter);
                         }
@@ -581,7 +581,6 @@ export default class ServicePerformance extends React.Component {
     doGetExcel() {
         axios.get('data/counter_001.xlsx', {responseType: 'arraybuffer'}).then(res => {
             let wb = XLSX.read(res.data, {type: 'array'});
-            console.log(wb);
             let mapColumns = new Map();
             let mapIndicators = new Map();
 
@@ -724,13 +723,13 @@ export default class ServicePerformance extends React.Component {
 
                                     if (data.success) {
                                         // message.info("成功导入指标COUNTER：" + data.data.counter_zhname).then(r => {});
-                                        console.log("成功导入指标COUNTER：" + data.data.counter_zhname);
+                                        this.context.showMessage("成功导入指标COUNTER：" + data.data.counter_zhname);
                                     }
                                 });
                             })
                         }
                         // message.info("成功导入指标：" + data.data.indicator_zhname).then(r => {});
-                        console.log("成功导入指标：" + data.data.indicator_zhname);
+                        this.context.showMessage("成功导入指标：" + data.data.indicator_zhname);
                     }
                 });
             })
@@ -997,15 +996,15 @@ export default class ServicePerformance extends React.Component {
         if (this.gDynamic.schemaId.a1 !== -99999) strA1 = this.gDynamic.schemaId.a1.toString();
         if (this.gDynamic.schemaId.a2 !== -99999) strA2 = this.gDynamic.schemaId.a2.toString();
         if (this.gDynamic.schemaId.b1 !== -99999) {  // 空间 + 网元
-                if (this.gDynamic.schemaId.b1 > 99) {
-                    strBb = this.gDynamic.schemaId.b1.toString()[0];
-                    strB = this.gDynamic.schemaId.b1.toString().substr(1, 2);
-                } else {
-                    strB = this.gDynamic.schemaId.b1.toString();
-                }
-                if (this.gDynamic.schemaId.b2 !== -99999) {
-                    strC = this.gDynamic.schemaId.b2.toString()
-                }
+            if (this.gDynamic.schemaId.b1 > 99) {
+                strBb = this.gDynamic.schemaId.b1.toString()[0];
+                strB = this.gDynamic.schemaId.b1.toString().substr(1, 2);
+            } else {
+                strB = this.gDynamic.schemaId.b1.toString();
+            }
+            if (this.gDynamic.schemaId.b2 !== -99999) {
+                strC = this.gDynamic.schemaId.b2.toString()
+            }
         } else if (this.gDynamic.schemaId.b2 !== -99999) { // 网元 + 序号
             if (this.gDynamic.schemaId.b2 > 99) {
                 strBb = this.gDynamic.schemaId.b2.toString()[0];
@@ -1020,7 +1019,7 @@ export default class ServicePerformance extends React.Component {
 
         selected.schema_id = schemaId;
 
-        this.setState({ selected: selected });
+        this.setState({selected: selected});
     }
 
     // ****************************************************************************************************
@@ -1057,8 +1056,30 @@ export default class ServicePerformance extends React.Component {
         })
     }
 
-    onButtonImportExcel() {
-        this.doGetExcel();
+    onButtonChangeComponentLayout4EditClicked(e) {
+        let styleLayoutLeftRight = "NN";
+        let styleLayoutUpDown = "NN";
+
+        if (this.state.styleLayoutUpDown !== "NS") {
+            styleLayoutLeftRight = "SN";
+            styleLayoutUpDown = "NS";
+        }
+
+        this.setState({
+            styleLayoutLeftRight: styleLayoutLeftRight,
+            styleLayoutUpDown: styleLayoutUpDown
+        }, () => {
+            if (this.state.styleLayoutUpDown !== "NS") {
+                this.setState({
+                    tablePropertiesScrollY: this.refBoxDetail.current.scrollHeight - 39 - 16,
+                })
+            }
+        })
+    }
+
+    onButtonSchemasAddClicked(e) {
+        //todo:: 2021-06-17
+        this.context.showMessage("增加指标组，开发中... 2021-08-17");
     }
 
     onButtonSchemasCopyPasteClicked(e) {
@@ -1083,15 +1104,15 @@ export default class ServicePerformance extends React.Component {
             }
             let schemaIdNew = "";
             if (regionClass === "") {
-                schemaIdNew = idObjectClassFirst + "260" + idType + "X" + idObjectClassSecond + idIndex;
+                schemaIdNew = idObjectClassFirst + idFixed + idType + "X" + idObjectClassSecond + idIndex;
             } else {
-                schemaIdNew = idObjectClassFirst + "260" + idType + "X" + idObjectClassSecond + idIndex;
+                schemaIdNew = idObjectClassFirst + idFixed + idType + "X" + idObjectClassSecond + idIndex;
             }
 
             schemaId = parseInt(schemaId);
 
             let schema = this.gMap.schemas.get(schemaId);
-            console.log("add schema...", idType, idTime, idObjectClassFirst + idObjectClassSecond, idIndex, schemaIdNew);
+            this.context.showMessage("add schema...", idType, idTime, idObjectClassFirst + idObjectClassSecond, idIndex, schemaIdNew);
             n++;
             treeDataKpiSchemas.push({
                 key: n + "_" + schemaId,
@@ -1101,7 +1122,7 @@ export default class ServicePerformance extends React.Component {
 
 
             schema.kpis.forEach((kpi) => {
-                console.log("add kpi...", kpi.kpi_id);
+                this.context.showMessage("add kpi...", kpi.kpi_id);
                 // todo:: add kpi
             })
         });
@@ -1111,8 +1132,55 @@ export default class ServicePerformance extends React.Component {
         });
     }
 
+    onButtonSchemasDeleteClicked(e) {
+        //todo:: 2021-06-18
+        this.context.showMessage("删除指标组，开发中... 2021-06-18");
+    }
+
+    onButtonSchemasExportClicked(e) {
+        this.context.showMessage("导出指标组，开发中...");
+    }
+
+    onButtonSchemasSaveClicked(e) {
+        //todo:: 2021-06-18
+        this.context.showMessage("保存指标组属性，开发中... 2021-06-18");
+    }
+
+    onButtonSchemasResetClicked(e) {
+        //todo:: 2021-06-18
+        this.context.showMessage("重置指标组属性，开发中... 2021-06-18");
+    }
+
+    onButtonSchemasCommitClicked(e) {
+        this.context.showMessage("提交近期指标组变更，开发中...");
+    }
+
+    onButtonKpisAddClicked(e) {
+        this.context.showMessage("增加指标，开发中...");
+    }
+
     onButtonKpisCopyPasteClicked(e) {
 
+    }
+
+    onButtonKpisDeleteClicked(e) {
+        this.context.showMessage("删除指标，开发中...");
+    }
+
+    onButtonKpisSaveClicked(e) {
+        this.context.showMessage("保存指标属性，开发中...");
+    }
+
+    onButtonKpisResetClicked(e) {
+        this.context.showMessage("重置指标属性，开发中...");
+    }
+
+    onButtonCountersDeleteClicked(e) {
+        this.context.showMessage("移除原始指标，开发中...");
+    }
+
+    onButtonIndicatorsCopy2CountersClicked(e) {
+        this.context.showMessage("移入原始指标统计数据，开发中...");
     }
 
     onButtonIndicatorsRefreshClicked(e) {
@@ -1122,13 +1190,23 @@ export default class ServicePerformance extends React.Component {
 
     }
 
+    onButtonIndicatorsImportClicked() {
+        this.context.showMessage("导入规范指标，已经开发完成，暂时屏蔽...");
+
+        //this.doGetExcel();
+    }
+
+    onButtonIndicatorsExportClicked(e) {
+        this.context.showMessage("导出规范指标，开发中...");
+    }
+
+
     // ****************************************************************************************************
     // TABLE...
     // ****************************************************************************************************
 
     onRowIndicatorCounterSelected = {
         onChange: (selectedRowKeys, selectedRows) => {
-            console.log(`selectedRowKeys: ${selectedRowKeys}`, 'selectedRows: ', selectedRows);
         },
         getCheckboxProps: record => ({
             disabled: record.name === 'Disabled User', // Column configuration not to be checked
@@ -1314,7 +1392,6 @@ export default class ServicePerformance extends React.Component {
                     let indicator = mapIndicators.has(iId) ? mapIndicators.get(iId) : null;
                     if (indicator) {
                         if (!setIndicators.has(iId)) {
-                            console.log(item);
                             dsIndicators.push(indicator);
                             setIndicators.add(iId);
                         }
@@ -1374,440 +1451,469 @@ export default class ServicePerformance extends React.Component {
 
     render() {
 
-        return <Fragment>
-            <div className={this.state.styleLayoutLeftRight === "NN" ? "ServicePerformance BoxServicePerformanceNormal" : "ServicePerformance BoxServicePerformanceSmall"}>
-                <div className={"BoxKpiSchemas"}>
-                    <div className={"BoxTitleBar"}>
+        return (
+            <Fragment>
+                <div key="ComponentServicePerformance"
+                     className={this.state.styleLayoutLeftRight === "NN" ? "ServicePerformance BoxServicePerformanceNormal" : "ServicePerformance BoxServicePerformanceSmall"}>
+                    <div className={"BoxKpiSchemas"}>
+                        <div className={"BoxTitleBar"}>
+                            {this.state.styleLayoutLeftRight === "NN" ? (
+                                <Fragment>
+                                    <div className={"BoxTitle"}>指标组</div>
+                                    <div className={"BoxButtons"}>
+                                        <Button
+                                            size={"small"}
+                                            type={"primary"}
+                                            icon={<PlusSquareOutlined/>}
+                                            onClick={this.onButtonSchemasAddClicked}>新增</Button>
+                                        <Button
+                                            size={"small"}
+                                            type={"primary"}
+                                            icon={<CopyOutlined/>}
+                                            onClick={this.onButtonSchemasCopyPasteClicked}>复制</Button>
+                                        <Button
+                                            size={"small"}
+                                            type={"primary"}
+                                            icon={<MinusSquareOutlined/>}
+                                            onClick={this.onButtonSchemasDeleteClicked}>删除</Button>
+                                        <Button
+                                            size={"small"}
+                                            type={"primary"}
+                                            icon={<CloudDownloadOutlined/>}
+                                            onClick={this.onButtonSchemasExportClicked}>导出</Button>
+                                    </div>
+                                </Fragment>) : (
+                                <Fragment>
+                                    <div></div>
+                                    <div></div>
+                                </Fragment>
+                            )}
+                            <div>
+                                <Button
+                                    size={"small"}
+                                    type={"ghost"}
+                                    icon={this.state.styleLayoutLeftRight === "NN" ? <CaretLeftOutlined/> : <CaretRightOutlined/>}
+                                    onClick={this.onButtonProductsChangeComponentSizeClicked}/>
+                            </div>
+                        </div>
                         {this.state.styleLayoutLeftRight === "NN" ? (
                             <Fragment>
-                                <div className={"BoxTitle"}>指标组</div>
-                                <div className={"BoxButtons"}>
-                                    <Button
-                                        size={"small"}
-                                        type={"primary"}
-                                        icon={<PlusSquareOutlined/>}>新增</Button>
-                                    <Button
-                                        size={"small"}
-                                        type={"primary"}
-                                        icon={<CopyOutlined/>}
-                                        onClick={this.onButtonSchemasCopyPasteClicked}>复制</Button>
-                                    <Button
-                                        size={"small"}
-                                        type={"primary"}
-                                        icon={<MinusSquareOutlined/>}>删除</Button>
-                                    <Button
-                                        size={"small"}
-                                        type={"primary"}
-                                        icon={<CloudDownloadOutlined/>}>导出</Button>
+                                <div className={"BoxTree"}>
+                                    <div className={"BoxCommit"}>
+                                        <Select defaultValue="-1">
+                                            <Option value="-1">变更：全集</Option>
+                                            <Option value="1">变更：K - 新增话务指标 - 2021-07-01</Option>
+                                        </Select>
+                                        <Button
+                                            // size={"small"}
+                                            type={"primary"}
+                                            icon={<BranchesOutlined/>}
+                                            onClick={this.onButtonSchemasCommitClicked}>提交变更</Button>
+
+                                    </div>
+                                    <Input.Search
+                                        className={"BoxSearch"}
+                                        placeholder="Search"
+                                        enterButton
+                                        onChange={this.onInputSearchSchemaChange}
+                                        onSearch={this.onInputSearchSchemasSearched}
+                                    />
+                                    <div className={"BoxTreeInstance"}>
+                                        <Tree
+                                            checkable
+                                            blockNode={true}
+                                            showLine={{showLeafIcon: false}}
+                                            showIcon={true}
+                                            switcherIcon={<CaretDownOutlined/>}
+                                            onSelect={this.onTreeKpiSchemasSelected}
+                                            onCheck={this.onTreeKpiSchemasChecked}
+                                            treeData={this.state.treeDataKpiSchemas}
+                                        />
+                                    </div>
                                 </div>
-                            </Fragment>) : (
-                            <Fragment>
-                                <div></div>
-                                <div></div>
+                            </Fragment>
+                        ) : (<Fragment>
+                                <div className="BoxKpiSchemasSmall">指<br/>标<br/>组</div>
                             </Fragment>
                         )}
-                        <div>
-                            <Button
-                                size={"small"}
-                                type={"ghost"}
-                                icon={this.state.styleLayoutLeftRight === "NN" ? <CaretLeftOutlined/> : <CaretRightOutlined/>}
-                                onClick={this.onButtonProductsChangeComponentSizeClicked}/>
-                        </div>
-                    </div>
-                    {this.state.styleLayoutLeftRight === "NN" ? (
-                        <Fragment>
-                            <div className={"BoxTree"}>
-                                <div className={"BoxCommit"}>
-                                    <Select defaultValue="-1">
-                                        <Option value="-1">变更：全集</Option>
-                                        <Option value="1">变更：K - 新增话务指标 - 2021-07-01</Option>
-                                    </Select>
-                                    <Button
-                                        // size={"small"}
-                                        type={"primary"}
-                                        icon={<BranchesOutlined/>}>提交变更</Button>
-
+                    < /div>
+                    <div
+                        className={this.state.styleLayoutUpDown === "NN" ? "BoxKpiRelated BoxKpiRelatedNormal" : this.state.styleLayoutUpDown === "SN" ? "BoxKpiRelated BoxKpiRelatedSmall" : "BoxKpiRelated BoxKpiRelatedSmaller"}>
+                        <div className={"BoxKpisAndProperties"}>
+                            <div className={((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? "BoxKpisAndCounterTab BoxKpisAndCounterTabNormal" : "BoxKpisAndCounterTab BoxKpisAndCounterTabSmall"}>
+                                <div className={"BoxKpis"}>
+                                    <div className={"BoxTitleBar"}>
+                                        <div className={"BoxTitle"}>指标</div>
+                                        {((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? (
+                                            <Fragment>
+                                                <div className={"BoxButtons"}>
+                                                    <Button
+                                                        size={"small"}
+                                                        type={"primary"}
+                                                        icon={<PlusSquareOutlined/>}
+                                                        onClick={this.onButtonKpisAddClicked}>新增</Button>
+                                                    <Button
+                                                        size={"small"}
+                                                        type={"primary"}
+                                                        icon={<CopyOutlined/>}
+                                                        onClick={this.onButtonKpisCopyPasteClicked}>复制</Button>
+                                                    <Button
+                                                        size={"small"}
+                                                        type={"primary"}
+                                                        icon={<MinusSquareOutlined/>}
+                                                        onClick={this.onButtonKpisDeleteClicked}>删除</Button>
+                                                </div>
+                                            </Fragment>) : (<Fragment>
+                                                <div>&nbsp;</div>
+                                            </Fragment>
+                                        )}
+                                        <div>
+                                            <Button
+                                                size={"small"}
+                                                type={"ghost"}
+                                                icon={<LayoutOutlined/>}
+                                                onClick={this.onButtonChangeComponentLayout4EditClicked}/>
+                                        </div>
+                                    </div>
+                                    {((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? (
+                                        <Fragment>
+                                            <div className={"BoxTree"}>
+                                                <div className={"BoxTree2"}>
+                                                    <Tree
+                                                        checkable
+                                                        blockNode={true}
+                                                        showLine={{showLeafIcon: false}}
+                                                        showIcon={true}
+                                                        switcherIcon={<CaretDownOutlined/>}
+                                                        onSelect={this.onTreeKpisSelected}
+                                                        onCheck={this.onTreeKpisChecked}
+                                                        treeData={this.state.treeDataKpis}
+                                                    /></div>
+                                            </div>
+                                        </Fragment>
+                                    ) : (<Fragment>
+                                    </Fragment>)}
                                 </div>
-                                <Input.Search
-                                    className={"BoxSearch"}
-                                    placeholder="Search"
-                                    enterButton
-                                    onChange={this.onInputSearchSchemaChange}
-                                    onSearch={this.onInputSearchSchemasSearched}
-                                />
-                                <div className={"BoxTreeInstance"}>
-                                    <Tree
-                                        checkable
-                                        blockNode={true}
-                                        showLine={{showLeafIcon: false}}
-                                        showIcon={true}
-                                        switcherIcon={<CaretDownOutlined/>}
-                                        onSelect={this.onTreeKpiSchemasSelected}
-                                        onCheck={this.onTreeKpiSchemasChecked}
-                                        treeData={this.state.treeDataKpiSchemas}
-                                    />
-                                </div>
+                                {((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? (
+                                    <Fragment>
+                                        <div className={"BoxCounterTab"}>
+                                            <div className={"BoxTitleBar"}>
+                                                <div className={"BoxTitle"}>原始指标</div>
+                                                <div className={"BoxButtons"}>
+                                                    <Button
+                                                        size={"small"}
+                                                        type={"primary"}
+                                                        icon={<MinusSquareOutlined/>}
+                                                        onClick={this.onButtonCountersDeleteClicked}>删除</Button>
+                                                </div>
+                                                <div>
+                                                    <Button
+                                                        size={"small"}
+                                                        type={"ghost"}
+                                                        icon={<LayoutOutlined/>}
+                                                        onClick={this.onButtonChangeComponentLayout4EditClicked}/>
+                                                </div>
+                                            </div>
+                                            <div className={"BoxTree"}>
+                                                <div className={"BoxTree2"}>
+                                                    <Tree
+                                                        checkable
+                                                        blockNode={true}
+                                                        showLine={{showLeafIcon: false}}
+                                                        showIcon={true}
+                                                        switcherIcon={<CaretDownOutlined/>}
+                                                        onSelect={this.onTreeKpisSelected}
+                                                        onCheck={this.onTreeKpisChecked}
+                                                        treeData={this.state.treeDataKpiCounters}
+                                                    /></div>
+                                            </div>
+                                        </div>
+                                    </Fragment>
+                                ) : (<Fragment>
+                                </Fragment>)}
                             </div>
-                        </Fragment>
-                    ) : (<Fragment>
-                            <div>&nbsp;</div>
-                        </Fragment>
-                    )}
-                < /div>
-                <div className={this.state.styleLayoutUpDown === "NN" ? "BoxKpiRelated BoxKpiRelatedNormal" : "BoxKpiRelated BoxKpiRelatedSmall"}>
-                    <div className={"BoxKpisAndProperties"}>
-                        <div className={this.state.styleLayoutUpDown === "NN" ? "BoxKpisAndCounterTab BoxKpisAndCounterTabNormal" : "BoxKpisAndCounterTab BoxKpisAndCounterTabSmall"}>
-                            <div className={"BoxKpis"}>
+                            <div className={((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? "BoxPropertiesBorder BoxPropertiesBorderNormal" : "BoxPropertiesBorder BoxPropertiesBorderSmall"}>
+                            {/*<div className={"BoxPropertiesBorder"}>*/}
                                 <div className={"BoxTitleBar"}>
-                                    <div className={"BoxTitle"}>指标</div>
-                                    {(this.state.styleLayoutUpDown === "NN") ? (
+                                    <div className={"BoxTitle"}>指标组属性 - {this.state.selected.schema_id}</div>
+                                    {((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? (
                                         <Fragment>
                                             <div className={"BoxButtons"}>
                                                 <Button
                                                     size={"small"}
                                                     type={"primary"}
-                                                    icon={<PlusSquareOutlined/>}>新增</Button>
+                                                    icon={<SaveOutlined/>}
+                                                    onClick={this.onButtonSchemasSaveClicked}>保存</Button>
                                                 <Button
                                                     size={"small"}
                                                     type={"primary"}
-                                                    icon={<CopyOutlined/>}
-                                                    onClick={this.onButtonKpisCopyPasteClicked}>复制</Button>
-                                                <Button
-                                                    size={"small"}
-                                                    type={"primary"}
-                                                    icon={<MinusSquareOutlined/>}>删除</Button>
+                                                    icon={<UndoOutlined/>}
+                                                    onClick={this.onButtonSchemasResetClicked}>恢复</Button>
                                             </div>
-                                        </Fragment>) : (<Fragment>
-                                            <div>&nbsp;</div>
+                                        </Fragment>
+                                    ) : (<Fragment>
                                         </Fragment>
                                     )}
                                     <div>
-                                        <Button size={"small"} type={"ghost"} icon={<EllipsisOutlined/>}/>
-                                    </div>
+                                        <Button
+                                            size={"small"}
+                                            type={"ghost"}
+                                            icon={<LayoutOutlined/>}
+                                            onClick={this.onButtonChangeComponentLayout4EditClicked}/></div>
                                 </div>
-                                {(this.state.styleLayoutUpDown === "NN") ? (
+                                {((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? (
                                     <Fragment>
-                                        <div className={"BoxTree"}>
-                                            <div className={"BoxTree2"}>
-                                                <Tree
-                                                    checkable
-                                                    blockNode={true}
-                                                    showLine={{showLeafIcon: false}}
-                                                    showIcon={true}
-                                                    switcherIcon={<CaretDownOutlined/>}
-                                                    onSelect={this.onTreeKpisSelected}
-                                                    onCheck={this.onTreeKpisChecked}
-                                                    treeData={this.state.treeDataKpis}
-                                                /></div>
+                                        <div className={"BoxPropertiesSchema"}>
+                                            <div className={"BoxSchemaIds"}>
+                                                <Select
+                                                    defaultValue={-99999}
+                                                    value={this.state.selected.schemaIdA1}
+                                                    options={this.state.optionsSchemaIdA1}
+                                                    onChange={(e) => {
+                                                        this.onSelectSchemaIdChanged(e, "a1")
+                                                    }}/>
+                                                <Select
+                                                    defaultValue={-99999}
+                                                    value={this.state.selected.schemaIdA2}
+                                                    options={this.state.optionsSchemaIdA2}
+                                                    onChange={(e) => {
+                                                        this.onSelectSchemaIdChanged(e, "a2")
+                                                    }}/>
+                                                <Select
+                                                    defaultValue={-99999}
+                                                    value={this.state.selected.schemaIdB1}
+                                                    options={this.state.optionsSchemaIdB1}
+                                                    onChange={(e) => {
+                                                        this.onSelectSchemaIdChanged(e, "b1")
+                                                    }}/>
+                                                <Select
+                                                    defaultValue={-99999}
+                                                    value={this.state.selected.schemaIdB2}
+                                                    options={this.state.optionsSchemaIdB2}
+                                                    onChange={(e) => {
+                                                        this.onSelectSchemaIdChanged(e, "b2")
+                                                    }}/>
+                                            </div>
+                                            <div>
+                                                <Input value={this.state.selected.schema_zhname}/>
+                                            </div>
+                                            <div className={"BoxVendorObjectClass"}>
+                                                <Select defaultValue="-1">
+                                                    <Option value="-1">不区分厂家</Option>
+                                                </Select>
+                                                <Select defaultValue="-1">
+                                                    <Option value="-1">网元类型</Option>
+                                                </Select>
+                                                <Select defaultValue="-1">
+                                                    <Option value="-1">网元细分类型</Option>
+                                                </Select>
+                                                <Select defaultValue="-1">
+                                                    <Option value="-1">采集粒度</Option>
+                                                </Select>
+                                            </div>
+                                            <div>
+                                                <Input value={this.state.selected.schema_counter_tab_name}/>
+                                            </div>
                                         </div>
-                                    </Fragment>
-                                ) : (<Fragment>
-                                    <div>&nbsp;</div>
-                                </Fragment>)}
-                            </div>
-                            {(this.state.styleLayoutUpDown === "NN") ? (
-                                <Fragment>
-                                    <div className={"BoxCounterTab"}>
                                         <div className={"BoxTitleBar"}>
-                                            <div className={"BoxTitle"}>原始指标</div>
+                                            <div className={"BoxTitle"}>指标属性 - {this.state.selected.kpi_id}</div>
                                             <div className={"BoxButtons"}>
-                                                {/*<Button*/}
-                                                {/*    size={"small"}*/}
-                                                {/*    type={"primary"}*/}
-                                                {/*    icon={<SaveOutlined/>}>保存</Button>*/}
                                                 <Button
                                                     size={"small"}
                                                     type={"primary"}
-                                                    icon={<MinusSquareOutlined/>}>删除</Button>
+                                                    icon={<SaveOutlined/>}
+                                                    onClick={this.onButtonKpisSaveClicked}>保存</Button>
+                                                <Button
+                                                    size={"small"}
+                                                    type={"primary"}
+                                                    icon={<UndoOutlined/>}
+                                                    onClick={this.onButtonKpisResetClicked}>恢复</Button>
                                             </div>
                                             <div>
-                                                <Button size={"small"} type={"ghost"} icon={<EllipsisOutlined/>}/>
+                                                <Button
+                                                    size={"small"}
+                                                    type={"ghost"}
+                                                    icon={<LayoutOutlined/>}
+                                                    onClick={this.onButtonChangeComponentLayout4EditClicked}/>
                                             </div>
                                         </div>
-                                        <div className={"BoxTree"}>
-                                            <div className={"BoxTree2"}>
-                                                <Tree
-                                                    checkable
-                                                    blockNode={true}
-                                                    showLine={{showLeafIcon: false}}
-                                                    showIcon={true}
-                                                    switcherIcon={<CaretDownOutlined/>}
-                                                    onSelect={this.onTreeKpisSelected}
-                                                    onCheck={this.onTreeKpisChecked}
-                                                    treeData={this.state.treeDataKpiCounters}
-                                                /></div>
+                                        <div className={"BoxPropertiesKpi"}>
+                                            <div className={"BoxNames"}>
+                                                <Input value={this.state.selected.kpi_zhname}/>
+                                                <Input value={this.state.selected.kpi_enname}/>
+                                            </div>
+                                            <div className={"BoxKpiValues"}>
+                                                <Select defaultValue="1">
+                                                    <Option value="0">不发告警</Option>
+                                                    <Option value="1">发送告警</Option>
+                                                </Select>
+                                                <Select defaultValue="1">
+                                                    <Option value="0">不指定格式</Option>
+                                                    <Option value="1">格式：R2</Option>
+                                                </Select>
+                                                <Input value={this.state.selected.kpi_min_value}/>
+                                                <Input value={this.state.selected.kpi_max_value}/>
+                                            </div>
+                                            <div className={"BoxUsedInfo"}>
+                                                <div className={"BoxProductModuleName"}>
+                                                    <Select defaultValue="-1">
+                                                        <Option value="-1">使用该指标的产品</Option>
+                                                    </Select>
+                                                    <Select defaultValue="-1">
+                                                        <Option value="-1">使用该指标的模块</Option>
+                                                    </Select>
+                                                    <Input value={this.state.selected.kpi_used_title}/>
+                                                    <Button icon={<PlusOutlined/>}/>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </Fragment>
-                            ) : (<Fragment>
-                                <div>&nbsp;</div>
-                            </Fragment>)}
+                                        <div className={"BoxKpiExp"}>
+                                            <TextArea autoSize={{minRows: 3, maxRows: 5}} value={this.state.selected.kpi_exp}/>
+                                        </div>
+                                    </Fragment>
+                                ) : (<Fragment>
+                                </Fragment>)}
+                            </div>
                         </div>
-                        <div className={"BoxPropertiesBorder"}>
+                        <div className={"BoxKpisStandard"}>
                             <div className={"BoxTitleBar"}>
-                                <div className={"BoxTitle"}>指标组属性 - {this.state.selected.schema_id}</div>
-                                {(this.state.styleLayoutUpDown === "NN") ? (
+                                <div className={"BoxTitle"}>规范指标</div>
+                                {((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "SN")) ? (
                                     <Fragment>
                                         <div className={"BoxButtons"}>
                                             <Button
                                                 size={"small"}
                                                 type={"primary"}
-                                                icon={<SaveOutlined/>}>保存</Button>
+                                                icon={<CloudUploadOutlined/>}
+                                                onClick={this.onButtonIndicatorsCopy2CountersClicked}>移入指标组</Button>
                                             <Button
                                                 size={"small"}
                                                 type={"primary"}
-                                                icon={<UndoOutlined/>}>恢复</Button>
+                                                icon={<CloudUploadOutlined/>}
+                                                onClick={this.onButtonIndicatorsRefreshClicked}>刷新</Button>
+                                            <Button
+                                                size={"small"}
+                                                type={"primary"}
+                                                icon={<CloudUploadOutlined/>}
+                                                onClick={this.onButtonIndicatorsImportClicked}>导入</Button>
+                                            <Button
+                                                size={"small"}
+                                                type={"primary"}
+                                                icon={<CloudDownloadOutlined/>}
+                                                onClick={this.onButtonIndicatorsExportClicked}>导出</Button>
                                         </div>
-                                    </Fragment>
-                                ) : (<Fragment>
-                                        <div>&nbsp;</div>
-                                    </Fragment>
-                                )}
+                                    </Fragment>) : (<Fragment>
+                                    <div>&nbsp;</div>
+                                </Fragment>)}
                                 <div>
                                     <Button
                                         size={"small"}
                                         type={"ghost"}
-                                        icon={<EllipsisOutlined/>}/></div>
+                                        icon={((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? <CaretUpOutlined/> : <CaretDownOutlined/>}
+                                        onClick={this.onButtonChangeComponentLayoutUpDownClicked}/>
+                                </div>
                             </div>
-                            {(this.state.styleLayoutUpDown === "NN") ? (
+                            {((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "SN")) ? (
                                 <Fragment>
-                                    <div className={"BoxPropertiesSchema"}>
-                                        <div className={"BoxSchemaIds"}>
-                                            <Select
-                                                defaultValue={-99999}
-                                                value={this.state.selected.schemaIdA1}
-                                                options={this.state.optionsSchemaIdA1}
-                                                onChange={(e) => {
-                                                    this.onSelectSchemaIdChanged(e, "a1")
-                                                }}/>
-                                            <Select
-                                                defaultValue={-99999}
-                                                value={this.state.selected.schemaIdA2}
-                                                options={this.state.optionsSchemaIdA2}
-                                                onChange={(e) => {
-                                                    this.onSelectSchemaIdChanged(e, "a2")
-                                                }}/>
-                                            <Select
-                                                defaultValue={-99999}
-                                                value={this.state.selected.schemaIdB1}
-                                                options={this.state.optionsSchemaIdB1}
-                                                onChange={(e) => {
-                                                    this.onSelectSchemaIdChanged(e, "b1")
-                                                }}/>
-                                            <Select
-                                                defaultValue={-99999}
-                                                value={this.state.selected.schemaIdB2}
-                                                options={this.state.optionsSchemaIdB2}
-                                                onChange={(e) => {
-                                                    this.onSelectSchemaIdChanged(e, "b2")
-                                                }}/>
+                                    <div className={"BoxTableIndicators"}>
+                                        <div className={"BoxSearch"}>
+                                            <Input.Search
+                                                placeholder="Search"
+                                                enterButton
+                                                onChange={this.onInputSearchIndicatorsChanged}
+                                                onSearch={this.onInputSearchIndicatorsSearched}
+                                            />
                                         </div>
-                                        <div>
-                                            <Input value={this.state.selected.schema_zhname}/>
-                                        </div>
-                                        <div className={"BoxVendorObjectClass"}>
-                                            <Select defaultValue="-1">
-                                                <Option value="-1">不区分厂家</Option>
-                                            </Select>
-                                            <Select defaultValue="-1">
-                                                <Option value="-1">网元类型</Option>
-                                            </Select>
-                                            <Select defaultValue="-1">
-                                                <Option value="-1">网元细分类型</Option>
-                                            </Select>
-                                            <Select defaultValue="-1">
-                                                <Option value="-1">采集粒度</Option>
-                                            </Select>
-                                        </div>
-                                        <div>
-                                            <Input value={this.state.selected.schema_counter_tab_name}/>
-                                        </div>
-                                    </div>
-                                    <div className={"BoxTitleBar"}>
-                                        <div className={"BoxTitle"}>指标属性 - {this.state.selected.kpi_id}</div>
-                                        <div className={"BoxButtons"}>
-                                            <Button
-                                                size={"small"}
-                                                type={"primary"}
-                                                icon={<SaveOutlined/>}>保存</Button>
-                                            <Button
-                                                size={"small"}
-                                                type={"primary"}
-                                                icon={<UndoOutlined/>}>恢复</Button>
-                                        </div>
-                                        <div>
-                                            <Button
-                                                size={"small"}
-                                                type={"ghost"}
-                                                icon={<EllipsisOutlined/>}/></div>
-                                    </div>
-                                    <div className={"BoxPropertiesKpi"}>
-                                        <div className={"BoxNames"}>
-                                            <Input value={this.state.selected.kpi_zhname}/>
-                                            <Input value={this.state.selected.kpi_enname}/>
-                                        </div>
-                                        <div className={"BoxKpiValues"}>
-                                            <Select defaultValue="1">
-                                                <Option value="0">不发告警</Option>
-                                                <Option value="1">发送告警</Option>
-                                            </Select>
-                                            <Select defaultValue="1">
-                                                <Option value="0">不指定格式</Option>
-                                                <Option value="1">格式：R2</Option>
-                                            </Select>
-                                            <Input value={this.state.selected.kpi_min_value}/>
-                                            <Input value={this.state.selected.kpi_max_value}/>
-                                        </div>
-                                        <div className={"BoxUsedInfo"}>
-                                            <div className={"BoxProductModuleName"}>
-                                                <Select defaultValue="-1">
-                                                    <Option value="-1">使用该指标的产品</Option>
-                                                </Select>
-                                                <Select defaultValue="-1">
-                                                    <Option value="-1">使用该指标的模块</Option>
-                                                </Select>
-                                                <Input value={this.state.selected.kpi_used_title}/>
-                                                <Button icon={<PlusOutlined/>}/>
+                                        <div ref={this.refBoxDetail} className={"BoxAuto"}>
+                                            <div className={"Box2"}>
+                                                <Table rowKey="id"
+                                                    // title={() => this.state.tableIndicatorsTitle}
+                                                       loading={this.state.tableIndicatorsIsLoading}
+                                                       dataSource={this.state.dsIndicators}
+                                                    // columns={this.state.columnsIndicator}
+                                                       bordered={true}
+                                                       size={"small"}
+                                                       scroll={{
+                                                           x: this.state.tablePropertiesScrollX,
+                                                           y: this.state.tablePropertiesScrollY
+                                                       }}
+                                                       pagination={{
+                                                           pageSize: this.state.pageSizeIndicators,
+                                                           position: ["none", "none"]
+                                                       }}
+                                                       rowSelection={{
+                                                           type: "checkbox",
+                                                           ...this.onRowIndicatorCounterSelected
+                                                       }}
+                                                       expandedRowRender={this.onTableIndicatorsExpandedRowRender}
+                                                       expandable={{
+                                                           rowExpandable: (record) => record.counters.length > 0
+                                                       }}
+                                                >
+                                                    <Column title=<KColumnTitle content="序号" className="clsColumnTitle"/>
+                                                    className="ColumnKey"
+                                                    dataIndex='index'
+                                                    key='index'
+                                                    align='center'
+                                                    width={this.state.columnWidths.key}
+                                                    fixed={true}
+                                                    />
+                                                    <Column title=<KColumnTitle content="来自表单" className="clsColumnTitle"/>
+                                                    className="ColumnIesn"
+                                                    dataIndex='excel_sheet_name'
+                                                    key='excel_sheet_name'
+                                                    align='center'
+                                                    width={this.state.columnWidths.esn}
+                                                    fixed={true}
+                                                    />
+                                                    <Column title=<KColumnTitle content="指标中文名称" className="clsColumnTitle"/>
+                                                    dataIndex='indicator_zhname'
+                                                    key='indicator_zhname'
+                                                    width={this.state.columnWidths.izn}
+                                                    sorter={(a, b) => a.indicator_zhname > b.indicator_zhname}
+                                                    sortDirections={['descend', 'ascend']}
+                                                    fixed={true}
+                                                    />
+                                                    <Column title=<KColumnTitle content="指标单位" className="clsColumnTitle"/>
+                                                    dataIndex='indicator_unit'
+                                                    key='indicator_unit'
+                                                    align='center'
+                                                    width={this.state.columnWidths.iu}/>
+                                                    <Column title=<KColumnTitle content="时间粒度" className="clsColumnTitle"/>
+                                                    dataIndex='indicator_time_type'
+                                                    key='indicator_time_type'
+                                                    align='center'
+                                                    width={this.state.columnWidths.itt}/>
+                                                    <Column title=<KColumnTitle content="空间粒度" className="clsColumnTitle"/>
+                                                    dataIndex='indicator_geo_type'
+                                                    key='indicator_geo_type'
+                                                    align='center'
+                                                    width={this.state.columnWidths.igt}/>
+                                                    <Column title=<KColumnTitle content="指标定义" className="clsColumnTitle"/>
+                                                    dataIndex='indicator_definition' key='indicator_definition' width={this.state.columnWidths.idef}/>
+                                                    {/*<Column title=<KColumnTitle content="指标业务需求" className="clsColumnTitle"/>*/}
+                                                    {/*dataIndex='indicator_desc' key='indicator_desc' width={this.state.columnWidths.idesc}/>*/}
+                                                    <Column title=<KColumnTitle content="中文映射算法" className="clsColumnTitle"/>
+                                                    dataIndex='indicator_zhexp'
+                                                    key='indicator_zhexp'
+                                                    render={(zhexp, record) => {
+                                                    return <div>
+                                                        <div>{record.indicator_zhexp}</div>
+                                                        <div>{record.indicator_enexp}</div>
+                                                    </div>
+                                                }}
+                                                    />
+                                                </Table>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className={"BoxKpiExp"}>
-                                        <TextArea autoSize={{minRows: 3, maxRows: 5}} value={this.state.selected.kpi_exp}/>
-                                    </div>
-                                </Fragment>
-                            ) : (<Fragment>
-                                <div>&nbsp;</div>
-                            </Fragment>)}
-                        </div>
-                    </div>
-                    <div className={"BoxKpisStandard"}>
-                        <div className={"BoxTitleBar"}>
-                            <div className={"BoxTitle"}>规范指标</div>
-                            <div className={"BoxButtons"}>
-                                <Button
-                                    size={"small"}
-                                    type={"primary"}
-                                    icon={<CloudUploadOutlined/>}>移入指标组</Button>
-                                <Button
-                                    size={"small"}
-                                    type={"primary"}
-                                    icon={<CloudUploadOutlined/>}
-                                    onClick={this.onButtonIndicatorsRefreshClicked}
-                                >刷新</Button>
-                                <Button
-                                    size={"small"}
-                                    type={"primary"}
-                                    icon={<CloudUploadOutlined/>}
-                                    // onClick={this.onButtonImportExcel}
-                                >导入</Button>
-                                <Button
-                                    size={"small"}
-                                    type={"primary"}
-                                    icon={<CloudDownloadOutlined/>}>导出</Button>
-                            </div>
-                            <div>
-                                <Button
-                                    size={"small"}
-                                    type={"ghost"}
-                                    icon={this.state.styleLayoutUpDown === "NN" ? <CaretUpOutlined/> : <CaretDownOutlined/>}
-                                    onClick={this.onButtonChangeComponentLayoutUpDownClicked}/>
-                            </div>
-                        </div>
-                        <div className={"BoxTableIndicators"}>
-                            <div className={"BoxSearch"}>
-                                <Input.Search
-                                    placeholder="Search"
-                                    onChange={this.onInputSearchIndicatorsChanged}
-                                    onSearch={this.onInputSearchIndicatorsSearched}
-                                />
-                            </div>
-                            <div ref={this.refBoxDetail} className={"BoxAuto"}>
-                                <div className={"Box2"}>
-                                    <Table rowKey="id"
-                                        // title={() => this.state.tableIndicatorsTitle}
-                                           loading={this.state.tableIndicatorsIsLoading}
-                                           dataSource={this.state.dsIndicators}
-                                        // columns={this.state.columnsIndicator}
-                                           bordered={true}
-                                           size={"small"}
-                                           scroll={{
-                                               x: this.state.tablePropertiesScrollX,
-                                               y: this.state.tablePropertiesScrollY
-                                           }}
-                                           pagination={{
-                                               pageSize: this.state.pageSizeIndicators,
-                                               position: ["none", "none"]
-                                           }}
-                                           rowSelection={{
-                                               type: "checkbox",
-                                               ...this.onRowIndicatorCounterSelected
-                                           }}
-                                           expandedRowRender={this.onTableIndicatorsExpandedRowRender}
-                                           expandable={{
-                                               rowExpandable: (record) => record.counters.length > 0
-                                           }}
-                                    >
-                                        <Column title=<KColumnTitle content="序号" className="clsColumnTitle"/>
-                                        className="ColumnKey"
-                                        dataIndex='index'
-                                        key='index'
-                                        align='center'
-                                        width={this.state.columnWidths.key}
-                                        fixed={true}
-                                        />
-                                        <Column title=<KColumnTitle content="来自表单" className="clsColumnTitle"/>
-                                        className="ColumnIesn"
-                                        dataIndex='excel_sheet_name'
-                                        key='excel_sheet_name'
-                                        align='center'
-                                        width={this.state.columnWidths.esn}
-                                        fixed={true}
-                                        />
-                                        <Column title=<KColumnTitle content="指标中文名称" className="clsColumnTitle"/>
-                                        dataIndex='indicator_zhname'
-                                        key='indicator_zhname'
-                                        width={this.state.columnWidths.izn}
-                                        sorter={(a, b) => a.indicator_zhname > b.indicator_zhname}
-                                        sortDirections={['descend', 'ascend']}
-                                        fixed={true}
-                                        />
-                                        <Column title=<KColumnTitle content="指标单位" className="clsColumnTitle"/>
-                                        dataIndex='indicator_unit'
-                                        key='indicator_unit'
-                                        align='center'
-                                        width={this.state.columnWidths.iu}/>
-                                        <Column title=<KColumnTitle content="时间粒度" className="clsColumnTitle"/>
-                                        dataIndex='indicator_time_type'
-                                        key='indicator_time_type'
-                                        align='center'
-                                        width={this.state.columnWidths.itt}/>
-                                        <Column title=<KColumnTitle content="空间粒度" className="clsColumnTitle"/>
-                                        dataIndex='indicator_geo_type'
-                                        key='indicator_geo_type'
-                                        align='center'
-                                        width={this.state.columnWidths.igt}/>
-                                        <Column title=<KColumnTitle content="指标定义" className="clsColumnTitle"/>
-                                        dataIndex='indicator_definition' key='indicator_definition' width={this.state.columnWidths.idef}/>
-                                        {/*<Column title=<KColumnTitle content="指标业务需求" className="clsColumnTitle"/>*/}
-                                        {/*dataIndex='indicator_desc' key='indicator_desc' width={this.state.columnWidths.idesc}/>*/}
-                                        <Column title=<KColumnTitle content="中文映射算法" className="clsColumnTitle"/>
-                                        dataIndex='indicator_zhexp'
-                                        key='indicator_zhexp'
-                                        render={(zhexp, record) => {
-                                        return <div>
-                                            <div>{record.indicator_zhexp}</div>
-                                            <div>{record.indicator_enexp}</div>
-                                        </div>
-                                    }}
-                                        />
-                                    </Table>
-                                </div>
-                            </div>
+                                </Fragment>) : (<Fragment></Fragment>
+                            )}
                         </div>
                     </div>
                 </div>
-            </div>
-        </Fragment>
+            </Fragment>
+        )
     }
 }
 

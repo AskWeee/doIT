@@ -2,5 +2,61 @@
   display: grid;
   background: rgb(55,55,55);
   color: white;
+  grid-template-rows: auto 1fr;
   overflow: hidden;
+
+  .BoxTabs {
+    background: rgba(55, 55, 55, 1);
+    overflow: hidden;
+
+
+    .BoxTabCurrent {
+      background: rgba(55, 155, 255, 1) !important;
+      border-color: rgba(55, 155, 255, 1) !important;
+      color: black !important;
+      font: {
+        size: 1.4rem !important;
+        weight: bold !important;
+      }
+    }
+
+    .BoxTab {
+      display: inline-block;
+      background: rgba(155, 155, 155, 1);
+      border: {
+        width: 1px 1px 0 1px;
+        style: solid;
+        color: rgba(155, 155, 155, 1);
+      }
+      margin: 3px 5px 0 0;
+      padding: 0 5px 0 5px;
+      font: {
+        size: 1.2rem;
+      }
+      cursor: pointer;
+
+      &:first-child {
+        margin-left: 10px;
+      }
+
+      .BoxTabTitle {
+        display: inline-block;
+      }
+
+      .BoxTabIcon {
+        display: inline-block;
+        margin-left: 5px;
+      }
+    }
+  }
+
+  .BoxComponent {
+    display: grid;
+    border: {
+      width: 1px 0 0 0;
+      style: solid;
+      color: rgba(55, 155, 255, 1);
+    }
+    overflow: hidden;
+  }
 }

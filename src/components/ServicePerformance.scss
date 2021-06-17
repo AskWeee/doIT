@@ -4,20 +4,16 @@ $colorComponentToolbar: rgb(175, 225, 255);
 
 .clsIndexColumns {
     display: grid;
-    //background: yellow;
 
     .clsIndexColumn {
         display: grid;
         grid-template-columns: 1fr auto;
-        //background: red;
         margin: 3px;
     }
-
 }
 
 .clsPartitionNames {
     display: grid;
-    //background: yellow;
 
     .clsPartitionName {
         display: grid;
@@ -25,12 +21,10 @@ $colorComponentToolbar: rgb(175, 225, 255);
         //background: red;
         margin: 3px;
     }
-
 }
 
 .clsPartitionHighValues {
     display: grid;
-    //background: yellow;
 
     .clsPartitionHighValue {
         display: grid;
@@ -38,7 +32,6 @@ $colorComponentToolbar: rgb(175, 225, 255);
         //background: red;
         margin: 3px;
     }
-
 }
 
 .BoxServicePerformanceNormal {
@@ -50,11 +43,10 @@ $colorComponentToolbar: rgb(175, 225, 255);
 }
 
 .ServicePerformance {
-    background: rgba(55, 175, 255, 0.2);
+    background: rgba(55, 175, 255, 0.25);
     border: 1px solid rgba(55, 55, 55, 1);
     display: grid;
     grid-gap: 5px;
-    margin: 5px;
     padding: 5px;
     overflow: hidden;
 
@@ -69,9 +61,22 @@ $colorComponentToolbar: rgb(175, 225, 255);
         background: black;
     }
 
+    .BoxKpiRelatedSmaller {
+        grid-template-rows: 1fr auto;
+        grid-gap: 0;
+        background: black;
+    }
+
+    .BoxKpiSchemasSmall {
+        background: $colorComponentToolbar;
+        color: black;
+        font-weight: bold;
+        display: grid;
+        justify-content: center;
+    }
+
     .BoxKpiSchemas {
         background: darkgray;
-        //border: 1px solid rgba(55,55,55,1);
         display: grid;
         grid-template-rows: auto 1fr;
         overflow: hidden;
@@ -286,11 +291,20 @@ $colorComponentToolbar: rgb(175, 225, 255);
                 }
             }
 
+            .BoxPropertiesBorderNormal {
+                grid-template-rows: auto auto auto auto 1fr;
+
+            }
+
+            .BoxPropertiesBorderSmall {
+                grid-template-rows: auto 0;
+                background: red;
+            }
+
             .BoxPropertiesBorder {
                 border: 1px solid $colorComponentToolbar;
                 background: darkgray;
                 display: grid;
-                grid-template-rows: auto auto auto auto 1fr;
                 color: black;
                 overflow: hidden;
 
