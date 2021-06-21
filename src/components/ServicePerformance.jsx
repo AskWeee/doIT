@@ -4,7 +4,7 @@ import moment from 'moment';
 import axios from "axios";
 import lodash from "lodash";
 import GCtx from "../GCtx";
-import {Button, Input, Select, Table, Tree} from 'antd'
+import {Button, Input, Select, Table, Tree, Modal} from 'antd'
 import {
     BranchesOutlined,
     CaretDownOutlined,
@@ -22,6 +22,7 @@ import {
     LayoutOutlined,
 } from '@ant-design/icons'
 import Mock from 'mockjs'
+import {produce} from 'immer';
 import XLSX from 'xlsx';
 import KColumnTitle from "./KColumnTitle";
 import TadDbConnection from "../entity/TadDbConnection";
@@ -79,11 +80,12 @@ export default class ServicePerformance extends React.PureComponent {
 
         this.state = {
             message: "",
-
+            isModalVisible: false,
+            modalWhat: "",
+            modalMessage: "",
             styleLayoutLeftRight: "NN",
             styleLayoutUpDown: "NN",
             styleLayout4Edit: "NN",
-
             treeDataKpiSchemas: [],
             treeDataKpis: [],
             treeDataKpiCounters: [],
@@ -127,6 +129,9 @@ export default class ServicePerformance extends React.PureComponent {
                 schema_sub_class: -1,
                 schema_interval_flag: -1,
                 schema_counter_tab_name: "COUNTER表名称",
+            },
+            selectedKpi: {
+                id: -1,
                 kpi_id: "",
                 kpi_zhname: "指标中文名称",
                 kpi_enname: "指标英文名称",
@@ -161,7 +166,13 @@ export default class ServicePerformance extends React.PureComponent {
         this.adoAddSchema = this.adoAddSchema.bind(this);
         this.adoUpdateSchema = this.adoUpdateSchema.bind(this);
 
+        this.restDeleteSchema = this.restDeleteSchema.bind(this);
+        this.restDeleteKpi = this.restDeleteKpi.bind(this);
+        this.restDeleteCounter = this.restDeleteCounter.bind(this);
+
         this.doDeleteSchema = this.doDeleteSchema.bind(this);
+        this.doDeleteKpi = this.doDeleteKpi.bind(this);
+        this.doDeleteCounter = this.doDeleteCounter.bind(this);
         this.doAddKpi = this.doAddKpi.bind(this);
         this.doUpdateKpi = this.doUpdateKpi.bind(this);
 
@@ -176,7 +187,6 @@ export default class ServicePerformance extends React.PureComponent {
 
         this.onButtonSchemasAddClicked = this.onButtonSchemasAddClicked.bind(this);
         this.onButtonSchemasCopyPasteClicked = this.onButtonSchemasCopyPasteClicked.bind(this);
-        this.onButtonSchemasDeleteClicked = this.onButtonSchemasDeleteClicked.bind(this);
         this.onButtonSchemasExportClicked = this.onButtonSchemasExportClicked.bind(this);
         this.onButtonSchemasSaveClicked = this.onButtonSchemasSaveClicked.bind(this);
         this.onButtonSchemasResetClicked = this.onButtonSchemasResetClicked.bind(this);
@@ -192,6 +202,8 @@ export default class ServicePerformance extends React.PureComponent {
         this.onButtonIndicatorsRefreshClicked = this.onButtonIndicatorsRefreshClicked.bind(this);
         this.onButtonIndicatorsImportClicked = this.onButtonIndicatorsImportClicked.bind(this);
         this.onButtonIndicatorsExportClicked = this.onButtonIndicatorsExportClicked.bind(this);
+        this.onModalButtonOkClicked = this.onModalButtonOkClicked.bind(this);
+        this.onModalButtonCancelClicked = this.onModalButtonCancelClicked.bind(this);
 
         this.onInputSchemaZhNameChanged = this.onInputSchemaZhNameChanged.bind(this);
 
@@ -209,6 +221,14 @@ export default class ServicePerformance extends React.PureComponent {
         this.toUiSchemas = this.toUiSchemas.bind(this);
         this.isFoundKpis = this.isFoundKpis.bind(this);
         this.uiUpdateSchema = this.uiUpdateSchema.bind(this);
+        this.dsUpdateSchema = this.dsUpdateSchema.bind(this);
+        this.uiUpdateKpi = this.uiUpdateKpi.bind(this);
+        this.dsUpdateKpi = this.dsUpdateKpi.bind(this);
+        this.uiUpdateCounter = this.uiUpdateCounter.bind(this);
+        this.dsUpdateCounter = this.dsUpdateCounter.bind(this);
+
+        this.uiUpdateCounter = this.uiUpdateCounter.bind(this);
+        this.showModal = this.showModal.bind(this);
     }
 
     test() {
@@ -239,7 +259,7 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     doInit() {
-        let columnWidths = JSON.parse(JSON.stringify(this.gUi.tableIndicatorsColumnWidths));
+        let columnWidths = lodash.cloneDeep(this.gUi.tableIndicatorsColumnWidths);
 
         columnWidths.key = columnWidths.key * 15;
         columnWidths.esn = columnWidths.esn * 15;
@@ -305,7 +325,7 @@ export default class ServicePerformance extends React.PureComponent {
         for (let i = 0; i < ds.length; i++) {
             let item = ds[i];
             let id = item.id;
-            let schemaId = item.schema_id === null ? 99260000261 + item.id : item.schema_id;
+            let schemaId = item.schema_id === null ? (99260000261 + item.id).toString() : item.schema_id;
             let schemaName = item.schema_zhname === null ? "" : item.schema_zhname;
 
             if (schemaId !== -1 &&
@@ -328,7 +348,7 @@ export default class ServicePerformance extends React.PureComponent {
                 }
 
                 if (!myResult.mapDs.has(id)) {
-                    let schemaClone = lodash.cloneDeep(item); //Object.assign(Object.create(Object.getPrototypeOf(item)), item);
+                    let schemaClone = lodash.cloneDeep(item);
 
                     schemaClone.schema_id = schemaId;
                     schemaClone.kpis = [];
@@ -352,13 +372,13 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     uiUpdateSchema(what) {
-        const { selectedSchema } = this.state;
+        const {selectedSchema} = this.state;
 
         let treeDataKpiSchemas = lodash.cloneDeep(this.state.treeDataKpiSchemas);
 
         switch (what) {
             case "update":
-                for(let i = 0; i < treeDataKpiSchemas.length; i++) {
+                for (let i = 0; i < treeDataKpiSchemas.length; i++) {
                     let item = treeDataKpiSchemas[i];
                     if (item.key === selectedSchema.id) {
                         item.title = <div className="BoxSchemaTitle">{this.state.selectedSchema.schema_id + " - " + this.state.selectedSchema.schema_zhname}</div>
@@ -368,7 +388,7 @@ export default class ServicePerformance extends React.PureComponent {
                 break
             case "delete":
                 let index = -1;
-                for(let i = 0; i < treeDataKpiSchemas.length; i++) {
+                for (let i = 0; i < treeDataKpiSchemas.length; i++) {
                     let item = treeDataKpiSchemas[i];
                     if (item.key === selectedSchema.id) {
                         index = i;
@@ -393,13 +413,215 @@ export default class ServicePerformance extends React.PureComponent {
         })
     }
 
+    dsUpdateSchema(schema, what) {
+        switch (what) {
+            case "add":
+                this.gMap.set(schema.id, schema);
+                break
+            case "update":
+                if (this.gMap.has(schema.id)) {
+                    let oldSchema = this.gMap.get(schema.id);
+                    oldSchema.schema_id = schema.schema_id;
+                    oldSchema.schema_zhname = schema.schema_zhname;
+                    oldSchema.vendor_id = schema.vendor_id;
+                    oldSchema.object_class = schema.object_class;
+                    oldSchema.sub_class = schema.sub_class;
+                    oldSchema.interval_flag = schema.interval_flag;
+
+                    this.gMap.get(schema.id).kpis.forEach((kpi) => {
+                        if (this.gMap.kpis.has(kpi.id)) {
+                            let mapKpi = this.gMap.kpis.get(kpi.id);
+                            let oldSchemaId = oldSchema.schema_id.replace(/260/, "");
+                            let newSchemaId = schema.schema_id.replace(/260/, "");
+                            let oldKpiIndex = mapKpi.kpi_id.toString().split(oldSchemaId)[1]
+                            mapKpi.kpi_id = newSchemaId + oldKpiIndex;
+                        }
+                    })
+                }
+                break
+            case "delete":
+                if (this.gMap.has(schema.id)) {
+
+                    this.gMap.get(schema.id).kpis.forEach((kpi) => {
+                        if (this.gMap.kpis.has(kpi.id)) {
+                            this.gMap.kpis.delete(kpi.id);
+                        }
+                    })
+                    this.gMap.delete(schema.id);
+                }
+                break
+            default:
+                break;
+        }
+    }
+
+    uiUpdateKpi(kpi, what) {
+        //const {selectedKpi} = this.state;
+        let treeDataKpis;
+
+        switch (what) {
+            case "add":
+                let uiKpi = {
+                    key: kpi.id,
+                    title: kpi.kpi_id + " - " + kpi.kpi_zhname,
+                    children: []
+                }
+
+                this.setState((prevState) => {
+                    return produce(prevState, draftState => {
+                        draftState.treeDataKpis.push(uiKpi);
+                    })
+                })
+                break
+            case "update":
+                treeDataKpis = lodash.cloneDeep(this.state.treeDataKpis);
+
+                for (let i = 0; i < treeDataKpis.length; i++) {
+                    let item = treeDataKpis[i];
+                    if (item.key === kpi.id) {
+                        item.title = <div className="BoxKpiTitle">{kpi.kpi_id + " - " + kpi.kpi_zhname}</div>
+                        break
+                    }
+                }
+                this.setState({
+                    treeDataKpis: treeDataKpis
+                })
+                break
+            case "delete":
+                treeDataKpis = lodash.cloneDeep(this.state.treeDataKpis);
+                let index = -1;
+                for (let i = 0; i < treeDataKpis.length; i++) {
+                    let item = treeDataKpis[i];
+                    if (item.key === kpi.id) {
+                        index = i;
+                        break
+                    }
+                }
+                treeDataKpis.splice(index, 1);
+                let newKpi = new TadKpi();
+                newKpi.init();
+                this.setState({
+                    selectedKpi: newKpi
+                });
+                this.setState({
+                    treeDataKpis: treeDataKpis
+                })
+                break
+            default:
+                break;
+        }
+    }
+
+    dsUpdateKpi(kpi, what) {
+        //const {selectedKpi} = this.state;
+        let treeDataKpis;
+
+        switch (what) {
+            case "add":
+                let uiKpi = {
+                    key: kpi.id,
+                    title: kpi.kpi_id + " - " + kpi.kpi_zhname,
+                    children: []
+                }
+
+                this.setState((prevState) => {
+                    return produce(prevState, draftState => {
+                        draftState.treeDataKpis.push(uiKpi);
+                    })
+                })
+                break
+            case "update":
+                treeDataKpis = lodash.cloneDeep(this.state.treeDataKpis);
+
+                for (let i = 0; i < treeDataKpis.length; i++) {
+                    let item = treeDataKpis[i];
+                    if (item.key === kpi.id) {
+                        item.title = <div className="BoxKpiTitle">{kpi.kpi_id + " - " + kpi.kpi_zhname}</div>
+                        break
+                    }
+                }
+                this.setState({
+                    treeDataKpis: treeDataKpis
+                })
+                break
+            case "delete":
+                treeDataKpis = lodash.cloneDeep(this.state.treeDataKpis);
+                let index = -1;
+                for (let i = 0; i < treeDataKpis.length; i++) {
+                    let item = treeDataKpis[i];
+                    if (item.key === kpi.id) {
+                        index = i;
+                        break
+                    }
+                }
+                treeDataKpis.splice(index, 1);
+                let newKpi = new TadKpi();
+                newKpi.init();
+                this.setState({
+                    selectedKpi: newKpi
+                });
+                this.setState({
+                    treeDataKpis: treeDataKpis
+                })
+                break
+            default:
+                break;
+        }
+    }
+
+    uiUpdateCounter(what) {
+        // const {selectedSchema} = this.state;
+        //
+        // let treeDataKpiSchemas = lodash.cloneDeep(this.state.treeDataKpiSchemas);
+        //
+        // switch (what) {
+        //     case "update":
+        //         for (let i = 0; i < treeDataKpiSchemas.length; i++) {
+        //             let item = treeDataKpiSchemas[i];
+        //             if (item.key === selectedSchema.id) {
+        //                 item.title = <div className="BoxSchemaTitle">{this.state.selectedSchema.schema_id + " - " + this.state.selectedSchema.schema_zhname}</div>
+        //                 break
+        //             }
+        //         }
+        //         break
+        //     case "delete":
+        //         let index = -1;
+        //         for (let i = 0; i < treeDataKpiSchemas.length; i++) {
+        //             let item = treeDataKpiSchemas[i];
+        //             if (item.key === selectedSchema.id) {
+        //                 index = i;
+        //                 break
+        //             }
+        //         }
+        //         treeDataKpiSchemas.splice(index, 1);
+        //         let schema = new TadKpiSchema();
+        //         schema.init();
+        //         this.setState({
+        //             selectedSchema: schema
+        //         });
+        //         break
+        //     default:
+        //         break;
+        // }
+        //
+        // //todo::update gMap.schemas
+        //
+        // this.setState({
+        //     treeDataKpiSchemas: treeDataKpiSchemas
+        // })
+    }
+
+    dsUpdateCounter(counter, what) {
+
+    }
+
     data2UiTable(data) {
         let myResult = [];
         let arrWidths = {izn: 13, czn: 13, cen: 13};
 
         for (let i = 0; i < data.length; i++) {
             let item = data[i];
-            let myIndicator = Object.assign(Object.create(Object.getPrototypeOf(item)), item);
+            let myIndicator = lodash.cloneDeep(item);
 
             myIndicator.index = i;
             if (myIndicator.indicator_zhname && myIndicator.indicator_zhname.length > arrWidths.izn) {
@@ -433,6 +655,15 @@ export default class ServicePerformance extends React.PureComponent {
         return myResult;
     }
 
+    showModal(what) {
+        this.setState({
+            isModalVisible: true,
+            modalWhat: what
+        })
+    };
+
+    // >>> do get <<<
+
     doGetAll() {
         axios.all([
             this.doGetKpiDict(),
@@ -459,6 +690,7 @@ export default class ServicePerformance extends React.PureComponent {
             this.gData.indicators = indicators.data.data;
             this.gData.indicatorCounters = indicatorCounters.data.data;
 
+            // kpi dict ...
             this.gData.kpiDict.forEach((item) => {
                 if (!mapKpiDict.has(item.type)) {
                     mapKpiDict.set(item.type, [item]);
@@ -508,15 +740,16 @@ export default class ServicePerformance extends React.PureComponent {
                 })
             }
 
+            // indicator ...
             let dsIndicators = [];
             let nKey = 0;
-            let columnWidths = JSON.parse(JSON.stringify(this.gUi.tableIndicatorsColumnWidths));
+            let columnWidths = lodash.cloneDeep(this.gUi.tableIndicatorsColumnWidths);
             for (let i = 0; i < this.gData.indicators.length; i++) {
                 let indicator = this.gData.indicators[i];
 
                 indicator.counters = [];
                 if (indicator.indicator_zhname && indicator.indicator_zhname !== "") {
-                    let myIndicator = Object.assign(Object.create(Object.getPrototypeOf(indicator)), indicator);
+                    let myIndicator = lodash.cloneDeep(indicator);
                     myIndicator.counters = [];
                     myIndicator.index = ++nKey;
                     if (myIndicator.indicator_zhname && myIndicator.indicator_zhname.length > columnWidths.izn) {
@@ -526,7 +759,7 @@ export default class ServicePerformance extends React.PureComponent {
                     let mKey = 0;
                     this.gData.indicatorCounters.forEach((counter) => {
                         if (counter.indicator_id === indicator.id) {
-                            let myCounter = Object.assign(Object.create(Object.getPrototypeOf(counter)), counter);
+                            let myCounter = lodash.cloneDeep(counter);
                             // myIndicator.counter_zhname = counter.counter_zhname;
                             // myIndicator.counter_enname = counter.counter_enname;
                             if (myCounter.counter_zhname && myCounter.counter_zhname.length > columnWidths.czn) {
@@ -562,22 +795,21 @@ export default class ServicePerformance extends React.PureComponent {
             // 生成 schema map and ui
             let mySchemas = this.toUiSchemas(this.gData.schemas);
 
-            // this.gData.kpis.forEach(function (item) {
-            for(let iKpi = 0; iKpi < this.gData.kpis.length; iKpi++) {
+            // kpi ...
+            for (let iKpi = 0; iKpi < this.gData.kpis.length; iKpi++) {
                 let item = this.gData.kpis[iKpi];
-                let kpiId = item.kpi_id === null ? -1 : item.kpi_id;
+                let kid = item.id;
                 let kpiName = item.kpi_zhname === null ? "" : item.kpi_zhname;
 
-                if (kpiId !== -1 &&
-                    kpiName !== "" &&
+                if (kpiName !== "" &&
                     kpiName.length > 0 &&
                     kpiName[0] !== "?" &&
                     kpiName[kpiName.length - 1] !== "?") {
 
                     let myKpi = item;
 
-                    if (!mapKpis.has(kpiId)) {
-                        mapKpis.set(kpiId, myKpi);
+                    if (!mapKpis.has(kid)) {
+                        mapKpis.set(kid, myKpi);
                     }
 
                     if (mySchemas.mapDs.has(item.schema_id)) {
@@ -852,16 +1084,28 @@ export default class ServicePerformance extends React.PureComponent {
             {headers: {'Content-Type': 'application/json'}});
     }
 
-    doDeleteSchema(schema) {
+    restDeleteSchema(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/delete_kpi_schema",
-            schema,
+            params,
+            {headers: {'Content-Type': 'application/json'}});
+    }
+
+    restDeleteKpi(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/delete_kpi",
+            params,
+            {headers: {'Content-Type': 'application/json'}});
+    }
+
+    restDeleteCounter(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/delete_kpi_counter",
+            params,
             {headers: {'Content-Type': 'application/json'}});
     }
 
     doUpdateKpi(kpi) {
-            return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/update_kpi",
-                kpi,
-                {headers: {'Content-Type': 'application/json'}});
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/update_kpi",
+            kpi,
+            {headers: {'Content-Type': 'application/json'}});
     }
 
     // >>> TREE <<<
@@ -879,7 +1123,7 @@ export default class ServicePerformance extends React.PureComponent {
 
                 schema.kpis.forEach((item) => {
                     let uiKpi = {
-                        key: item.kpi_id,
+                        key: item.id,
                         title: <div className={"BoxKpiTitle"}>{item.kpi_id + " - " + item.kpi_zhname}</div>,
                         children: []
                     }
@@ -949,6 +1193,9 @@ export default class ServicePerformance extends React.PureComponent {
                         schema_sub_class: schema.sub_class,  // 必填
                         schema_interval_flag: schema.interval_flag,  // 必填
                         schema_counter_tab_name: schema.counter_tab_name, // 必填
+                    },
+                    selectedKpi: {
+                        id: -1,
                         kpi_id: "",
                         kpi_zhname: "指标中文名称",
                         kpi_enname: "指标英文名称",
@@ -980,6 +1227,9 @@ export default class ServicePerformance extends React.PureComponent {
                     schema_sub_class: -1,
                     schema_interval_flag: -1,
                     schema_counter_tab_name: "COUNTER表名称",
+                },
+                selectedKpi: {
+                    id: -1,
                     kpi_id: "",
                     kpi_zhname: "指标中文名称",
                     kpi_enname: "指标英文名称",
@@ -1000,44 +1250,48 @@ export default class ServicePerformance extends React.PureComponent {
 
     onTreeKpisSelected(selectedKeys, info) {
         if (info.selected) {
-            let kpiId = selectedKeys[0];
+            let kid = selectedKeys[0];
 
-            if (this.gMap.kpis.has(kpiId)) {
-                let selectedSchema = JSON.parse(JSON.stringify(this.state.selectedSchema));
-                let kpi = this.gMap.kpis.get(kpiId);
+            console.log(kid);
+            if (this.gMap.kpis.has(kid)) {
+                let selectedKpi = lodash.cloneDeep(this.state.selectedKpi);
+                let kpi = this.gMap.kpis.get(kid);
+                console.log(kpi);
 
-                selectedSchema.kpi_id = kpiId;
-                selectedSchema.kpi_zhname = kpi.kpi_zhname;
-                selectedSchema.kpi_enname = kpi.kpi_enname;
-                selectedSchema.kpi_exp = kpi.kpi_exp;
-                selectedSchema.kpi_alarm = kpi.kpi_alarm; // 默认告
-                selectedSchema.kpi_format = kpi.kpi_format; // 默认格式R2
-                selectedSchema.kpi_min_value = kpi.kpi_min_value;
-                selectedSchema.kpi_max_value = kpi.kpi_max_value;
-                selectedSchema.kpi_used_product = -1;
-                selectedSchema.kpi_used_module = -1;
-                selectedSchema.kpi_used_title = "界面呈现标题";
+                selectedKpi.id = kpi.id;
+                selectedKpi.kpi_id = kpi.kpi_id;
+                selectedKpi.kpi_zhname = kpi.kpi_zhname;
+                selectedKpi.kpi_enname = kpi.kpi_enname;
+                selectedKpi.kpi_exp = kpi.kpi_exp;
+                selectedKpi.kpi_alarm = kpi.kpi_alarm; // 默认告
+                selectedKpi.kpi_format = kpi.kpi_format; // 默认格式R2
+                selectedKpi.kpi_min_value = kpi.kpi_min_value;
+                selectedKpi.kpi_max_value = kpi.kpi_max_value;
+                selectedKpi.kpi_used_product = -1;
+                selectedKpi.kpi_used_module = -1;
+                selectedKpi.kpi_used_title = "界面呈现标题";
 
                 this.setState({
-                    selectedSchema: selectedSchema
+                    selectedKpi: selectedKpi
                 })
             }
         } else {
-            let selectedSchema = JSON.parse(JSON.stringify(this.state.selectedSchema));
-            selectedSchema.kpi_id = "";
-            selectedSchema.kpi_zhname = "指标中文名称";
-            selectedSchema.kpi_enname = "指标英文名称";
-            selectedSchema.kpi_exp = "指标计算表达式";
-            selectedSchema.kpi_alarm = 1;
-            selectedSchema.kpi_format = 1;
-            selectedSchema.kpi_min_value = "最小值";
-            selectedSchema.kpi_max_value = "最大值";
-            selectedSchema.kpi_used_product = -1;
-            selectedSchema.kpi_used_module = -1;
-            selectedSchema.kpi_used_title = "界面呈现标题";
+            let selectedKpi = lodash.cloneDeep(this.state.selectedKpi);
+            selectedKpi.id = -1;
+            selectedKpi.kpi_id = "";
+            selectedKpi.kpi_zhname = "指标中文名称";
+            selectedKpi.kpi_enname = "指标英文名称";
+            selectedKpi.kpi_exp = "指标计算表达式";
+            selectedKpi.kpi_alarm = 1;
+            selectedKpi.kpi_format = 1;
+            selectedKpi.kpi_min_value = "最小值";
+            selectedKpi.kpi_max_value = "最大值";
+            selectedKpi.kpi_used_product = -1;
+            selectedKpi.kpi_used_module = -1;
+            selectedKpi.kpi_used_title = "界面呈现标题";
 
             this.setState({
-                    selectedSchema: selectedSchema
+                    selectedKpi: selectedKpi
                 }
             )
         }
@@ -1101,7 +1355,7 @@ export default class ServicePerformance extends React.PureComponent {
 
         }
         // schemaId = strBb + "-260-" + strA1 + "-" + strA2 + "-" + strB + "-" + strC;
-        schemaId = parseInt(strBb + "260" + strA1 + strA2 + strB + strC);
+        schemaId = strBb + "260" + strA1 + strA2 + strB + strC;
 
         selectedSchema.schema_id = schemaId;
 
@@ -1160,7 +1414,6 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     async onButtonSchemasAddClicked(e) {
-        //todo:: 2021-06-18
         let schema = new TadKpiSchema();
         schema.schema_zhname = "新增指标组";
 
@@ -1170,7 +1423,7 @@ export default class ServicePerformance extends React.PureComponent {
             this.context.showMessage("创建成功，新增指标组内部ID为：" + myResult.data.id);
 
             schema.id = myResult.data.id;
-            schema.schema_id = 99260000261 + schema.id;
+            schema.schema_id = (99260000261 + schema.id).toString();
 
             if (!this.gMap.schemas.has) {
                 this.gMap.schemas.set(schema.id, schema);
@@ -1197,61 +1450,62 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     onButtonSchemasCopyPasteClicked(e) {
-        let treeDataKpiSchemas = JSON.parse(JSON.stringify(this.state.treeDataKpiSchemas));
-
-        let n = treeDataKpiSchemas.length;
-        this.gCurrent.schemasChecked.forEach((itemSchema) => {
-            let schemaId = itemSchema.key.split("_")[1];
-            let ids = schemaId.split("260");
-            let idObjectClassFirst = ids[0];
-            let idFixed = "260";
-            let idType = ids[1][0];
-            let idTime = ids[1][1];
-            let regionClass = "";
-            let idObjectClassSecond = ids[1].substr(2, 2);
-            let idIndex = ids[1].substr(4, 2);
-            let objectClass = parseInt(idObjectClassFirst + idObjectClassSecond);
-            if (((objectClass >= 50) && (objectClass <= 59)) || ((objectClass >= 50) && (objectClass <= 59)) || (objectClass === 99) || (objectClass === 199)) {
-                regionClass = objectClass;
-                objectClass = idIndex;
-                idIndex = "";
-            }
-            let schemaIdNew = "";
-            if (regionClass === "") {
-                schemaIdNew = idObjectClassFirst + idFixed + idType + "X" + idObjectClassSecond + idIndex;
-            } else {
-                schemaIdNew = idObjectClassFirst + idFixed + idType + "X" + idObjectClassSecond + idIndex;
-            }
-
-            schemaId = parseInt(schemaId);
-
-            let schema = this.gMap.schemas.get(schemaId);
-            this.context.showMessage("add schema...", idType, idTime, idObjectClassFirst + idObjectClassSecond, idIndex, schemaIdNew);
-            n++;
-            treeDataKpiSchemas.push({
-                key: n + "_" + schemaId,
-                title: n + " - " + schemaId + " - " + schema.schema_zhname + " - 副本",
-                children: []
-            })
-
-
-            schema.kpis.forEach((kpi) => {
-                this.context.showMessage("add kpi...", kpi.kpi_id);
-                // todo:: add kpi
-            })
-        });
-
-        this.setState({
-            treeDataKpiSchemas: treeDataKpiSchemas
-        });
+        this.context.showMessage("开发中...");
+        // let treeDataKpiSchemas = lodash.cloneDeep(this.state.treeDataKpiSchemas);
+        //
+        // let n = treeDataKpiSchemas.length;
+        // this.gCurrent.schemasChecked.forEach((itemSchema) => {
+        //     let schemaId = itemSchema.key.split("_")[1];
+        //     let ids = schemaId.split("260");
+        //     let idObjectClassFirst = ids[0];
+        //     let idFixed = "260";
+        //     let idType = ids[1][0];
+        //     let idTime = ids[1][1];
+        //     let regionClass = "";
+        //     let idObjectClassSecond = ids[1].substr(2, 2);
+        //     let idIndex = ids[1].substr(4, 2);
+        //     let objectClass = parseInt(idObjectClassFirst + idObjectClassSecond);
+        //     if (((objectClass >= 50) && (objectClass <= 59)) || ((objectClass >= 50) && (objectClass <= 59)) || (objectClass === 99) || (objectClass === 199)) {
+        //         regionClass = objectClass;
+        //         objectClass = idIndex;
+        //         idIndex = "";
+        //     }
+        //     let schemaIdNew = "";
+        //     if (regionClass === "") {
+        //         schemaIdNew = idObjectClassFirst + idFixed + idType + "X" + idObjectClassSecond + idIndex;
+        //     } else {
+        //         schemaIdNew = idObjectClassFirst + idFixed + idType + "X" + idObjectClassSecond + idIndex;
+        //     }
+        //
+        //     schemaId = parseInt(schemaId);
+        //
+        //     let schema = this.gMap.schemas.get(schemaId);
+        //     this.context.showMessage("add schema...", idType, idTime, idObjectClassFirst + idObjectClassSecond, idIndex, schemaIdNew);
+        //     n++;
+        //     treeDataKpiSchemas.push({
+        //         key: n + "_" + schemaId,
+        //         title: n + " - " + schemaId + " - " + schema.schema_zhname + " - 副本",
+        //         children: []
+        //     })
+        //
+        //
+        //     schema.kpis.forEach((kpi) => {
+        //         this.context.showMessage("add kpi...", kpi.id);
+        //         // todo:: add kpi
+        //     })
+        // });
+        //
+        // this.setState({
+        //     treeDataKpiSchemas: treeDataKpiSchemas
+        // });
     }
 
-    onButtonSchemasDeleteClicked(e) {
+    doDeleteSchema() {
         let schema = new TadKpiSchema();
         const {selectedSchema} = this.state;
         schema.id = selectedSchema.id;
 
-        this.doDeleteSchema(schema).then((result) => {
+        this.restDeleteSchema(schema).then((result) => {
             if (result.status === 200) {
                 if (result.data.success) {
                     this.uiUpdateSchema("delete");
@@ -1263,6 +1517,47 @@ export default class ServicePerformance extends React.PureComponent {
                 this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
             }
         });
+    }
+
+    doDeleteKpi() {
+        let kpi = new TadKpi();
+        const {selectedKpi} = this.state;
+        kpi.id = selectedKpi.id;
+
+        this.restDeleteKpi(kpi).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateKpi(result.data.data,"delete");
+                    //todo:: this.dsUpdateKpi(result.data.data, "delete");
+                    this.context.showMessage("删除成功，被删除指标ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doDeleteCounter() {
+        this.context.showMessage("移除统计数据，开发中...");
+
+        // let schema = new TadKpiSchema();
+        // const {selectedSchema} = this.state;
+        // schema.id = selectedSchema.id;
+        //
+        // this.restDeleteSchema(schema).then((result) => {
+        //     if (result.status === 200) {
+        //         if (result.data.success) {
+        //             this.uiUpdateSchema("delete");
+        //             this.context.showMessage("保存成功，指标组ID为：" + result.data.schema_id);
+        //         } else {
+        //             this.context.showMessage("调用服务接口出现问题，详情：" + result.message);
+        //         }
+        //     } else {
+        //         this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+        //     }
+        // });
     }
 
     onButtonSchemasExportClicked(e) {
@@ -1296,11 +1591,31 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     onButtonKpisAddClicked(e) {
-        this.context.showMessage("增加指标，开发中...");
+        //todo:: 2021-06-21
+        let kpi = new TadKpi();
+        const {selectedSchema} = this.state;
+        kpi.schema_id = selectedSchema.id;
+        kpi.kpi_id = selectedSchema.schema_id.replace(/260/, "");
+        kpi.kpi_zhname = "新增指标";
+
+        this.doAddKpi(kpi).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateKpi(result.data.data, "add");
+                    //todo:: this.dsUpdateKpi(result.data.data, "add");
+                    this.context.showMessage("创建成功，新增指标内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
     }
 
     onButtonKpisCopyPasteClicked(e) {
 
+        this.context.showMessage("开发中...");
     }
 
     onButtonKpisDeleteClicked(e) {
@@ -1339,6 +1654,36 @@ export default class ServicePerformance extends React.PureComponent {
     onButtonIndicatorsExportClicked(e) {
         this.context.showMessage("导出规范指标，开发中...");
     }
+
+    onModalButtonOkClicked() {
+        const {modalWhat} = this.state;
+
+        switch (modalWhat) {
+            case "删除指标组":
+                this.doDeleteSchema();
+                break
+            case "删除指标":
+                this.doDeleteKpi();
+                break
+            case "删除统计数据":
+                this.doDeleteCounter();
+                break
+            default:
+                break
+        }
+
+        this.setState({
+            isModalVisible: false
+        });
+    }
+
+    onModalButtonCancelClicked() {
+        this.setState({
+            isModalVisible: false,
+            modalWhat: ""
+        })
+    }
+
 
     // >>> TABLE <<<
 
@@ -1394,14 +1739,27 @@ export default class ServicePerformance extends React.PureComponent {
 
     // >>> INPUT <<<
 
-    onInputSchemaZhNameChanged(e) {
-        let selectedSchema = lodash.cloneDeep(this.state.selectedSchema);
+    onInputSchemaZhNameChanged(e)  {
+        //console.log(e.target.value);
+        // let df = lodash.debounce((e) => {
+        //     console.log(e.target.value);
+        //     let selectedSchema = lodash.cloneDeep(this.state.selectedSchema);
+        //
+        //     selectedSchema.schema_zhname = e.target.value;
+        //
+        //     this.setState({
+        //         selectedSchema: selectedSchema
+        //     });
+        // }, 100);
+        //
+        // df(e);
 
-        selectedSchema.schema_zhname = e.target.value;
+        this.setState((prevState) => {
+            return produce(prevState, draftState => {
+                draftState.selectedSchema.schema_zhname = e.target.value;
+            })
+        })
 
-        this.setState({
-            selectedSchema: selectedSchema
-        });
     }
 
     onInputSearchSchemaChange(e) {
@@ -1418,6 +1776,7 @@ export default class ServicePerformance extends React.PureComponent {
 
         if (value !== "") {
             this.gData.kpis.forEach(function (item) {
+                let kid = item.id;
                 let kpiId = item.kpi_id === null ? -1 : item.kpi_id;
                 let kpiName = item.kpi_zhname === null ? "" : item.kpi_zhname;
                 let schemaId = item.schema_id === null ? -1 : item.schema_id;
@@ -1432,7 +1791,7 @@ export default class ServicePerformance extends React.PureComponent {
                     if ((kpiName.indexOf(value) >= 0) || (kpiId.toString().indexOf(value) >= 0)) {
                         setSchemas.add(schemaId);
                         let uiKpi = {
-                            key: kpiId,
+                            key: kid,
                             title: kpiId + " - " + kpiName,
                             children: []
                         }
@@ -1555,6 +1914,7 @@ export default class ServicePerformance extends React.PureComponent {
 
     }
 
+    // todo:: kpi_id number to string
     onInputSearchSchemasSearched(value, event) {
         let sv = value;
 
@@ -1595,7 +1955,6 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     render() {
-
         return (
             <Fragment>
                 <div key="ComponentServicePerformance"
@@ -1620,7 +1979,8 @@ export default class ServicePerformance extends React.PureComponent {
                                             size={"small"}
                                             type={"primary"}
                                             icon={<MinusSquareOutlined/>}
-                                            onClick={this.onButtonSchemasDeleteClicked}>删除</Button>
+                                            // onClick={this.onButtonSchemasDeleteClicked}
+                                            onClick={() => {this.showModal("删除指标组")}}>删除</Button>
                                         <Button
                                             size={"small"}
                                             type={"primary"}
@@ -1666,13 +2026,13 @@ export default class ServicePerformance extends React.PureComponent {
                                     <div className={"BoxTreeInstance"}>
                                         <Tree
                                             ref={this.refTreeSchema}
-                                            checkable
+                                            // checkable
+                                            // onCheck={this.onTreeKpiSchemasChecked}
                                             blockNode={true}
                                             showLine={{showLeafIcon: false}}
                                             showIcon={true}
                                             switcherIcon={<CaretDownOutlined/>}
                                             onSelect={this.onTreeKpiSchemasSelected}
-                                            onCheck={this.onTreeKpiSchemasChecked}
                                             treeData={this.state.treeDataKpiSchemas}
                                         />
                                     </div>
@@ -1708,7 +2068,7 @@ export default class ServicePerformance extends React.PureComponent {
                                                         size={"small"}
                                                         type={"primary"}
                                                         icon={<MinusSquareOutlined/>}
-                                                        onClick={this.onButtonKpisDeleteClicked}>删除</Button>
+                                                        onClick={() => {this.showModal("删除指标")}}>删除</Button>
                                                 </div>
                                             </Fragment>) : (<Fragment>
                                                 <div>&nbsp;</div>
@@ -1727,13 +2087,13 @@ export default class ServicePerformance extends React.PureComponent {
                                             <div className={"BoxTree"}>
                                                 <div className={"BoxTree2"}>
                                                     <Tree
-                                                        checkable
+                                                        // checkable
+                                                        // onCheck={this.onTreeKpisChecked}
                                                         blockNode={true}
                                                         showLine={{showLeafIcon: false}}
                                                         showIcon={true}
                                                         switcherIcon={<CaretDownOutlined/>}
                                                         onSelect={this.onTreeKpisSelected}
-                                                        onCheck={this.onTreeKpisChecked}
                                                         treeData={this.state.treeDataKpis}
                                                     /></div>
                                             </div>
@@ -1751,7 +2111,7 @@ export default class ServicePerformance extends React.PureComponent {
                                                         size={"small"}
                                                         type={"primary"}
                                                         icon={<MinusSquareOutlined/>}
-                                                        onClick={this.onButtonCountersDeleteClicked}>删除</Button>
+                                                        onClick={() => {this.showModal("删除统计数据")}}>删除</Button>
                                                 </div>
                                                 <div>
                                                     <Button
@@ -1764,13 +2124,13 @@ export default class ServicePerformance extends React.PureComponent {
                                             <div className={"BoxTree"}>
                                                 <div className={"BoxTree2"}>
                                                     <Tree
-                                                        checkable
+                                                        // checkable
+                                                        // onCheck={this.onTreeKpisChecked}
                                                         blockNode={true}
                                                         showLine={{showLeafIcon: false}}
                                                         showIcon={true}
                                                         switcherIcon={<CaretDownOutlined/>}
                                                         onSelect={this.onTreeKpisSelected}
-                                                        onCheck={this.onTreeKpisChecked}
                                                         treeData={this.state.treeDataKpiCounters}
                                                     /></div>
                                             </div>
@@ -1869,7 +2229,7 @@ export default class ServicePerformance extends React.PureComponent {
                                             </div>
                                         </div>
                                         <div className={"BoxTitleBar"}>
-                                            <div className={"BoxTitle"}>指标属性 - {this.state.selectedSchema.kpi_id}</div>
+                                            <div className={"BoxTitle"}>指标属性 - {this.state.selectedKpi.kpi_id}</div>
                                             <div className={"BoxButtons"}>
                                                 <Button
                                                     size={"small"}
@@ -1892,8 +2252,8 @@ export default class ServicePerformance extends React.PureComponent {
                                         </div>
                                         <div className={"BoxPropertiesKpi"}>
                                             <div className={"BoxNames"}>
-                                                <Input value={this.state.selectedSchema.kpi_zhname}/>
-                                                <Input value={this.state.selectedSchema.kpi_enname}/>
+                                                <Input value={this.state.selectedKpi.kpi_zhname}/>
+                                                <Input value={this.state.selectedKpi.kpi_enname}/>
                                             </div>
                                             <div className={"BoxKpiValues"}>
                                                 <Select defaultValue="1">
@@ -1904,8 +2264,8 @@ export default class ServicePerformance extends React.PureComponent {
                                                     <Option value="0">不指定格式</Option>
                                                     <Option value="1">格式：R2</Option>
                                                 </Select>
-                                                <Input value={this.state.selectedSchema.kpi_min_value}/>
-                                                <Input value={this.state.selectedSchema.kpi_max_value}/>
+                                                <Input value={this.state.selectedKpi.kpi_min_value}/>
+                                                <Input value={this.state.selectedKpi.kpi_max_value}/>
                                             </div>
                                             <div className={"BoxUsedInfo"}>
                                                 <div className={"BoxProductModuleName"}>
@@ -1915,13 +2275,13 @@ export default class ServicePerformance extends React.PureComponent {
                                                     <Select defaultValue="-1">
                                                         <Option value="-1">使用该指标的模块</Option>
                                                     </Select>
-                                                    <Input value={this.state.selectedSchema.kpi_used_title}/>
+                                                    <Input value={this.state.selectedKpi.kpi_used_title}/>
                                                     <Button icon={<PlusOutlined/>}/>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className={"BoxKpiExp"}>
-                                            <TextArea autoSize={{minRows: 3, maxRows: 5}} value={this.state.selectedSchema.kpi_exp}/>
+                                            <TextArea autoSize={{minRows: 3, maxRows: 5}} value={this.state.selectedKpi.kpi_exp}/>
                                         </div>
                                     </Fragment>
                                 ) : (<Fragment>
@@ -2064,6 +2424,12 @@ export default class ServicePerformance extends React.PureComponent {
                             )}
                         </div>
                     </div>
+                    <Modal title="系统提示窗口"
+                           visible={this.state.isModalVisible}
+                           onOk={this.onModalButtonOkClicked}
+                           onCancel={this.onModalButtonCancelClicked}>
+                        <p>{this.state.modalMessage}</p>
+                    </Modal>
                 </div>
             </Fragment>
         )

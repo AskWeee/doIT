@@ -13,10 +13,19 @@ export default class TadKpi{
         this.kpi_min_value = null;
         this.kpi_max_value = null;
         // this.used_info = null;
-
-        // let t = "TadKpi_" + Math.floor(Math.random()*100000);
-        // this.key = t;
-        // this.title = t;
-        // this.children = [];
+    }
+    init() {
+        this.id = -1;
+        this.kpi_id = "";
+        this.kpi_zhname = "指标中文名称";
+        this.kpi_enname = "指标英文名称";
+        this.kpi_exp = "指标计算表达式";
+        this.kpi_alarm = 1; // 默认告警
+        this.kpi_format = 1; // 默认格式R2
+        this.kpi_min_value = "最小值";
+        this.kpi_max_value = "最大值";
+        this.kpi_used_product = -1;
+        this.kpi_used_module = -1;
+        this.kpi_used_title = "界面呈现标题";
     }
 }
