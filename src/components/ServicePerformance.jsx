@@ -1,10 +1,10 @@
-import React, {Fragment} from 'react'
+import React, { Fragment } from 'react'
 import './ServicePerformance.scss'
 import moment from 'moment';
 import axios from "axios";
 import lodash from "lodash";
 import GCtx from "../GCtx";
-import {Button, Input, Select, Table, Tree, Modal} from 'antd'
+import { Button, Input, Select, Table, Tree, Modal, Form, Tooltip } from 'antd'
 import {
     BranchesOutlined,
     CaretDownOutlined,
@@ -20,9 +20,10 @@ import {
     SaveOutlined,
     UndoOutlined,
     LayoutOutlined,
+    QuestionCircleOutlined,
 } from '@ant-design/icons'
 import Mock from 'mockjs'
-import {produce} from 'immer';
+import { produce } from 'immer';
 import XLSX from 'xlsx';
 import KColumnTitle from "./KColumnTitle";
 import TadDbConnection from "../entity/TadDbConnection";
@@ -31,9 +32,9 @@ import TadKpi from "../entity/TadKpi";
 import TadIndicator from "../entity/TadIndicator";
 import TadIndicatorCounter from "../entity/TadIndicatorCounter";
 
-const {Option} = Select;
-const {TextArea} = Input;
-const {Column} = Table;
+const { Option } = Select;
+const { TextArea } = Input;
+const { Column } = Table;
 
 export default class ServicePerformance extends React.PureComponent {
     static contextType = GCtx;
@@ -60,10 +61,17 @@ export default class ServicePerformance extends React.PureComponent {
     };
     gMap = {};
     gData = {};
-    gCurrent = {};
+    gCurrent = {
+        schema: null,
+        kpi: null,
+        counter: null,
+        indicatorCounters: []
+    };
     gRef = {};
     refBoxDetail = React.createRef();
     refTreeSchema = React.createRef();
+    refFormSchemaProperties = React.createRef();
+    refFormKpiProperties = React.createRef();
     gDynamic = {
         schemaId: {
             a1: -99999,
@@ -90,10 +98,10 @@ export default class ServicePerformance extends React.PureComponent {
             treeDataKpis: [],
             treeDataKpiCounters: [],
 
-            optionsSchemaIdA1: [{label: "业务分类", value: -99999}],
-            optionsSchemaIdA2: [{label: "时间粒度", value: -99999}],
-            optionsSchemaIdB1: [{label: "空间粒度", value: -99999}],
-            optionsSchemaIdB2: [{label: "网元类型", value: -99999}],
+            optionsSchemaIdA1: [{ label: "业务分类", value: -99999 }],
+            optionsSchemaIdA2: [{ label: "时间粒度", value: -99999 }],
+            optionsSchemaIdB1: [{ label: "空间粒度", value: -99999 }],
+            optionsSchemaIdB2: [{ label: "网元类型", value: -99999 }],
             pageSizeIndicators: 50,
             columnsIndicator: [],
             columnWidths: {
@@ -132,14 +140,17 @@ export default class ServicePerformance extends React.PureComponent {
             },
             selectedKpi: {
                 id: -1,
+                sid: -1,
                 kpi_id: "",
+                kpi_field: "",
                 kpi_zhname: "指标中文名称",
                 kpi_enname: "指标英文名称",
-                kpi_exp: "指标计算表达式",
                 kpi_alarm: 1, // 默认告警
                 kpi_format: 1, // 默认格式R2
                 kpi_min_value: "最小值",
                 kpi_max_value: "最大值",
+                kpi_exp: "指标计算表达式",
+                kpi_used_info: "",
                 kpi_used_product: -1,
                 kpi_used_module: -1,
                 kpi_used_title: "界面呈现标题",
@@ -147,8 +158,9 @@ export default class ServicePerformance extends React.PureComponent {
             tablePropertiesScrollX: 1920,
             tableIndicatorCountersScrollX: 1920,
             tablePropertiesScrollY: 200,
-        }
 
+        }
+        //TODO:BM: 事件绑定
         this.test = this.test.bind(this);
         this.doMock = this.doMock.bind(this);
 
@@ -163,23 +175,25 @@ export default class ServicePerformance extends React.PureComponent {
         this.doGetKpiCounters = this.doGetKpiCounters.bind(this);
         this.doGetExcel = this.doGetExcel.bind(this);
 
-        this.adoAddSchema = this.adoAddSchema.bind(this);
-        this.adoUpdateSchema = this.adoUpdateSchema.bind(this);
-
         this.restDeleteSchema = this.restDeleteSchema.bind(this);
         this.restDeleteKpi = this.restDeleteKpi.bind(this);
         this.restDeleteCounter = this.restDeleteCounter.bind(this);
+        this.restAddKpi = this.restAddKpi.bind(this);
+        this.restUpdateKpi = this.restUpdateKpi.bind(this);
 
+        this.adoAddSchema = this.adoAddSchema.bind(this);
         this.doDeleteSchema = this.doDeleteSchema.bind(this);
-        this.doDeleteKpi = this.doDeleteKpi.bind(this);
+        this.doUpdateSchema = this.doUpdateSchema.bind(this);
         this.doDeleteCounter = this.doDeleteCounter.bind(this);
-        this.doAddKpi = this.doAddKpi.bind(this);
-        this.doUpdateKpi = this.doUpdateKpi.bind(this);
+        this.doDeleteKpi = this.doDeleteKpi.bind(this);
 
-        this.onTreeKpiSchemasSelected = this.onTreeKpiSchemasSelected.bind(this);
-        this.onTreeKpisSelected = this.onTreeKpisSelected.bind(this);
         this.onTreeKpiSchemasChecked = this.onTreeKpiSchemasChecked.bind(this);
+        this.onTreeKpiSchemasSelected = this.onTreeKpiSchemasSelected.bind(this);
+
+        this.onTreeKpisSelected = this.onTreeKpisSelected.bind(this);
         this.onTreeKpisChecked = this.onTreeKpisChecked.bind(this);
+        this.onTreeKpisDragEnter = this.onTreeKpisDragEnter.bind(this);
+        this.onTreeKpisDrop = this.onTreeKpisDrop.bind(this);
 
         this.onButtonProductsChangeComponentSizeClicked = this.onButtonProductsChangeComponentSizeClicked.bind(this);
         this.onButtonChangeComponentLayoutUpDownClicked = this.onButtonChangeComponentLayoutUpDownClicked.bind(this);
@@ -188,15 +202,12 @@ export default class ServicePerformance extends React.PureComponent {
         this.onButtonSchemasAddClicked = this.onButtonSchemasAddClicked.bind(this);
         this.onButtonSchemasCopyPasteClicked = this.onButtonSchemasCopyPasteClicked.bind(this);
         this.onButtonSchemasExportClicked = this.onButtonSchemasExportClicked.bind(this);
-        this.onButtonSchemasSaveClicked = this.onButtonSchemasSaveClicked.bind(this);
         this.onButtonSchemasResetClicked = this.onButtonSchemasResetClicked.bind(this);
         this.onButtonSchemasCommitClicked = this.onButtonSchemasCommitClicked.bind(this);
 
         this.onButtonKpisAddClicked = this.onButtonKpisAddClicked.bind(this);
         this.onButtonKpisCopyPasteClicked = this.onButtonKpisCopyPasteClicked.bind(this);
         this.onButtonKpisDeleteClicked = this.onButtonKpisDeleteClicked.bind(this);
-        this.onButtonKpisSaveClicked = this.onButtonKpisSaveClicked.bind(this);
-        this.onButtonKpisResetClicked = this.onButtonKpisResetClicked.bind(this);
 
         this.onButtonIndicatorsCopy2CountersClicked = this.onButtonIndicatorsCopy2CountersClicked.bind(this);
         this.onButtonIndicatorsRefreshClicked = this.onButtonIndicatorsRefreshClicked.bind(this);
@@ -229,6 +240,13 @@ export default class ServicePerformance extends React.PureComponent {
 
         this.uiUpdateCounter = this.uiUpdateCounter.bind(this);
         this.showModal = this.showModal.bind(this);
+
+        this.onFormSchemaPropertiesFinish = this.onFormSchemaPropertiesFinish.bind(this);
+        this.onFormSchemaPropertiesFinishFailed = this.onFormSchemaPropertiesFinishFailed.bind(this);
+        this.onFormKpiPropertiesFinish = this.onFormKpiPropertiesFinish.bind(this);
+        this.onFormKpiPropertiesFinishFailed = this.onFormKpiPropertiesFinishFailed.bind(this);
+        this.onFormSchemaPropertiesFill = this.onFormSchemaPropertiesFill.bind(this);
+        this.onFormKpiPropertiesFill = this.onFormKpiPropertiesFill.bind(this);
     }
 
     test() {
@@ -320,7 +338,7 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     toUiSchemas(ds, sv) {
-        let myResult = {mapDs: new Map(), uiDs: [], mapRelation: new Map()}
+        let myResult = { mapDs: new Map(), uiDs: [], mapRelation: new Map() }
 
         for (let i = 0; i < ds.length; i++) {
             let item = ds[i];
@@ -371,12 +389,15 @@ export default class ServicePerformance extends React.PureComponent {
         return myResult;
     }
 
-    uiUpdateSchema(what) {
-        const {selectedSchema} = this.state;
+    uiUpdateSchema(schema, what) {
+        const { selectedSchema } = this.state;
 
         let treeDataKpiSchemas = lodash.cloneDeep(this.state.treeDataKpiSchemas);
 
         switch (what) {
+            case "add":
+
+                break
             case "update":
                 for (let i = 0; i < treeDataKpiSchemas.length; i++) {
                     let item = treeDataKpiSchemas[i];
@@ -406,7 +427,6 @@ export default class ServicePerformance extends React.PureComponent {
                 break;
         }
 
-        //todo::update gMap.schemas
 
         this.setState({
             treeDataKpiSchemas: treeDataKpiSchemas
@@ -414,13 +434,14 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     dsUpdateSchema(schema, what) {
+        //todo::update gMap.schemas
         switch (what) {
             case "add":
-                this.gMap.set(schema.id, schema);
+                this.gMap.schemas.set(schema.id, schema);
                 break
             case "update":
-                if (this.gMap.has(schema.id)) {
-                    let oldSchema = this.gMap.get(schema.id);
+                if (this.gMap.schemas.has(schema.id)) {
+                    let oldSchema = this.gMap.schemas.get(schema.id);
                     oldSchema.schema_id = schema.schema_id;
                     oldSchema.schema_zhname = schema.schema_zhname;
                     oldSchema.vendor_id = schema.vendor_id;
@@ -428,9 +449,9 @@ export default class ServicePerformance extends React.PureComponent {
                     oldSchema.sub_class = schema.sub_class;
                     oldSchema.interval_flag = schema.interval_flag;
 
-                    this.gMap.get(schema.id).kpis.forEach((kpi) => {
-                        if (this.gMap.kpis.has(kpi.id)) {
-                            let mapKpi = this.gMap.kpis.get(kpi.id);
+                    this.gMap.schemas.get(schema.id).kpis.forEach((kpi) => {
+                        if (this.gMap.schemas.get(schema.id).kpis.has(kpi.id)) {
+                            let mapKpi = this.gMap.schemas.get(schema.id).kpis.get(kpi.id);
                             let oldSchemaId = oldSchema.schema_id.replace(/260/, "");
                             let newSchemaId = schema.schema_id.replace(/260/, "");
                             let oldKpiIndex = mapKpi.kpi_id.toString().split(oldSchemaId)[1]
@@ -440,14 +461,14 @@ export default class ServicePerformance extends React.PureComponent {
                 }
                 break
             case "delete":
-                if (this.gMap.has(schema.id)) {
+                if (this.gMap.schemas.has(schema.id)) {
 
-                    this.gMap.get(schema.id).kpis.forEach((kpi) => {
-                        if (this.gMap.kpis.has(kpi.id)) {
-                            this.gMap.kpis.delete(kpi.id);
+                    this.gMap.schemas.get(schema.id).kpis.forEach((kpi) => {
+                        if (this.gMap.schemas.get(schema.id).kpis.has(kpi.id)) {
+                            this.gMap.schemas.get(schema.id).kpis.delete(kpi.id);
                         }
                     })
-                    this.gMap.delete(schema.id);
+                    this.gMap.schemas.delete(schema.id);
                 }
                 break
             default:
@@ -455,8 +476,8 @@ export default class ServicePerformance extends React.PureComponent {
         }
     }
 
+    //TODO:BM: ui update kpi...
     uiUpdateKpi(kpi, what) {
-        //const {selectedKpi} = this.state;
         let treeDataKpis;
 
         switch (what) {
@@ -513,56 +534,40 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     dsUpdateKpi(kpi, what) {
-        //const {selectedKpi} = this.state;
-        let treeDataKpis;
-
         switch (what) {
             case "add":
-                let uiKpi = {
-                    key: kpi.id,
-                    title: kpi.kpi_id + " - " + kpi.kpi_zhname,
-                    children: []
+                if (this.gMap.schemas.has(kpi.sid)) {
+                    this.gMap.schemas.get(kpi.sid).kpis.push(lodash.cloneDeep(kpi));
                 }
-
-                this.setState((prevState) => {
-                    return produce(prevState, draftState => {
-                        draftState.treeDataKpis.push(uiKpi);
-                    })
-                })
                 break
             case "update":
-                treeDataKpis = lodash.cloneDeep(this.state.treeDataKpis);
-
-                for (let i = 0; i < treeDataKpis.length; i++) {
-                    let item = treeDataKpis[i];
-                    if (item.key === kpi.id) {
-                        item.title = <div className="BoxKpiTitle">{kpi.kpi_id + " - " + kpi.kpi_zhname}</div>
-                        break
+                if (this.gMap.schemas.has(kpi.sid)) {
+                    let kpis = this.gMap.schemas.get(kpi.sid).kpis;
+                    for (let i = 0; i < kpis.length; i++) {
+                        if (kpis[i].id === kpi.id) {
+                            kpis[i].kpi_zhname = kpi.kpi_zhname;
+                            kpis[i].kpi_enname = kpi.kpi_enname;
+                            kpis[i].kpi_alarm = kpi.kpi_alarm;
+                            kpis[i].kpi_format = kpi.kpi_format;
+                            kpis[i].kpi_min_value = kpi.kpi_min_value;
+                            kpis[i].kpi_max_value = kpi.kpi_max_value;
+                            kpis[i].kpi_exp = kpi.kpi_exp;
+                            kpis[i].used_info = kpi.used_info;
+                            break
+                        }
                     }
                 }
-                this.setState({
-                    treeDataKpis: treeDataKpis
-                })
                 break
             case "delete":
-                treeDataKpis = lodash.cloneDeep(this.state.treeDataKpis);
-                let index = -1;
-                for (let i = 0; i < treeDataKpis.length; i++) {
-                    let item = treeDataKpis[i];
-                    if (item.key === kpi.id) {
-                        index = i;
-                        break
+                if (this.gMap.schemas.has(kpi.sid)) {
+                    let kpis = this.gMap.schemas.get(kpi.sid).kpis;
+                    for (let i = 0; i < kpis.length; i++) {
+                        if (kpis[i].id === kpi.id) {
+                            kpis.splice(i, 1);
+                            break
+                        }
                     }
                 }
-                treeDataKpis.splice(index, 1);
-                let newKpi = new TadKpi();
-                newKpi.init();
-                this.setState({
-                    selectedKpi: newKpi
-                });
-                this.setState({
-                    treeDataKpis: treeDataKpis
-                })
                 break
             default:
                 break;
@@ -604,7 +609,7 @@ export default class ServicePerformance extends React.PureComponent {
         //         break;
         // }
         //
-        // //todo::update gMap.schemas
+        //
         //
         // this.setState({
         //     treeDataKpiSchemas: treeDataKpiSchemas
@@ -617,7 +622,7 @@ export default class ServicePerformance extends React.PureComponent {
 
     data2UiTable(data) {
         let myResult = [];
-        let arrWidths = {izn: 13, czn: 13, cen: 13};
+        let arrWidths = { izn: 13, czn: 13, cen: 13 };
 
         for (let i = 0; i < data.length; i++) {
             let item = data[i];
@@ -663,7 +668,7 @@ export default class ServicePerformance extends React.PureComponent {
     };
 
     // >>> do get <<<
-
+    //TODO:BM: doGetAll...
     doGetAll() {
         axios.all([
             this.doGetKpiDict(),
@@ -677,17 +682,17 @@ export default class ServicePerformance extends React.PureComponent {
             kpis,
             schemas,
             counters,
-            indicators,
+            // indicators,
             indicatorCounters) => {
             let mapKpiDict = new Map();
             let mapKpis = new Map();
-            let mapIndicators = new Map();
+            // let mapIndicators = new Map();
 
             this.gData.kpiDict = kpiDict.data.data;
             this.gData.kpis = kpis.data.data;
             this.gData.schemas = schemas.data.data;
             this.gData.counters = counters.data.data;
-            this.gData.indicators = indicators.data.data;
+            // this.gData.indicators = indicators.data.data;
             this.gData.indicatorCounters = indicatorCounters.data.data;
 
             // kpi dict ...
@@ -700,28 +705,28 @@ export default class ServicePerformance extends React.PureComponent {
             });
             this.gMap.kpiDict = mapKpiDict;
             if (this.gMap.kpiDict.has(1021)) {
-                let options = [{label: "业务分类", value: -99999}];
+                let options = [{ label: "业务分类", value: -99999 }];
                 this.gMap.kpiDict.get(1021).forEach((value, key) => {
-                    options.push({label: value.txt, value: value.id});
+                    options.push({ label: value.txt, value: value.id });
                 });
                 this.setState({
                     optionsSchemaIdA1: options
                 })
             }
             if (this.gMap.kpiDict.has(1022)) {
-                let options = [{label: "时间粒度", value: -99999}];
+                let options = [{ label: "时间粒度", value: -99999 }];
                 this.gMap.kpiDict.get(1022).forEach((value, key) => {
-                    options.push({label: value.txt, value: value.id});
+                    options.push({ label: value.txt, value: value.id });
                 });
                 this.setState({
                     optionsSchemaIdA2: options
                 })
             }
             if (this.gMap.kpiDict.has(1023)) {
-                let options = [{label: "空间粒度", value: -99999}];
+                let options = [{ label: "空间粒度", value: -99999 }];
                 this.gMap.kpiDict.get(1023).forEach((value, key) => {
                     if (this.ids.includes(value.id)) {
-                        options.push({label: value.txt + "-" + value.id, value: value.id});
+                        options.push({ label: value.txt + "-" + value.id, value: value.id });
                     }
                 });
                 this.setState({
@@ -729,10 +734,10 @@ export default class ServicePerformance extends React.PureComponent {
                 })
             }
             if (this.gMap.kpiDict.has(1023)) {
-                let options = [{label: "网元类型", value: -99999}];
+                let options = [{ label: "网元类型", value: -99999 }];
                 this.gMap.kpiDict.get(1023).forEach((value, key) => {
                     if (!this.ids.includes(value.id)) {
-                        options.push({label: value.txt, value: value.id});
+                        options.push({ label: value.txt, value: value.id });
                     }
                 });
                 this.setState({
@@ -741,6 +746,7 @@ export default class ServicePerformance extends React.PureComponent {
             }
 
             // indicator ...
+            /*
             let dsIndicators = [];
             let nKey = 0;
             let columnWidths = lodash.cloneDeep(this.gUi.tableIndicatorsColumnWidths);
@@ -791,7 +797,7 @@ export default class ServicePerformance extends React.PureComponent {
                     message: "共加载：" + this.state.dsIndicators.length + " 个指标"
                 })
             })
-
+            */
             // 生成 schema map and ui
             let mySchemas = this.toUiSchemas(this.gData.schemas);
 
@@ -812,8 +818,8 @@ export default class ServicePerformance extends React.PureComponent {
                         mapKpis.set(kid, myKpi);
                     }
 
-                    if (mySchemas.mapDs.has(item.schema_id)) {
-                        mySchemas.mapDs.get(item.schema_id).kpis.push(myKpi)
+                    if (mySchemas.mapDs.has(item.sid)) {
+                        mySchemas.mapDs.get(item.sid).kpis.push(myKpi)
                     }
                 }
 
@@ -841,61 +847,61 @@ export default class ServicePerformance extends React.PureComponent {
         params.db_password = "nmosoptr";
 
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpis", params,
-            {headers: {'Content-Type': 'application/json'}})
+            { headers: { 'Content-Type': 'application/json' } })
     }
 
     doGetKpis() {
         let params = new TadKpi();
 
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpis", params,
-            {headers: {'Content-Type': 'application/json'}})
+            { headers: { 'Content-Type': 'application/json' } })
     }
 
     doGetKpiSchemas() {
         let params = new TadKpiSchema();
 
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpi_schemas", params,
-            {headers: {'Content-Type': 'application/json'}})
+            { headers: { 'Content-Type': 'application/json' } })
     }
 
     doGetKpiCounters() {
         let params = new TadKpiSchema();
 
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpi_counters", params,
-            {headers: {'Content-Type': 'application/json'}})
+            { headers: { 'Content-Type': 'application/json' } })
     }
 
     doGetIndicators() {
         let params = {};
 
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_indicators", params,
-            {headers: {'Content-Type': 'application/json'}})
+            { headers: { 'Content-Type': 'application/json' } })
     }
 
     doGetIndicatorCounters() {
         let params = {};
 
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_indicator_counters", params,
-            {headers: {'Content-Type': 'application/json'}})
+            { headers: { 'Content-Type': 'application/json' } })
     }
 
     doGetKpiDict() {
         let params = {};
 
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpi_dict", params,
-            {headers: {'Content-Type': 'application/json'}})
+            { headers: { 'Content-Type': 'application/json' } })
     }
 
     doGetExcel() {
-        axios.get('data/counter_001.xlsx', {responseType: 'arraybuffer'}).then(res => {
-            let wb = XLSX.read(res.data, {type: 'array'});
+        axios.get('data/counter_001.xlsx', { responseType: 'arraybuffer' }).then(res => {
+            let wb = XLSX.read(res.data, { type: 'array' });
             let mapColumns = new Map();
             let mapIndicators = new Map();
 
             for (let i = 0; i < wb.SheetNames.length; i++) {
                 let range = XLSX.utils.decode_range(wb.Sheets[wb.SheetNames[i]]['!ref']);
                 for (let C = range.s.c; C <= range.e.c; ++C) {
-                    mapColumns.set(this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: 0})]), C);
+                    mapColumns.set(this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: 0 })]), C);
                 }
 
                 let C;
@@ -907,73 +913,73 @@ export default class ServicePerformance extends React.PureComponent {
                     myIndicator.excel_name = "counter_001.xlsx";
                     myIndicator.excel_sheet_name = wb.SheetNames[i];
                     C = this.getColumnIndex("设备类型,网元类型", mapColumns);
-                    myIndicator.indicator_object_class = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.indicator_object_class = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("指标来源,字段：VoLTE引入指标=是", mapColumns);
-                    myIndicator.indicator_datasource = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.indicator_datasource = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("指标分级", mapColumns);
-                    myIndicator.indicator_level = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.indicator_level = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("指标编码", mapColumns);
-                    myIndicator.indicator_code = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.indicator_code = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("指标名称", mapColumns);
-                    myIndicator.indicator_zhname = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.indicator_zhname = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("英文名称", mapColumns);
-                    myIndicator.indicator_enname = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.indicator_enname = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("业务需求", mapColumns);
-                    myIndicator.indicator_desc = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.indicator_desc = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("指标定义", mapColumns);
-                    myIndicator.indicator_definition = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.indicator_definition = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("中文映射算法", mapColumns);
-                    myIndicator.indicator_zhexp = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.indicator_zhexp = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("英文映射算法", mapColumns);
-                    myIndicator.indicator_enexp = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.indicator_enexp = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("单位", mapColumns);
-                    myIndicator.indicator_unit = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.indicator_unit = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("空间粒度", mapColumns);
-                    myIndicator.indicator_geo_type = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.indicator_geo_type = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("时间粒度", mapColumns);
-                    myIndicator.indicator_time_type = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.indicator_time_type = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("备注", mapColumns);
-                    myIndicator.indicator_memo = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.indicator_memo = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("KPI表", mapColumns);
-                    myIndicator.kpi_tab_name = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.kpi_tab_name = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("指标名称（待删除）", mapColumns);
-                    myIndicator.kpi_zhname = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.kpi_zhname = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("KPI_DB映射,KPI指标", mapColumns);
-                    myIndicator.kpi_enname = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.kpi_enname = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("DB映射算法,KPI映射算法", mapColumns);
-                    myIndicator.kpi_exp = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.kpi_exp = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("DB映射备注", mapColumns);
-                    myIndicator.kpi_exp_desc = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.kpi_exp_desc = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("自动编号", mapColumns);
-                    myIndicator.kpi_index = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.kpi_index = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("KPI数据格式", mapColumns);
-                    myIndicator.kpi_value_format = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.kpi_value_format = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("KPI最小值", mapColumns);
-                    myIndicator.kpi_value_min = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.kpi_value_min = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("KPI最大值", mapColumns);
-                    myIndicator.kpi_value_max = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicator.kpi_value_max = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     myIndicator.import_time = moment().format("yyyy-MM-DD HH:mm:ss");
                     myIndicator.import_desc = "版本：" + myIndicator.import_time;
 
                     myIndicatorCounter.indicator_id = "???";
                     C = this.getColumnIndex("统计数据编码,统计编码", mapColumns);
-                    myIndicatorCounter.counter_code = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicatorCounter.counter_code = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("统计数据中文名称", mapColumns);
-                    myIndicatorCounter.counter_zhname = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicatorCounter.counter_zhname = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("统计数据英文名称", mapColumns);
-                    myIndicatorCounter.counter_enname = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicatorCounter.counter_enname = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("主表", mapColumns);
-                    myIndicatorCounter.base_tab_name = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicatorCounter.base_tab_name = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("DB映射,字段", mapColumns);
-                    myIndicatorCounter.base_tab_col_name = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicatorCounter.base_tab_col_name = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("COUNTER时间汇总算法", mapColumns);
-                    myIndicatorCounter.counter_time_type = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicatorCounter.counter_time_type = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("COUNTER空间汇总算法", mapColumns);
-                    myIndicatorCounter.counter_geo_type = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicatorCounter.counter_geo_type = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("COUNTER表", mapColumns);
-                    myIndicatorCounter.counter_tab_name = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicatorCounter.counter_tab_name = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     C = this.getColumnIndex("COUNTER表对应字段", mapColumns);
-                    myIndicatorCounter.counter_tab_col_name = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                    myIndicatorCounter.counter_tab_col_name = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({ c: C, r: R })]);
                     myIndicatorCounter.import_time = myIndicator.import_time;
 
                     if (myIndicator.indicator_object_class !== null) lastIndicator.indicator_object_class = myIndicator.indicator_object_class; else myIndicator.indicator_object_class = lastIndicator.indicator_object_class;
@@ -1000,7 +1006,7 @@ export default class ServicePerformance extends React.PureComponent {
                     if (myIndicator.kpi_value_max !== null) lastIndicator.kpi_value_max = myIndicator.kpi_value_max; else myIndicator.kpi_value_max = lastIndicator.kpi_value_max;
 
                     if (!mapIndicators.has(myIndicator.indicator_zhname)) {
-                        mapIndicators.set(myIndicator.indicator_zhname, {indicator: myIndicator, counters: [myIndicatorCounter]});
+                        mapIndicators.set(myIndicator.indicator_zhname, { indicator: myIndicator, counters: [myIndicatorCounter] });
                     } else {
                         mapIndicators.get(myIndicator.indicator_zhname).counters.push(myIndicatorCounter);
                     }
@@ -1011,7 +1017,7 @@ export default class ServicePerformance extends React.PureComponent {
                 let myIndicator = value.indicator;
                 axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/add_indicator",
                     myIndicator,
-                    {headers: {'Content-Type': 'application/json'}}
+                    { headers: { 'Content-Type': 'application/json' } }
                 ).then((response) => {
                     let data = response.data;
 
@@ -1025,7 +1031,7 @@ export default class ServicePerformance extends React.PureComponent {
 
                                 axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/add_indicator_counter",
                                     myCounter,
-                                    {headers: {'Content-Type': 'application/json'}}
+                                    { headers: { 'Content-Type': 'application/json' } }
                                 ).then((response) => {
                                     let data = response.data;
 
@@ -1052,7 +1058,7 @@ export default class ServicePerformance extends React.PureComponent {
         return new Promise((resolve, reject) => {
             axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/add_kpi_schema",
                 schema,
-                {headers: {'Content-Type': 'application/json'}}
+                { headers: { 'Content-Type': 'application/json' } }
             ).then((response) => {
                 let data = response.data;
 
@@ -1063,49 +1069,41 @@ export default class ServicePerformance extends React.PureComponent {
         });
     }
 
-    adoUpdateSchema(schema) {
-        return new Promise((resolve, reject) => {
-            axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/update_kpi_schema",
-                schema,
-                {headers: {'Content-Type': 'application/json'}}
-            ).then((response) => {
-                let data = response.data;
-
-                if (data.success) {
-                    resolve(data);
-                }
-            });
-        });
+    doUpdateSchema(schema) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/update_kpi_schema",
+            schema,
+            { headers: { 'Content-Type': 'application/json' } }
+        );
     }
 
-    doAddKpi(kpi) {
+    restAddKpi(kpi) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/add_kpi",
             kpi,
-            {headers: {'Content-Type': 'application/json'}});
+            { headers: { 'Content-Type': 'application/json' } });
     }
 
     restDeleteSchema(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/delete_kpi_schema",
             params,
-            {headers: {'Content-Type': 'application/json'}});
+            { headers: { 'Content-Type': 'application/json' } });
     }
 
     restDeleteKpi(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/delete_kpi",
             params,
-            {headers: {'Content-Type': 'application/json'}});
+            { headers: { 'Content-Type': 'application/json' } });
     }
 
     restDeleteCounter(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/delete_kpi_counter",
             params,
-            {headers: {'Content-Type': 'application/json'}});
+            { headers: { 'Content-Type': 'application/json' } });
     }
 
-    doUpdateKpi(kpi) {
+    restUpdateKpi(kpi) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/update_kpi",
             kpi,
-            {headers: {'Content-Type': 'application/json'}});
+            { headers: { 'Content-Type': 'application/json' } });
     }
 
     // >>> TREE <<<
@@ -1119,6 +1117,7 @@ export default class ServicePerformance extends React.PureComponent {
 
             if (this.gMap.schemas.has(id)) {
                 schema = this.gMap.schemas.get(id);
+                this.gCurrent.schema = schema;
                 let strSchemaId = schema.schema_id.toString();
 
                 schema.kpis.forEach((item) => {
@@ -1176,6 +1175,10 @@ export default class ServicePerformance extends React.PureComponent {
                 this.gDynamic.schemaId.b1 = schemaIdB1;
                 this.gDynamic.schemaId.b2 = schemaIdB2;
                 this.gDynamic.schemaId.index = schemaIdIndex;
+
+                this.onFormSchemaPropertiesFill(schema);
+                let newKpi = new TadKpi(); newKpi.init();
+                this.onFormKpiPropertiesFill(newKpi);
 
                 this.setState({
                     treeDataKpis: uiKpis,
@@ -1252,11 +1255,10 @@ export default class ServicePerformance extends React.PureComponent {
         if (info.selected) {
             let kid = selectedKeys[0];
 
-            console.log(kid);
             if (this.gMap.kpis.has(kid)) {
                 let selectedKpi = lodash.cloneDeep(this.state.selectedKpi);
                 let kpi = this.gMap.kpis.get(kid);
-                console.log(kpi);
+                this.gCurrent.kpi = kpi;
 
                 selectedKpi.id = kpi.id;
                 selectedKpi.kpi_id = kpi.kpi_id;
@@ -1271,6 +1273,7 @@ export default class ServicePerformance extends React.PureComponent {
                 selectedKpi.kpi_used_module = -1;
                 selectedKpi.kpi_used_title = "界面呈现标题";
 
+                this.onFormKpiPropertiesFill(kpi);
                 this.setState({
                     selectedKpi: selectedKpi
                 })
@@ -1290,11 +1293,56 @@ export default class ServicePerformance extends React.PureComponent {
             selectedKpi.kpi_used_module = -1;
             selectedKpi.kpi_used_title = "界面呈现标题";
 
+            let newKpi = new TadKpi();
+            newKpi.init();
+            this.onFormKpiPropertiesFill(newKpi);
             this.setState({
-                    selectedKpi: selectedKpi
-                }
+                selectedKpi: selectedKpi
+            }
             )
         }
+    }
+
+    onTreeKpisDragEnter(info) {
+
+    }
+
+    //TODO:BM:  on tree kpis drop...
+    onTreeKpisDrop(info) {
+        let treeDataKpis = [];
+        let dragKey = info.dragNode.key;
+        let dropKey = info.node.key;
+        let dragNodeClone = lodash.cloneDeep(this.gMap.kpis.get(dragKey));
+
+        if (info.dropPosition === -1) {
+            this.gCurrent.schema.kpis.unshift(dragNodeClone);
+        } else {
+            for (let i = 0; i < this.gCurrent.schema.kpis.length; i++) {
+                if (this.gCurrent.schema.kpis[i].id === dropKey) {
+                    this.gCurrent.schema.kpis.splice(i + 1, 0, dragNodeClone);
+                    break
+                }
+            }
+        }
+        for (let i = 0; i < this.gCurrent.schema.kpis.length; i++) {
+            if (this.gCurrent.schema.kpis[i].id === dragKey) {
+                this.gCurrent.schema.kpis.splice(i, 1);
+                break
+            }
+        }
+
+        let schema_id = this.gCurrent.schema.schema_id.replace(/260/, "");
+        console.log(this.gCurrent.schema);
+        for(let i = 0; i < this.gCurrent.schema.kpis.length; i++) {
+            treeDataKpis.push({
+                key: this.gCurrent.schema.kpis[i].id,
+                title: schema_id + (i+1).toString().padStart(2, "0") + " - " + this.gCurrent.schema.kpis[i].kpi_zhname,
+            })
+        }
+
+        this.setState({
+            treeDataKpis: treeDataKpis
+        })
     }
 
     onTreeKpiSchemasChecked(checkedKeys, info) {
@@ -1309,7 +1357,7 @@ export default class ServicePerformance extends React.PureComponent {
 
     onSelectSchemaIdChanged(e, sender) {
         let schemaId = "";
-        const {selectedSchema} = this.state;
+        const { selectedSchema } = this.state;
 
         switch (sender) {
             case "a1":
@@ -1359,7 +1407,7 @@ export default class ServicePerformance extends React.PureComponent {
 
         selectedSchema.schema_id = schemaId;
 
-        this.setState({selectedSchema: selectedSchema});
+        this.setState({ selectedSchema: selectedSchema });
     }
 
     // >>> CHECKBOX <<<
@@ -1413,6 +1461,7 @@ export default class ServicePerformance extends React.PureComponent {
         })
     }
 
+    // add schema
     async onButtonSchemasAddClicked(e) {
         let schema = new TadKpiSchema();
         schema.schema_zhname = "新增指标组";
@@ -1425,9 +1474,9 @@ export default class ServicePerformance extends React.PureComponent {
             schema.id = myResult.data.id;
             schema.schema_id = (99260000261 + schema.id).toString();
 
-            if (!this.gMap.schemas.has) {
-                this.gMap.schemas.set(schema.id, schema);
-            }
+            // if (!this.gMap.schemas.has(schema.id)) {
+            //     this.gMap.schemas.set(schema.id, schema);
+            // }
 
             let treeDataKpiSchemas = lodash.cloneDeep(this.state.treeDataKpiSchemas);
             let n = treeDataKpiSchemas.length + 1;
@@ -1442,8 +1491,10 @@ export default class ServicePerformance extends React.PureComponent {
                 treeDataKpiSchemas: treeDataKpiSchemas
             }, () => {
                 //todo:: scroll to the new position
-                this.refTreeSchema.current.scrollTo({key: uiSchema});
+                this.refTreeSchema.current.scrollTo({ key: uiSchema });
             });
+
+            this.dsUpdateSchema(schema, "add");
         } else {
             this.context.showMessage("调用服务接口出现问题，详情：" + myResult.message);
         }
@@ -1502,7 +1553,7 @@ export default class ServicePerformance extends React.PureComponent {
 
     doDeleteSchema() {
         let schema = new TadKpiSchema();
-        const {selectedSchema} = this.state;
+        const { selectedSchema } = this.state;
         schema.id = selectedSchema.id;
 
         this.restDeleteSchema(schema).then((result) => {
@@ -1520,15 +1571,15 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     doDeleteKpi() {
-        let kpi = new TadKpi();
-        const {selectedKpi} = this.state;
-        kpi.id = selectedKpi.id;
+        let kpi = this.gCurrent.kpi;
+        // const { selectedKpi } = this.state;
+        // kpi.id = selectedKpi.id;
 
         this.restDeleteKpi(kpi).then((result) => {
             if (result.status === 200) {
                 if (result.data.success) {
-                    this.uiUpdateKpi(result.data.data,"delete");
-                    //todo:: this.dsUpdateKpi(result.data.data, "delete");
+                    this.uiUpdateKpi(result.data.data, "delete");
+                    this.dsUpdateKpi(result.data.data, "delete");
                     this.context.showMessage("删除成功，被删除指标ID为：" + result.data.data.id);
                 } else {
                     this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
@@ -1564,25 +1615,8 @@ export default class ServicePerformance extends React.PureComponent {
         this.context.showMessage("导出指标组，开发中...");
     }
 
-    async onButtonSchemasSaveClicked(e) {
-        let schema = new TadKpiSchema();
-        const {selectedSchema} = this.state;
-        schema.id = selectedSchema.id;
-        schema.schema_id = selectedSchema.schema_id;
-        schema.schema_zhname = selectedSchema.schema_zhname;
-        schema.counter_tab_name = selectedSchema.counter_tab_name;
-
-        let myResult = await this.adoUpdateSchema(schema);
-        if (myResult.success) {
-            this.uiUpdateSchema("update");
-            this.context.showMessage("保存成功，指标组ID为：" + myResult.data.schema_id);
-        } else {
-            this.context.showMessage("调用服务接口出现问题，详情：" + myResult.message);
-        }
-    }
-
     onButtonSchemasResetClicked(e) {
-        //todo:: 2021-06-18
+        //todo:: 2021-06-22
         this.context.showMessage("重置指标组属性，开发中... 2021-06-18");
     }
 
@@ -1591,18 +1625,17 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     onButtonKpisAddClicked(e) {
-        //todo:: 2021-06-21
         let kpi = new TadKpi();
-        const {selectedSchema} = this.state;
-        kpi.schema_id = selectedSchema.id;
+        const { selectedSchema } = this.state;
+        kpi.sid = selectedSchema.id;
         kpi.kpi_id = selectedSchema.schema_id.replace(/260/, "");
         kpi.kpi_zhname = "新增指标";
 
-        this.doAddKpi(kpi).then((result) => {
+        this.restAddKpi(kpi).then((result) => {
             if (result.status === 200) {
                 if (result.data.success) {
                     this.uiUpdateKpi(result.data.data, "add");
-                    //todo:: this.dsUpdateKpi(result.data.data, "add");
+                    this.dsUpdateKpi(result.data.data, "add");
                     this.context.showMessage("创建成功，新增指标内部ID为：" + result.data.data.id);
                 } else {
                     this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
@@ -1620,14 +1653,6 @@ export default class ServicePerformance extends React.PureComponent {
 
     onButtonKpisDeleteClicked(e) {
         this.context.showMessage("删除指标，开发中...");
-    }
-
-    onButtonKpisSaveClicked(e) {
-        this.context.showMessage("保存指标属性，开发中...");
-    }
-
-    onButtonKpisResetClicked(e) {
-        this.context.showMessage("重置指标属性，开发中...");
     }
 
     onButtonCountersDeleteClicked(e) {
@@ -1656,7 +1681,7 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     onModalButtonOkClicked() {
-        const {modalWhat} = this.state;
+        const { modalWhat } = this.state;
 
         switch (modalWhat) {
             case "删除指标组":
@@ -1699,14 +1724,14 @@ export default class ServicePerformance extends React.PureComponent {
     onTableIndicatorsExpandedRowRender(record) {
         if (record.counters.length > 0) {
             const columns = [
-                {title: "统计数据中文名称", dataIndex: "counter_zhname", key: "counter_zhname", width: this.state.columnWidths.czn},
-                {title: "统计数据中文名称", dataIndex: "counter_enname", key: "counter_enname", width: this.state.columnWidths.cen},
-                {title: "主表", dataIndex: "base_tab_name", key: "base_tab_name", width: this.state.columnWidths.cbtn},
-                {title: "主表列", dataIndex: "base_tab__col_name", key: "base_tab__col_name", width: this.state.columnWidths.cbtcn},
-                {title: "COUNTER表", dataIndex: "counter_tab_name", key: "counter_tab_name", width: this.state.columnWidths.ctn},
-                {title: "COUNTER表列", dataIndex: "counter_tab__col_name", key: "counter_tab__col_name", width: this.state.columnWidths.ctcn},
-                {title: "时间汇总算法", dataIndex: "counter_time_type", key: "counter_time_type", width: this.state.columnWidths.ctt},
-                {title: "空间汇总算法", dataIndex: "counter_geo_type", key: "counter_geo_type", width: this.state.columnWidths.cgt},
+                { title: "统计数据中文名称", dataIndex: "counter_zhname", key: "counter_zhname", width: this.state.columnWidths.czn },
+                { title: "统计数据中文名称", dataIndex: "counter_enname", key: "counter_enname", width: this.state.columnWidths.cen },
+                { title: "主表", dataIndex: "base_tab_name", key: "base_tab_name", width: this.state.columnWidths.cbtn },
+                { title: "主表列", dataIndex: "base_tab__col_name", key: "base_tab__col_name", width: this.state.columnWidths.cbtcn },
+                { title: "COUNTER表", dataIndex: "counter_tab_name", key: "counter_tab_name", width: this.state.columnWidths.ctn },
+                { title: "COUNTER表列", dataIndex: "counter_tab__col_name", key: "counter_tab__col_name", width: this.state.columnWidths.ctcn },
+                { title: "时间汇总算法", dataIndex: "counter_time_type", key: "counter_time_type", width: this.state.columnWidths.ctt },
+                { title: "空间汇总算法", dataIndex: "counter_geo_type", key: "counter_geo_type", width: this.state.columnWidths.cgt },
                 // {title: "统计数据中文名称", dataIndex: "counter_zhname", key: "counter_zhname"},
                 // {title: "统计数据中文名称", dataIndex: "counter_enname", key: "counter_enname"},
                 // {title: "主表", dataIndex: "base_tab_name", key: "base_tab_name"},
@@ -1715,7 +1740,7 @@ export default class ServicePerformance extends React.PureComponent {
                 // {title: "COUNTER表列", dataIndex: "counter_tab__col_name", key: "counter_tab__col_name"},
                 // {title: "时间汇总算法", dataIndex: "counter_time_type", key: "counter_time_type"},
                 // {title: "空间汇总算法", dataIndex: "counter_geo_type", key: "counter_geo_type"},
-                {title: "导入时间", dataIndex: "import_time", key: "import_time"},
+                { title: "导入时间", dataIndex: "import_time", key: "import_time" },
             ]
 
             return <Table
@@ -1739,26 +1764,7 @@ export default class ServicePerformance extends React.PureComponent {
 
     // >>> INPUT <<<
 
-    onInputSchemaZhNameChanged(e)  {
-        //console.log(e.target.value);
-        // let df = lodash.debounce((e) => {
-        //     console.log(e.target.value);
-        //     let selectedSchema = lodash.cloneDeep(this.state.selectedSchema);
-        //
-        //     selectedSchema.schema_zhname = e.target.value;
-        //
-        //     this.setState({
-        //         selectedSchema: selectedSchema
-        //     });
-        // }, 100);
-        //
-        // df(e);
-
-        this.setState((prevState) => {
-            return produce(prevState, draftState => {
-                draftState.selectedSchema.schema_zhname = e.target.value;
-            })
-        })
+    onInputSchemaZhNameChanged(e) {
 
     }
 
@@ -1767,7 +1773,7 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     onInputSearchKpiChange(e) {
-        const {value} = e.target;
+        const { value } = e.target;
 
         let uiSchemas = [];
         let uiKpis = [];
@@ -1779,7 +1785,7 @@ export default class ServicePerformance extends React.PureComponent {
                 let kid = item.id;
                 let kpiId = item.kpi_id === null ? -1 : item.kpi_id;
                 let kpiName = item.kpi_zhname === null ? "" : item.kpi_zhname;
-                let schemaId = item.schema_id === null ? -1 : item.schema_id;
+                let schemaId = item.sid === null ? -1 : item.sid;
                 // let schemaName = item.schema_zhname === null ? "" : item.schema_zhname;
 
                 if (kpiId !== -1 &&
@@ -1848,7 +1854,7 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     onInputSearchIndicatorsChanged(e) {
-        const {value} = e.target;
+        const { value } = e.target;
 
         this.gCurrent.searchTextOfIndicators = value;
     }
@@ -1954,484 +1960,571 @@ export default class ServicePerformance extends React.PureComponent {
         }
     }
 
+    onFormSchemaPropertiesFinish(values) {
+        let schema = new TadKpiSchema();
+        const { selectedSchema } = this.state;
+        schema.id = selectedSchema.id;
+        schema.schema_id = selectedSchema.schema_id;
+
+        schema.schema_zhname = values.schemaZhName;
+        schema.counter_tab_name = values.counterTabName;
+
+        this.doUpdateSchema(schema).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateSchema(result.data.data, "update");
+                    //todo:: this.dsUpdateKpi(result.data.data, "update");
+                    this.context.showMessage("更新成功，更新指标组内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    onFormSchemaPropertiesFinishFailed(errorInfo) {
+
+    }
+
+    onFormKpiPropertiesFinish(values) {
+        let kpi = lodash.cloneDeep(this.gCurrent.kpi);
+
+        // kpi.id = this.gCurrent.kpi.id;
+        // kpi.sid = this.gCurrent.schema.id;
+        // kpi.kpi_id = this.gCurrent.kpi.kpi_id;
+        // kpi.kpi_field = this.gCurrent.kpi.kpi_field;
+        kpi.kpi_zhname = values.kpiZhName;
+        kpi.kpi_enname = values.kpiEnName;
+        kpi.kpi_alarm = values.kpiAlarm;
+        kpi.kpi_format = values.kpiFormat;
+        kpi.kpi_min_value = values.kpiMinValue;
+        kpi.kpi_max_value = values.kpiMaxValue;
+        kpi.used_info = values.kpiUsedProduct + "," + values.kpiUsedModule + "," + values.kpiUsedTitle + ";"
+
+        this.restUpdateKpi(kpi).then((result) => {
+            console.log(result);
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateKpi(result.data.data, "update");
+                    this.dsUpdateKpi(result.data.data, "update");
+                    this.context.showMessage("保存成功，指标内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    onFormKpiPropertiesFinishFailed(errorInfo) {
+
+    }
+
+    onFormSchemaPropertiesFill(schema) {
+        this.refFormSchemaProperties.current.setFieldsValue({
+            schemaZhName: schema.schema_zhname,
+        });
+    }
+
+    onFormKpiPropertiesFill(kpi) {
+        this.refFormKpiProperties.current.setFieldsValue({
+            kpiZhName: kpi.kpi_zhname,
+            kpiEnName: kpi.kpi_enname,
+        });
+    }
+
+    //todo:: use Form
     render() {
         return (
-            <Fragment>
-                <div key="ComponentServicePerformance"
-                     className={this.state.styleLayoutLeftRight === "NN" ? "ServicePerformance BoxServicePerformanceNormal" : "ServicePerformance BoxServicePerformanceSmall"}>
-                    <div className={"BoxKpiSchemas"}>
-                        <div className={"BoxTitleBar"}>
-                            {this.state.styleLayoutLeftRight === "NN" ? (
-                                <Fragment>
-                                    <div className={"BoxTitle"}>指标组</div>
-                                    <div className={"BoxButtons"}>
-                                        <Button
-                                            size={"small"}
-                                            type={"primary"}
-                                            icon={<PlusSquareOutlined/>}
-                                            onClick={this.onButtonSchemasAddClicked}>新增</Button>
-                                        <Button
-                                            size={"small"}
-                                            type={"primary"}
-                                            icon={<CopyOutlined/>}
-                                            onClick={this.onButtonSchemasCopyPasteClicked}>复制</Button>
-                                        <Button
-                                            size={"small"}
-                                            type={"primary"}
-                                            icon={<MinusSquareOutlined/>}
-                                            // onClick={this.onButtonSchemasDeleteClicked}
-                                            onClick={() => {this.showModal("删除指标组")}}>删除</Button>
-                                        <Button
-                                            size={"small"}
-                                            type={"primary"}
-                                            icon={<CloudDownloadOutlined/>}
-                                            onClick={this.onButtonSchemasExportClicked}>导出</Button>
-                                    </div>
-                                </Fragment>) : (
-                                <Fragment>
-                                    <div></div>
-                                    <div></div>
-                                </Fragment>
-                            )}
-                            <div>
-                                <Button
-                                    size={"small"}
-                                    type={"ghost"}
-                                    icon={this.state.styleLayoutLeftRight === "NN" ? <CaretLeftOutlined/> : <CaretRightOutlined/>}
-                                    onClick={this.onButtonProductsChangeComponentSizeClicked}/>
-                            </div>
-                        </div>
+            <div key="ComponentServicePerformance"
+                className={this.state.styleLayoutLeftRight === "NN" ? "ServicePerformance" : "ServicePerformance BoxServicePerformanceSmall"}>
+                <div className={"BoxKpiSchemas"}>
+                    <div className={"BoxTitleBar"}>
                         {this.state.styleLayoutLeftRight === "NN" ? (
                             <Fragment>
-                                <div className={"BoxTree"}>
-                                    <div className={"BoxCommit"}>
-                                        <Select defaultValue="-1">
-                                            <Option value="-1">变更：全集</Option>
-                                            <Option value="1">变更：K - 新增话务指标 - 2021-07-01</Option>
-                                        </Select>
-                                        <Button
-                                            // size={"small"}
-                                            type={"primary"}
-                                            icon={<BranchesOutlined/>}
-                                            onClick={this.onButtonSchemasCommitClicked}>提交变更</Button>
-
-                                    </div>
-                                    <Input.Search
-                                        className={"BoxSearch"}
-                                        placeholder="Search"
-                                        enterButton
-                                        onChange={this.onInputSearchSchemaChange}
-                                        onSearch={this.onInputSearchSchemasSearched}
-                                    />
-                                    <div className={"BoxTreeInstance"}>
-                                        <Tree
-                                            ref={this.refTreeSchema}
-                                            // checkable
-                                            // onCheck={this.onTreeKpiSchemasChecked}
-                                            blockNode={true}
-                                            showLine={{showLeafIcon: false}}
-                                            showIcon={true}
-                                            switcherIcon={<CaretDownOutlined/>}
-                                            onSelect={this.onTreeKpiSchemasSelected}
-                                            treeData={this.state.treeDataKpiSchemas}
-                                        />
-                                    </div>
+                                <div className={"BoxTitle"}>指标组</div>
+                                <div className={"BoxButtons"}>
+                                    <Button
+                                        size={"small"}
+                                        type={"primary"}
+                                        icon={<PlusSquareOutlined />}
+                                        onClick={this.onButtonSchemasAddClicked}>新增</Button>
+                                    <Button
+                                        size={"small"}
+                                        type={"primary"}
+                                        icon={<CopyOutlined />}
+                                        onClick={this.onButtonSchemasCopyPasteClicked}>复制</Button>
+                                    <Button
+                                        size={"small"}
+                                        type={"primary"}
+                                        icon={<MinusSquareOutlined />}
+                                        // onClick={this.onButtonSchemasDeleteClicked}
+                                        onClick={() => {
+                                            this.showModal("删除指标组")
+                                        }}>删除</Button>
+                                    <Button
+                                        size={"small"}
+                                        type={"primary"}
+                                        icon={<CloudDownloadOutlined />}
+                                        onClick={this.onButtonSchemasExportClicked}>导出</Button>
                                 </div>
-                            </Fragment>
-                        ) : (<Fragment>
-                                <div className="BoxKpiSchemasSmall">指<br/>标<br/>组</div>
+                            </Fragment>) : (
+                            <Fragment>
+                                <div></div>
+                                <div></div>
                             </Fragment>
                         )}
-                    < /div>
-                    <div
-                        className={this.state.styleLayoutUpDown === "NN" ? "BoxKpiRelated BoxKpiRelatedNormal" : this.state.styleLayoutUpDown === "SN" ? "BoxKpiRelated BoxKpiRelatedSmall" : "BoxKpiRelated BoxKpiRelatedSmaller"}>
-                        <div className={"BoxKpisAndProperties"}>
-                            <div
-                                className={((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? "BoxKpisAndCounterTab BoxKpisAndCounterTabNormal" : "BoxKpisAndCounterTab BoxKpisAndCounterTabSmall"}>
-                                <div className={"BoxKpis"}>
-                                    <div className={"BoxTitleBar"}>
-                                        <div className={"BoxTitle"}>指标</div>
-                                        {((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? (
-                                            <Fragment>
-                                                <div className={"BoxButtons"}>
-                                                    <Button
-                                                        size={"small"}
-                                                        type={"primary"}
-                                                        icon={<PlusSquareOutlined/>}
-                                                        onClick={this.onButtonKpisAddClicked}>新增</Button>
-                                                    <Button
-                                                        size={"small"}
-                                                        type={"primary"}
-                                                        icon={<CopyOutlined/>}
-                                                        onClick={this.onButtonKpisCopyPasteClicked}>复制</Button>
-                                                    <Button
-                                                        size={"small"}
-                                                        type={"primary"}
-                                                        icon={<MinusSquareOutlined/>}
-                                                        onClick={() => {this.showModal("删除指标")}}>删除</Button>
-                                                </div>
-                                            </Fragment>) : (<Fragment>
-                                                <div>&nbsp;</div>
-                                            </Fragment>
-                                        )}
-                                        <div>
-                                            <Button
-                                                size={"small"}
-                                                type={"ghost"}
-                                                icon={<LayoutOutlined/>}
-                                                onClick={this.onButtonChangeComponentLayout4EditClicked}/>
-                                        </div>
-                                    </div>
-                                    {((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? (
-                                        <Fragment>
-                                            <div className={"BoxTree"}>
-                                                <div className={"BoxTree2"}>
-                                                    <Tree
-                                                        // checkable
-                                                        // onCheck={this.onTreeKpisChecked}
-                                                        blockNode={true}
-                                                        showLine={{showLeafIcon: false}}
-                                                        showIcon={true}
-                                                        switcherIcon={<CaretDownOutlined/>}
-                                                        onSelect={this.onTreeKpisSelected}
-                                                        treeData={this.state.treeDataKpis}
-                                                    /></div>
-                                            </div>
-                                        </Fragment>
-                                    ) : (<Fragment>
-                                    </Fragment>)}
+                        <div>
+                            <Button
+                                size={"small"}
+                                type={"ghost"}
+                                icon={this.state.styleLayoutLeftRight === "NN" ? <CaretLeftOutlined /> : <CaretRightOutlined />}
+                                onClick={this.onButtonProductsChangeComponentSizeClicked} />
+                        </div>
+                    </div>
+                    {this.state.styleLayoutLeftRight === "NN" ? (
+                        <Fragment>
+                            <div className={"BoxTree"}>
+                                <div className={"BoxCommit"}>
+                                    <Select defaultValue="-1">
+                                        <Option value="-1">变更：全集</Option>
+                                        <Option value="1">变更：K - 新增话务指标 - 2021-07-01</Option>
+                                    </Select>
+                                    <Button
+                                        // size={"small"}
+                                        type={"primary"}
+                                        icon={<BranchesOutlined />}
+                                        onClick={this.onButtonSchemasCommitClicked}>提交变更</Button>
+
                                 </div>
-                                {((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? (
-                                    <Fragment>
-                                        <div className={"BoxCounterTab"}>
-                                            <div className={"BoxTitleBar"}>
-                                                <div className={"BoxTitle"}>原始指标</div>
-                                                <div className={"BoxButtons"}>
-                                                    <Button
-                                                        size={"small"}
-                                                        type={"primary"}
-                                                        icon={<MinusSquareOutlined/>}
-                                                        onClick={() => {this.showModal("删除统计数据")}}>删除</Button>
-                                                </div>
-                                                <div>
-                                                    <Button
-                                                        size={"small"}
-                                                        type={"ghost"}
-                                                        icon={<LayoutOutlined/>}
-                                                        onClick={this.onButtonChangeComponentLayout4EditClicked}/>
-                                                </div>
-                                            </div>
-                                            <div className={"BoxTree"}>
-                                                <div className={"BoxTree2"}>
-                                                    <Tree
-                                                        // checkable
-                                                        // onCheck={this.onTreeKpisChecked}
-                                                        blockNode={true}
-                                                        showLine={{showLeafIcon: false}}
-                                                        showIcon={true}
-                                                        switcherIcon={<CaretDownOutlined/>}
-                                                        onSelect={this.onTreeKpisSelected}
-                                                        treeData={this.state.treeDataKpiCounters}
-                                                    /></div>
-                                            </div>
-                                        </div>
-                                    </Fragment>
-                                ) : (<Fragment>
-                                </Fragment>)}
+                                <Input.Search
+                                    className={"BoxSearch"}
+                                    placeholder="Search"
+                                    enterButton
+                                    onChange={this.onInputSearchSchemaChange}
+                                    onSearch={this.onInputSearchSchemasSearched}
+                                />
+                                <div className={"BoxTreeInstance"}>
+                                    <Tree
+                                        ref={this.refTreeSchema}
+                                        // checkable
+                                        // onCheck={this.onTreeKpiSchemasChecked}
+                                        blockNode={true}
+                                        showLine={{ showLeafIcon: false }}
+                                        showIcon={true}
+                                        switcherIcon={<CaretDownOutlined />}
+                                        onSelect={this.onTreeKpiSchemasSelected}
+                                        treeData={this.state.treeDataKpiSchemas}
+                                    />
+                                </div>
                             </div>
-                            <div
-                                className={((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? "BoxPropertiesBorder BoxPropertiesBorderNormal" : "BoxPropertiesBorder BoxPropertiesBorderSmall"}>
-                                {/*<div className={"BoxPropertiesBorder"}>*/}
+                        </Fragment>
+                    ) : (<Fragment>
+                        <div className="BoxKpiSchemasSmall">指<br />标<br />组</div>
+                    </Fragment>
+                    )}
+                </div>
+                <div className={this.state.styleLayoutUpDown === "NN" ? "BoxKpiRelated" : this.state.styleLayoutUpDown === "SN" ? "BoxKpiRelated BoxKpiRelatedSmall" : "BoxKpiRelated BoxKpiRelatedSmaller"}>
+                    <div className={"BoxKpisAndProperties"}>
+                        <div className={((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? "BoxKpisAndCounterTab" : "BoxKpisAndCounterTab BoxKpisAndCounterTabSmall"}>
+                            <div className={"BoxKpis"}>
                                 <div className={"BoxTitleBar"}>
-                                    <div className={"BoxTitle"}>指标组属性 - {this.state.selectedSchema.schema_id}</div>
+                                    <div className={"BoxTitle"}>指标</div>
                                     {((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? (
                                         <Fragment>
                                             <div className={"BoxButtons"}>
                                                 <Button
                                                     size={"small"}
                                                     type={"primary"}
-                                                    icon={<SaveOutlined/>}
-                                                    onClick={this.onButtonSchemasSaveClicked}>保存</Button>
+                                                    icon={<PlusSquareOutlined />}
+                                                    onClick={this.onButtonKpisAddClicked}>新增</Button>
                                                 <Button
                                                     size={"small"}
                                                     type={"primary"}
-                                                    icon={<UndoOutlined/>}
-                                                    onClick={this.onButtonSchemasResetClicked}>恢复</Button>
+                                                    icon={<CopyOutlined />}
+                                                    onClick={this.onButtonKpisCopyPasteClicked}>复制</Button>
+                                                <Button
+                                                    size={"small"}
+                                                    type={"primary"}
+                                                    icon={<MinusSquareOutlined />}
+                                                    onClick={() => {
+                                                        this.showModal("删除指标")
+                                                    }}>删除</Button>
                                             </div>
-                                        </Fragment>
-                                    ) : (<Fragment>
+                                        </Fragment>) : (<Fragment>
+                                            <div>&nbsp;</div>
                                         </Fragment>
                                     )}
                                     <div>
                                         <Button
                                             size={"small"}
                                             type={"ghost"}
-                                            icon={<LayoutOutlined/>}
-                                            onClick={this.onButtonChangeComponentLayout4EditClicked}/></div>
+                                            icon={<LayoutOutlined />}
+                                            onClick={this.onButtonChangeComponentLayout4EditClicked} />
+                                    </div>
                                 </div>
                                 {((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? (
                                     <Fragment>
-                                        <div className={"BoxPropertiesSchema"}>
-                                            <div className={"BoxSchemaIds"}>
-                                                <Select
-                                                    defaultValue={-99999}
-                                                    value={this.state.selectedSchema.schemaIdA1}
-                                                    options={this.state.optionsSchemaIdA1}
-                                                    onChange={(e) => {
-                                                        this.onSelectSchemaIdChanged(e, "a1")
-                                                    }}/>
-                                                <Select
-                                                    defaultValue={-99999}
-                                                    value={this.state.selectedSchema.schemaIdA2}
-                                                    options={this.state.optionsSchemaIdA2}
-                                                    onChange={(e) => {
-                                                        this.onSelectSchemaIdChanged(e, "a2")
-                                                    }}/>
-                                                <Select
-                                                    defaultValue={-99999}
-                                                    value={this.state.selectedSchema.schemaIdB1}
-                                                    options={this.state.optionsSchemaIdB1}
-                                                    onChange={(e) => {
-                                                        this.onSelectSchemaIdChanged(e, "b1")
-                                                    }}/>
-                                                <Select
-                                                    defaultValue={-99999}
-                                                    value={this.state.selectedSchema.schemaIdB2}
-                                                    options={this.state.optionsSchemaIdB2}
-                                                    onChange={(e) => {
-                                                        this.onSelectSchemaIdChanged(e, "b2")
-                                                    }}/>
+                                        <div className={"BoxTree"}>
+                                            <div className={"BoxTreeInstance"}>
+                                                <Tree treeData={this.state.treeDataKpis}
+                                                    blockNode
+                                                    draggable
+                                                    showIcon
+                                                    showLine={{ showLeafIcon: false }}
+                                                    switcherIcon={<CaretDownOutlined />}
+                                                    onSelect={this.onTreeKpisSelected}
+                                                    onDragEnter={this.onTreeKpisDragEnter}
+                                                    onDrop={this.onTreeKpisDrop} />
                                             </div>
-                                            <div>
-                                                <Input
-                                                    onChange={this.onInputSchemaZhNameChanged}
-                                                    value={this.state.selectedSchema.schema_zhname}
-                                                />
-                                            </div>
-                                            <div className={"BoxVendorObjectClass"}>
-                                                <Select defaultValue="-1">
-                                                    <Option value="-1">不区分厂家</Option>
-                                                </Select>
-                                                <Select defaultValue="-1">
-                                                    <Option value="-1">网元类型</Option>
-                                                </Select>
-                                                <Select defaultValue="-1">
-                                                    <Option value="-1">网元细分类型</Option>
-                                                </Select>
-                                                <Select defaultValue="-1">
-                                                    <Option value="-1">采集粒度</Option>
-                                                </Select>
-                                            </div>
-                                            <div>
-                                                <Input
-                                                    value={this.state.selectedSchema.schema_counter_tab_name}
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className={"BoxTitleBar"}>
-                                            <div className={"BoxTitle"}>指标属性 - {this.state.selectedKpi.kpi_id}</div>
-                                            <div className={"BoxButtons"}>
-                                                <Button
-                                                    size={"small"}
-                                                    type={"primary"}
-                                                    icon={<SaveOutlined/>}
-                                                    onClick={this.onButtonKpisSaveClicked}>保存</Button>
-                                                <Button
-                                                    size={"small"}
-                                                    type={"primary"}
-                                                    icon={<UndoOutlined/>}
-                                                    onClick={this.onButtonKpisResetClicked}>恢复</Button>
-                                            </div>
-                                            <div>
-                                                <Button
-                                                    size={"small"}
-                                                    type={"ghost"}
-                                                    icon={<LayoutOutlined/>}
-                                                    onClick={this.onButtonChangeComponentLayout4EditClicked}/>
-                                            </div>
-                                        </div>
-                                        <div className={"BoxPropertiesKpi"}>
-                                            <div className={"BoxNames"}>
-                                                <Input value={this.state.selectedKpi.kpi_zhname}/>
-                                                <Input value={this.state.selectedKpi.kpi_enname}/>
-                                            </div>
-                                            <div className={"BoxKpiValues"}>
-                                                <Select defaultValue="1">
-                                                    <Option value="0">不发告警</Option>
-                                                    <Option value="1">发送告警</Option>
-                                                </Select>
-                                                <Select defaultValue="1">
-                                                    <Option value="0">不指定格式</Option>
-                                                    <Option value="1">格式：R2</Option>
-                                                </Select>
-                                                <Input value={this.state.selectedKpi.kpi_min_value}/>
-                                                <Input value={this.state.selectedKpi.kpi_max_value}/>
-                                            </div>
-                                            <div className={"BoxUsedInfo"}>
-                                                <div className={"BoxProductModuleName"}>
-                                                    <Select defaultValue="-1">
-                                                        <Option value="-1">使用该指标的产品</Option>
-                                                    </Select>
-                                                    <Select defaultValue="-1">
-                                                        <Option value="-1">使用该指标的模块</Option>
-                                                    </Select>
-                                                    <Input value={this.state.selectedKpi.kpi_used_title}/>
-                                                    <Button icon={<PlusOutlined/>}/>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className={"BoxKpiExp"}>
-                                            <TextArea autoSize={{minRows: 3, maxRows: 5}} value={this.state.selectedKpi.kpi_exp}/>
                                         </div>
                                     </Fragment>
                                 ) : (<Fragment>
                                 </Fragment>)}
                             </div>
-                        </div>
-                        <div className={"BoxKpisStandard"}>
-                            <div className={"BoxTitleBar"}>
-                                <div className={"BoxTitle"}>规范指标</div>
-                                {((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "SN")) ? (
-                                    <Fragment>
-                                        <div className={"BoxButtons"}>
-                                            <Button
-                                                size={"small"}
-                                                type={"primary"}
-                                                icon={<CloudUploadOutlined/>}
-                                                onClick={this.onButtonIndicatorsCopy2CountersClicked}>移入指标组</Button>
-                                            <Button
-                                                size={"small"}
-                                                type={"primary"}
-                                                icon={<CloudUploadOutlined/>}
-                                                onClick={this.onButtonIndicatorsRefreshClicked}>刷新</Button>
-                                            <Button
-                                                size={"small"}
-                                                type={"primary"}
-                                                icon={<CloudUploadOutlined/>}
-                                                onClick={this.onButtonIndicatorsImportClicked}>导入</Button>
-                                            <Button
-                                                size={"small"}
-                                                type={"primary"}
-                                                icon={<CloudDownloadOutlined/>}
-                                                onClick={this.onButtonIndicatorsExportClicked}>导出</Button>
+                            {((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? (
+                                <Fragment>
+                                    <div className={"BoxCounterTab"}>
+                                        <div className={"BoxTitleBar"}>
+                                            <div className={"BoxTitle"}>原始指标</div>
+                                            <div className={"BoxButtons"}>
+                                                <Button
+                                                    size={"small"}
+                                                    type={"primary"}
+                                                    icon={<MinusSquareOutlined />}
+                                                    onClick={() => {
+                                                        this.showModal("删除统计数据")
+                                                    }}>删除</Button>
+                                            </div>
+                                            <div>
+                                                <Button
+                                                    size={"small"}
+                                                    type={"ghost"}
+                                                    icon={<LayoutOutlined />}
+                                                    onClick={this.onButtonChangeComponentLayout4EditClicked} />
+                                            </div>
                                         </div>
-                                    </Fragment>) : (<Fragment>
-                                    <div>&nbsp;</div>
-                                </Fragment>)}
-                                <div>
-                                    <Button
-                                        size={"small"}
-                                        type={"ghost"}
-                                        icon={((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? <CaretUpOutlined/> : <CaretDownOutlined/>}
-                                        onClick={this.onButtonChangeComponentLayoutUpDownClicked}/>
+                                        <div className={"BoxTree"}>
+                                            <div className={"BoxTreeInstance"}>
+                                                <Tree
+                                                    // checkable
+                                                    // onCheck={this.onTreeKpisChecked}
+                                                    blockNode={true}
+                                                    showLine={{ showLeafIcon: false }}
+                                                    showIcon={true}
+                                                    switcherIcon={<CaretDownOutlined />}
+                                                    onSelect={this.onTreeKpisSelected}
+                                                    treeData={this.state.treeDataKpiCounters}
+                                                /></div>
+                                        </div>
+                                    </div>
+                                </Fragment>
+                            ) : (<Fragment>
+                            </Fragment>)}
+                        </div>
+                        <div className={((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? "BoxPropertiesBorder" : "BoxPropertiesBorder BoxPropertiesBorderSmall"}>
+                            <Form ref={this.refFormSchemaProperties} name="formSchemaProperties" initialValues={{ remember: true }} onFinish={this.onFormSchemaPropertiesFinish} onFinishFailed={this.onFormSchemaPropertiesFinishFailed}>
+                                <div className={"BoxTitleBar"}>
+                                    <div className={"BoxTitle"}>指标组属性 - {this.state.selectedSchema.schema_id}</div>
+                                    <div className={((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? "BoxButtons" : "BoxButtons BoxHidden"}>
+                                        <Button size={"small"} type={"primary"} icon={<SaveOutlined />} htmlType="submit">保存</Button>
+                                        <Button size={"small"} type={"primary"} icon={<UndoOutlined />} onClick={this.onButtonSchemasResetClicked}>恢复</Button>
+                                    </div>
+                                    <div>
+                                        <Button size={"small"} type={"ghost"} icon={<LayoutOutlined />} onClick={this.onButtonChangeComponentLayout4EditClicked} />
+                                    </div>
                                 </div>
-                            </div>
+                                <div className={((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? "BoxPropertiesSchema" : "BoxPropertiesSchema BoxHidden"}>
+                                    <div className={"BoxSchemaIds"}>
+                                        <Select
+                                            defaultValue={-99999}
+                                            value={this.state.selectedSchema.schemaIdA1}
+                                            options={this.state.optionsSchemaIdA1}
+                                            onChange={(e) => {
+                                                this.onSelectSchemaIdChanged(e, "a1")
+                                            }} />
+                                        <Select
+                                            defaultValue={-99999}
+                                            value={this.state.selectedSchema.schemaIdA2}
+                                            options={this.state.optionsSchemaIdA2}
+                                            onChange={(e) => {
+                                                this.onSelectSchemaIdChanged(e, "a2")
+                                            }} />
+                                        <Select
+                                            defaultValue={-99999}
+                                            value={this.state.selectedSchema.schemaIdB1}
+                                            options={this.state.optionsSchemaIdB1}
+                                            onChange={(e) => {
+                                                this.onSelectSchemaIdChanged(e, "b1")
+                                            }} />
+                                        <Select
+                                            defaultValue={-99999}
+                                            value={this.state.selectedSchema.schemaIdB2}
+                                            options={this.state.optionsSchemaIdB2}
+                                            onChange={(e) => {
+                                                this.onSelectSchemaIdChanged(e, "b2")
+                                            }} />
+                                    </div>
+                                    <div>
+                                        <Form.Item className="BoxFormItemInput">
+                                            <Form.Item name="schemaZhName" noStyle><Input /></Form.Item>
+                                            <Tooltip placement="topLeft" title="输入指标组中文名称" arrowPointAtCenter>
+                                                <div className="input-icon"><QuestionCircleOutlined /></div>
+                                            </Tooltip>
+                                        </Form.Item>
+                                    </div>
+                                    <div className={"BoxVendorObjectClass"}>
+                                        <Select defaultValue="-1">
+                                            <Option value="-1">不区分厂家</Option>
+                                        </Select>
+                                        <Select defaultValue="-1">
+                                            <Option value="-1">网元类型</Option>
+                                        </Select>
+                                        <Select defaultValue="-1">
+                                            <Option value="-1">网元细分类型</Option>
+                                        </Select>
+                                        <Select defaultValue="-1">
+                                            <Option value="-1">采集粒度</Option>
+                                        </Select>
+                                    </div>
+                                    <div>
+                                        <Form.Item className="BoxFormItemInput">
+                                            <Form.Item name="counterTabName" noStyle><Input /></Form.Item>
+                                            <Tooltip placement="topLeft" title="输入指标组统计数据存储表名称" arrowPointAtCenter>
+                                                <div className="input-icon"><QuestionCircleOutlined /></div>
+                                            </Tooltip>
+                                        </Form.Item>
+                                    </div>
+                                </div>
+                            </Form>
+                            <Form ref={this.refFormKpiProperties} name="formKpiProperties" initialValues={{ remember: true }} onFinish={this.onFormKpiPropertiesFinish} onFinishFailed={this.onFormKpiPropertiesFinishFailed}>
+                                <div className={((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? "BoxTitleBar" : "BoxTitleBar BoxHidden"}>
+                                    <div className={"BoxTitle"}>指标属性 - {this.state.selectedKpi.kpi_id}</div>
+                                    <div className={"BoxButtons"}>
+                                        <Button size={"small"} type={"primary"} icon={<SaveOutlined />} htmlType="submit">保存</Button>
+                                        <Button size={"small"} type={"primary"} icon={<UndoOutlined />} onClick={this.onButtonKpisResetClicked}>恢复</Button>
+                                    </div>
+                                    <div>
+                                        <Button size={"small"} type={"ghost"} icon={<LayoutOutlined />} onClick={this.onButtonChangeComponentLayout4EditClicked} />
+                                    </div>
+                                </div>
+                                <div className={((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? "BoxPropertiesKpi" : "BoxPropertiesKpi BoxHidden"}>
+                                    <div className={"BoxNames"}>
+                                        <Form.Item className="BoxFormItemInput">
+                                            <Form.Item name="kpiZhName" noStyle><Input /></Form.Item>
+                                            <Tooltip placement="topLeft" title="输入指标中文名称" arrowPointAtCenter>
+                                                <div className="input-icon"><QuestionCircleOutlined /></div>
+                                            </Tooltip>
+                                        </Form.Item>
+                                        <Form.Item className="BoxFormItemInput">
+                                            <Form.Item name="kpiEnName" noStyle><Input /></Form.Item>
+                                            <Tooltip placement="topLeft" title="输入指标英文名称" arrowPointAtCenter>
+                                                <div className="input-icon"><QuestionCircleOutlined /></div>
+                                            </Tooltip>
+                                        </Form.Item>
+                                    </div>
+                                    <div className={"BoxKpiValues"}>
+                                        <Form.Item name="kpiAlarm" className="BoxFormItemInput">
+                                            <Select>
+                                                <Option value="0">不发告警</Option>
+                                                <Option value="1">发送告警</Option>
+                                            </Select>
+                                        </Form.Item>
+                                        <Form.Item name="kpiFormat" className="BoxFormItemInput">
+                                            <Select>
+                                                <Option value="0">不指定格式</Option>
+                                                <Option value="1">格式：R2</Option>
+                                            </Select>
+                                        </Form.Item>
+                                        <Form.Item className="BoxFormItemInput">
+                                            <Form.Item name="kpiMinValue" noStyle><Input /></Form.Item>
+                                            <Tooltip placement="topLeft" title="输入指标最小值" arrowPointAtCenter>
+                                                <div className="input-icon"><QuestionCircleOutlined /></div>
+                                            </Tooltip>
+                                        </Form.Item>
+                                        <Form.Item className="BoxFormItemInput">
+                                            <Form.Item name="kpiMaxValue" noStyle><Input /></Form.Item>
+                                            <Tooltip placement="topLeft" title="输入指标最大值" arrowPointAtCenter>
+                                                <div className="input-icon"><QuestionCircleOutlined /></div>
+                                            </Tooltip>
+                                        </Form.Item>
+                                    </div>
+                                    <div className={"BoxUsedInfo"}>
+                                        <div className={"BoxProductModuleName"}>
+                                            <Form.Item name="kpiUsedProduct" className="BoxFormItemInput">
+                                                <Select>
+                                                    <Option value="-1">使用该指标的产品</Option>
+                                                </Select>
+                                            </Form.Item>
+                                            <Form.Item name="kpiUsedModule" className="BoxFormItemInput">
+                                                <Select>
+                                                    <Option value="-1">使用该指标的模块</Option>
+                                                </Select>
+                                            </Form.Item>
+                                            <Form.Item className="BoxFormItemInput">
+                                                <Form.Item name="kpiUsedTitle" noStyle><Input /></Form.Item>
+                                                <Tooltip placement="topLeft" title="输入该指标在界面上的显示标题" arrowPointAtCenter>
+                                                    <div className="input-icon"><QuestionCircleOutlined /></div>
+                                                </Tooltip>
+                                            </Form.Item>
+                                            <Button icon={<PlusOutlined />} />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className={((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? "BoxKpiExp" : "BoxKpiExp BoxHidden"}>
+                                    <Form.Item className="BoxFormItemInput">
+                                        <Form.Item name="kpiExp" noStyle><TextArea autoSize={{ minRows: 3, maxRows: 5 }} /></Form.Item>
+                                        <Tooltip placement="topLeft" title="输入指标计算表达式" arrowPointAtCenter>
+                                            <div className="input-icon"><QuestionCircleOutlined /></div>
+                                        </Tooltip>
+                                    </Form.Item>
+                                </div>
+                            </Form>
+                        </div>
+                    </div>
+                    <div className={"BoxKpisStandard"}>
+                        <div className={"BoxTitleBar"}>
+                            <div className={"BoxTitle"}>规范指标</div>
                             {((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "SN")) ? (
                                 <Fragment>
-                                    <div className={"BoxTableIndicators"}>
-                                        <div className={"BoxSearch"}>
-                                            <Input.Search
-                                                placeholder="Search"
-                                                enterButton
-                                                onChange={this.onInputSearchIndicatorsChanged}
-                                                onSearch={this.onInputSearchIndicatorsSearched}
-                                            />
-                                        </div>
-                                        <div ref={this.refBoxDetail} className={"BoxAuto"}>
-                                            <div className={"Box2"}>
-                                                <Table rowKey="id"
-                                                    // title={() => this.state.tableIndicatorsTitle}
-                                                       loading={this.state.tableIndicatorsIsLoading}
-                                                       dataSource={this.state.dsIndicators}
-                                                    // columns={this.state.columnsIndicator}
-                                                       bordered={true}
-                                                       size={"small"}
-                                                       scroll={{
-                                                           x: this.state.tablePropertiesScrollX,
-                                                           y: this.state.tablePropertiesScrollY
-                                                       }}
-                                                       pagination={{
-                                                           pageSize: this.state.pageSizeIndicators,
-                                                           position: ["none", "none"]
-                                                       }}
-                                                       rowSelection={{
-                                                           type: "checkbox",
-                                                           ...this.onRowIndicatorCounterSelected
-                                                       }}
-                                                       expandedRowRender={this.onTableIndicatorsExpandedRowRender}
-                                                       expandable={{
-                                                           rowExpandable: (record) => record.counters.length > 0
-                                                       }}
-                                                >
-                                                    <Column title=<KColumnTitle content="序号" className="clsColumnTitle"/>
-                                                    className="ColumnKey"
-                                                    dataIndex='index'
-                                                    key='index'
-                                                    align='center'
-                                                    width={this.state.columnWidths.key}
-                                                    fixed={true}
-                                                    />
-                                                    <Column title=<KColumnTitle content="来自表单" className="clsColumnTitle"/>
-                                                    className="ColumnIesn"
-                                                    dataIndex='excel_sheet_name'
-                                                    key='excel_sheet_name'
-                                                    align='center'
-                                                    width={this.state.columnWidths.esn}
-                                                    fixed={true}
-                                                    />
-                                                    <Column title=<KColumnTitle content="指标中文名称" className="clsColumnTitle"/>
-                                                    dataIndex='indicator_zhname'
-                                                    key='indicator_zhname'
-                                                    width={this.state.columnWidths.izn}
-                                                    sorter={(a, b) => a.indicator_zhname > b.indicator_zhname}
-                                                    sortDirections={['descend', 'ascend']}
-                                                    fixed={true}
-                                                    />
-                                                    <Column title=<KColumnTitle content="指标单位" className="clsColumnTitle"/>
-                                                    dataIndex='indicator_unit'
-                                                    key='indicator_unit'
-                                                    align='center'
-                                                    width={this.state.columnWidths.iu}/>
-                                                    <Column title=<KColumnTitle content="时间粒度" className="clsColumnTitle"/>
-                                                    dataIndex='indicator_time_type'
-                                                    key='indicator_time_type'
-                                                    align='center'
-                                                    width={this.state.columnWidths.itt}/>
-                                                    <Column title=<KColumnTitle content="空间粒度" className="clsColumnTitle"/>
-                                                    dataIndex='indicator_geo_type'
-                                                    key='indicator_geo_type'
-                                                    align='center'
-                                                    width={this.state.columnWidths.igt}/>
-                                                    <Column title=<KColumnTitle content="指标定义" className="clsColumnTitle"/>
-                                                    dataIndex='indicator_definition' key='indicator_definition' width={this.state.columnWidths.idef}/>
-                                                    {/*<Column title=<KColumnTitle content="指标业务需求" className="clsColumnTitle"/>*/}
-                                                    {/*dataIndex='indicator_desc' key='indicator_desc' width={this.state.columnWidths.idesc}/>*/}
-                                                    <Column title=<KColumnTitle content="中文映射算法" className="clsColumnTitle"/>
-                                                    dataIndex='indicator_zhexp'
-                                                    key='indicator_zhexp'
-                                                    render={(zhexp, record) => {
+                                    <div className={"BoxButtons"}>
+                                        <Button
+                                            size={"small"}
+                                            type={"primary"}
+                                            icon={<CloudUploadOutlined />}
+                                            onClick={this.onButtonIndicatorsCopy2CountersClicked}>移入指标组</Button>
+                                        <Button
+                                            size={"small"}
+                                            type={"primary"}
+                                            icon={<CloudUploadOutlined />}
+                                            onClick={this.onButtonIndicatorsRefreshClicked}>刷新</Button>
+                                        <Button
+                                            size={"small"}
+                                            type={"primary"}
+                                            icon={<CloudUploadOutlined />}
+                                            onClick={this.onButtonIndicatorsImportClicked}>导入</Button>
+                                        <Button
+                                            size={"small"}
+                                            type={"primary"}
+                                            icon={<CloudDownloadOutlined />}
+                                            onClick={this.onButtonIndicatorsExportClicked}>导出</Button>
+                                    </div>
+                                </Fragment>) : (<Fragment>
+                                    <div>&nbsp;</div>
+                                </Fragment>)}
+                            <div>
+                                <Button
+                                    size={"small"}
+                                    type={"ghost"}
+                                    icon={((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? <CaretUpOutlined /> : <CaretDownOutlined />}
+                                    onClick={this.onButtonChangeComponentLayoutUpDownClicked} />
+                            </div>
+                        </div>
+                        {((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "SN")) ? (
+                            <Fragment>
+                                <div className={"BoxTableIndicators"}>
+                                    <div className={"BoxSearch"}>
+                                        <Input.Search
+                                            placeholder="Search"
+                                            enterButton
+                                            onChange={this.onInputSearchIndicatorsChanged}
+                                            onSearch={this.onInputSearchIndicatorsSearched}
+                                        />
+                                    </div>
+                                    <div ref={this.refBoxDetail} className={"BoxAuto"}>
+                                        <div className={"Box2"}>
+                                            <Table rowKey="id"
+                                                // title={() => this.state.tableIndicatorsTitle}
+                                                loading={this.state.tableIndicatorsIsLoading}
+                                                dataSource={this.state.dsIndicators}
+                                                // columns={this.state.columnsIndicator}
+                                                bordered={true}
+                                                size={"small"}
+                                                scroll={{
+                                                    x: this.state.tablePropertiesScrollX,
+                                                    y: this.state.tablePropertiesScrollY
+                                                }}
+                                                pagination={{
+                                                    pageSize: this.state.pageSizeIndicators,
+                                                    position: ["none", "none"]
+                                                }}
+                                                rowSelection={{
+                                                    type: "checkbox",
+                                                    ...this.onRowIndicatorCounterSelected
+                                                }}
+                                                expandedRowRender={this.onTableIndicatorsExpandedRowRender}
+                                                expandable={{
+                                                    rowExpandable: (record) => record.counters.length > 0
+                                                }}
+                                            >
+                                                <Column title=<KColumnTitle content="序号" className="clsColumnTitle"/>
+                                                className="ColumnKey"
+                                                dataIndex='index'
+                                                key='index'
+                                                align='center'
+                                                width={this.state.columnWidths.key}
+                                                fixed={true}
+                                                />
+                                                <Column title=<KColumnTitle content="来自表单" className="clsColumnTitle"/>
+                                                className="ColumnIesn"
+                                                dataIndex='excel_sheet_name'
+                                                key='excel_sheet_name'
+                                                align='center'
+                                                width={this.state.columnWidths.esn}
+                                                fixed={true}
+                                                />
+                                                <Column title=<KColumnTitle content="指标中文名称" className="clsColumnTitle"/>
+                                                dataIndex='indicator_zhname'
+                                                key='indicator_zhname'
+                                                width={this.state.columnWidths.izn}
+                                                sorter={(a, b) => a.indicator_zhname > b.indicator_zhname}
+                                                sortDirections={['descend', 'ascend']}
+                                                fixed={true}
+                                                />
+                                                <Column title=<KColumnTitle content="指标单位" className="clsColumnTitle"/>
+                                                dataIndex='indicator_unit'
+                                                key='indicator_unit'
+                                                align='center'
+                                                width={this.state.columnWidths.iu}/>
+                                                <Column title=<KColumnTitle content="时间粒度" className="clsColumnTitle"/>
+                                                dataIndex='indicator_time_type'
+                                                key='indicator_time_type'
+                                                align='center'
+                                                width={this.state.columnWidths.itt}/>
+                                                <Column title=<KColumnTitle content="空间粒度" className="clsColumnTitle"/>
+                                                dataIndex='indicator_geo_type'
+                                                key='indicator_geo_type'
+                                                align='center'
+                                                width={this.state.columnWidths.igt}/>
+                                                <Column title=<KColumnTitle content="指标定义" className="clsColumnTitle"/>
+                                                dataIndex='indicator_definition' key='indicator_definition' width={this.state.columnWidths.idef}/>
+                                                {/*<Column title=<KColumnTitle content="指标业务需求" className="clsColumnTitle"/>*/}
+                                                {/*dataIndex='indicator_desc' key='indicator_desc' width={this.state.columnWidths.idesc}/>*/}
+                                                <Column title=<KColumnTitle content="中文映射算法" className="clsColumnTitle"/>
+                                                dataIndex='indicator_zhexp'
+                                                key='indicator_zhexp'
+                                                render={(zhexp, record) => {
                                                     return <div>
                                                         <div>{record.indicator_zhexp}</div>
                                                         <div>{record.indicator_enexp}</div>
                                                     </div>
                                                 }}
-                                                    />
-                                                </Table>
-                                            </div>
+                                                />
+                                            </Table>
                                         </div>
                                     </div>
-                                </Fragment>) : (<Fragment></Fragment>
-                            )}
-                        </div>
+                                </div>
+                            </Fragment>) : (<Fragment></Fragment>
+                        )}
                     </div>
-                    <Modal title="系统提示窗口"
-                           visible={this.state.isModalVisible}
-                           onOk={this.onModalButtonOkClicked}
-                           onCancel={this.onModalButtonCancelClicked}>
-                        <p>{this.state.modalMessage}</p>
-                    </Modal>
                 </div>
-            </Fragment>
+                <Modal title="系统提示窗口" visible={this.state.isModalVisible} onOk={this.onModalButtonOkClicked} onCancel={this.onModalButtonCancelClicked}>
+                    <p>{this.state.modalMessage}</p>
+                </Modal>
+            </div>
         )
     }
 }

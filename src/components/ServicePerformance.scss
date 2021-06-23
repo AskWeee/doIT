@@ -34,37 +34,77 @@ $colorComponentToolbar: rgb(175, 225, 255);
     }
 }
 
-.BoxServicePerformanceNormal {
-    grid-template-columns: 1fr 2fr;
-}
+// .BoxServicePerformanceNormal {
+//     grid-template-columns: 1fr 2fr;
+// }
 
 .BoxServicePerformanceSmall {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto 1fr !important;
+}
+
+.BoxHidden {
+    width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-width: 0 !important;
+    overflow: hidden !important;
 }
 
 .ServicePerformance {
     background: rgba(55, 175, 255, 0.25);
     border: 1px solid rgba(55, 55, 55, 1);
     display: grid;
+    grid-template-columns: 1fr 2fr;
     grid-gap: 5px;
     padding: 5px;
     overflow: hidden;
 
-    .BoxKpiRelatedNormal {
-        grid-template-rows: 7fr 4fr;
-        grid-gap: 5px;
+    // .BoxKpiRelatedNormal {
+    //     grid-template-rows: 7fr 4fr;
+    //     grid-gap: 5px;
+    // }
+
+    .BoxFormItemInput {
+        margin-bottom: 0;
+
+        .ant-form-item-control-input-content {
+            display: grid;
+            grid-template-columns: 1fr auto;
+
+            .input-icon {
+                display: grid;
+                justify-content: center;
+                align-content: center;
+                padding: 0 3px 0 3px;
+                background: rgb(255,255,255);
+                border: {
+                    width: 1px 1px 1px 0;
+                    style: solid;
+                    color: rgb(225,225,225);
+                }
+                border-radius: 0 5px 5px 0;
+            }
+        }
+
+
+        // &:last-child {
+        //     margin-left: 5px;
+        // }
+
+        // &:first-child {
+        //     margin-left: 0;
+        // }
     }
 
     .BoxKpiRelatedSmall {
-        grid-template-rows: auto 1fr;
-        grid-gap: 0;
-        background: black;
+        grid-template-rows: auto 1fr !important;
+        grid-gap: 0 !important;
     }
 
     .BoxKpiRelatedSmaller {
-        grid-template-rows: 1fr auto;
-        grid-gap: 0;
-        background: black;
+        grid-template-rows: 1fr auto !important;
+        grid-gap: 0 !important;
     }
 
     .BoxKpiSchemasSmall {
@@ -142,6 +182,8 @@ $colorComponentToolbar: rgb(175, 225, 255);
 
     .BoxKpiRelated {
         display: grid;
+        grid-template-rows: 7fr 4fr;
+        grid-gap: 5px;
         overflow: hidden;
 
         .BoxKpisAndProperties {
@@ -150,20 +192,20 @@ $colorComponentToolbar: rgb(175, 225, 255);
             grid-gap: 5px;
             overflow: hidden;
 
-            .BoxKpisAndCounterTabNormal {
-                grid-template-rows: 1fr 1fr;
+            // .BoxKpisAndCounterTabNormal {
+            //     grid-template-rows: 1fr 1fr;
 
-            }
+            // }
 
             .BoxKpisAndCounterTabSmall {
-                grid-template-rows: auto 0;
-                background: red;
+                grid-template-rows: auto 0 !important;
             }
 
             .BoxKpisAndCounterTab {
                 border: 1px solid $colorComponentToolbar;
                 background: darkgray;
                 display: grid;
+                grid-template-rows: 1fr 1fr;
                 overflow: hidden;
 
                 .BoxKpis {
@@ -219,7 +261,7 @@ $colorComponentToolbar: rgb(175, 225, 255);
                             white-space: nowrap;
                         }
 
-                        .BoxTree2 {
+                        .BoxTreeInstance {
                             display: grid;
                             overflow: auto;
                         }
@@ -282,7 +324,7 @@ $colorComponentToolbar: rgb(175, 225, 255);
                             white-space: nowrap;
                         }
 
-                        .BoxTree2 {
+                        .BoxTreeInstance {
                             display: grid;
                             overflow: auto;
                         }
@@ -291,17 +333,12 @@ $colorComponentToolbar: rgb(175, 225, 255);
                 }
             }
 
-            .BoxPropertiesBorderNormal {
-                grid-template-rows: auto auto auto auto 1fr;
-
-            }
-
             .BoxPropertiesBorderSmall {
-                grid-template-rows: auto 0;
-                background: red;
+                grid-template-rows: auto 0 !important;
             }
 
             .BoxPropertiesBorder {
+                grid-template-rows: auto auto auto auto 1fr;
                 border: 1px solid $colorComponentToolbar;
                 background: darkgray;
                 display: grid;
@@ -309,12 +346,9 @@ $colorComponentToolbar: rgb(175, 225, 255);
                 overflow: hidden;
 
                 .BoxTitleBar {
-                    //border: 1px solid rgba(55,55,55,1);
                     background: $colorComponentToolbar;
                     display: grid;
                     grid-template-columns: 1fr auto auto;
-                    //justify-content: end;
-                    //align-content: center;
                     padding: 3px;
                     font-weight: bold;
 
