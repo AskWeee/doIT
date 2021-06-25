@@ -30,6 +30,7 @@ import TadKpiSchema from "../entity/TadKpiSchema";
 import TadKpi from "../entity/TadKpi";
 import TadIndicator from "../entity/TadIndicator";
 import TadIndicatorCounter from "../entity/TadIndicatorCounter";
+import TadKpiCounter from "../entity/TadKpiCounter";
 
 const {Option} = Select;
 const {TextArea} = Input;
@@ -174,7 +175,7 @@ export default class ServicePerformance extends React.PureComponent {
         this.doGetKpiSchemas = this.doGetKpiSchemas.bind(this);
         this.doGetIndicators = this.doGetIndicators.bind(this);
         this.doGetIndicatorCounters = this.doGetIndicatorCounters.bind(this);
-        this.doGetKpiCounters = this.doGetKpiCounters.bind(this);
+        this.restGetKpiCounters = this.restGetKpiCounters.bind(this);
         this.doGetExcel = this.doGetExcel.bind(this);
 
         this.restAddSchema = this.restAddSchema.bind(this);
@@ -184,7 +185,9 @@ export default class ServicePerformance extends React.PureComponent {
         this.restDeleteKpi = this.restDeleteKpi.bind(this);
         this.restUpdateKpi = this.restUpdateKpi.bind(this);
 
+        this.restAddCounter = this.restAddCounter.bind(this);
         this.restDeleteCounter = this.restDeleteCounter.bind(this);
+        this.restFixKpiCounter = this.restFixKpiCounter.bind(this);
 
         this.doAddSchema = this.doAddSchema.bind(this);
         this.doDeleteSchema = this.doDeleteSchema.bind(this);
@@ -194,7 +197,9 @@ export default class ServicePerformance extends React.PureComponent {
         this.doDeleteKpi = this.doDeleteKpi.bind(this);
         this.doUpdateKpi = this.doUpdateKpi.bind(this);
 
+        this.doAddCounter = this.doAddCounter.bind(this);
         this.doDeleteCounter = this.doDeleteCounter.bind(this);
+        this.doFixKpiCounters = this.doFixKpiCounters.bind(this);
 
         this.onTreeKpiSchemasSelected = this.onTreeKpiSchemasSelected.bind(this);
 
@@ -235,7 +240,7 @@ export default class ServicePerformance extends React.PureComponent {
         this.onSelectSchemaIdChanged = this.onSelectSchemaIdChanged.bind(this);
 
         this.data2UiTable = this.data2UiTable.bind(this);
-        this.toUiSchemas = this.toUiSchemas.bind(this);
+        this.dataSchemas2DsMapUiTree = this.dataSchemas2DsMapUiTree.bind(this);
         this.isFoundKpis = this.isFoundKpis.bind(this);
         this.uiUpdateSchema = this.uiUpdateSchema.bind(this);
         this.dsUpdateSchema = this.dsUpdateSchema.bind(this);
@@ -244,7 +249,6 @@ export default class ServicePerformance extends React.PureComponent {
         this.uiUpdateCounter = this.uiUpdateCounter.bind(this);
         this.dsUpdateCounter = this.dsUpdateCounter.bind(this);
 
-        this.uiUpdateCounter = this.uiUpdateCounter.bind(this);
         this.showModal = this.showModal.bind(this);
 
         this.onFormSchemaPropertiesFinish = this.onFormSchemaPropertiesFinish.bind(this);
@@ -343,7 +347,7 @@ export default class ServicePerformance extends React.PureComponent {
         return myResult
     }
 
-    toUiSchemas(ds, sv) {
+    dataSchemas2DsMapUiTree(ds, sv) {
         let myResult = {mapDs: new Map(), uiDs: [], mapRelation: new Map()}
 
         for (let i = 0; i < ds.length; i++) {
@@ -376,6 +380,7 @@ export default class ServicePerformance extends React.PureComponent {
 
                     schemaClone.schema_id = schemaId;
                     schemaClone.kpis = [];
+                    schemaClone.counters = [];
                     myResult.mapDs.set(id, schemaClone)
 
                     let uiSchema = {
@@ -597,49 +602,90 @@ export default class ServicePerformance extends React.PureComponent {
         }
     }
 
-    uiUpdateCounter(what) {
-        // const {selectedSchema} = this.state;
-        //
-        // let treeDataKpiSchemas = lodash.cloneDeep(this.state.treeDataKpiSchemas);
-        //
-        // switch (what) {
-        //     case "update":
-        //         for (let i = 0; i < treeDataKpiSchemas.length; i++) {
-        //             let item = treeDataKpiSchemas[i];
-        //             if (item.key === selectedSchema.id) {
-        //                 item.title = <div className="BoxSchemaTitle">{this.state.selectedSchema.schema_id + " - " + this.state.selectedSchema.schema_zhname}</div>
-        //                 break
-        //             }
-        //         }
-        //         break
-        //     case "delete":
-        //         let index = -1;
-        //         for (let i = 0; i < treeDataKpiSchemas.length; i++) {
-        //             let item = treeDataKpiSchemas[i];
-        //             if (item.key === selectedSchema.id) {
-        //                 index = i;
-        //                 break
-        //             }
-        //         }
-        //         treeDataKpiSchemas.splice(index, 1);
-        //         let schema = new TadKpiSchema();
-        //         schema.init();
-        //         this.setState({
-        //             selectedSchema: schema
-        //         });
-        //         break
-        //     default:
-        //         break;
-        // }
-        //
-        //
-        //
-        // this.setState({
-        //     treeDataKpiSchemas: treeDataKpiSchemas
-        // })
+    uiUpdateCounter(counter, what) {
+        let treeDataCounters;
+
+        switch (what) {
+            case "add":
+                let uiCounter = {
+                    key: counter.id,
+                    title: counter.counter_zhname + " - " + counter.counter_enname,
+                    children: []
+                }
+
+                this.setState((prevState) => {
+                    return produce(prevState, draftState => {
+                        draftState.treeDataKpiCounters.push(uiCounter);
+                    })
+                })
+                break
+            case "clone":
+                break
+            case "delete":
+                treeDataCounters = lodash.cloneDeep(this.state.treeDataKpiCounters);
+                let index = -1;
+                for (let i = 0; i < treeDataCounters.length; i++) {
+                    let item = treeDataCounters[i];
+                    if (item.key === counter.id) {
+                        index = i;
+                        break
+                    }
+                }
+                treeDataCounters.splice(index, 1);
+                let newKpi = new TadKpi();
+                newKpi.init();
+                this.setState({
+                    selectedKpi: newKpi
+                });
+                this.setState({
+                    treeDataKpiCounters: treeDataCounters
+                })
+                break
+            default:
+                break;
+        }
     }
 
     dsUpdateCounter(counter, what) {
+        switch (what) {
+            case "add":
+                if (this.gMap.schemas.has(counter.sid)) {
+                    this.gMap.schemas.get(counter.sid).counters.push(lodash.cloneDeep(counter));
+                }
+                break
+            case "delete":
+                if (this.gMap.schemas.has(counter.sid)) {
+                    let counters = this.gMap.schemas.get(counter.sid).counters;
+                    for (let i = 0; i < counters.length; i++) {
+                        if (counters[i].id === counter.id) {
+                            counters.splice(i, 1);
+                            break
+                        }
+                    }
+                }
+                break
+            default:
+                break;
+        }
+    }
+
+    doFixKpiCounters(mapSchemas) {
+        mapSchemas.forEach((value, key) => {
+            let counter = new TadKpiCounter();
+            counter.sid = key;
+            counter.schema_id2 = value.schema_id;
+            console.log(counter);
+            this.restFixKpiCounter(counter).then((result) => {
+                console.log(result);
+            });
+        })
+    }
+
+    uiUpdateCounter(what) {
+
+    }
+
+    dsUpdateCounter(mapSchemas) {
 
     }
 
@@ -696,7 +742,7 @@ export default class ServicePerformance extends React.PureComponent {
             this.doGetKpiDict(),
             this.doGetKpis(),
             this.doGetKpiSchemas(),
-            this.doGetKpiCounters(),
+            this.restGetKpiCounters(),
             this.doGetIndicators(),
             this.doGetIndicatorCounters(),
         ]).then(axios.spread((
@@ -822,7 +868,7 @@ export default class ServicePerformance extends React.PureComponent {
             */
 
             // schemas to gMap.schemas
-            let mySchemas = this.toUiSchemas(this.gData.schemas);
+            let mySchemas = this.dataSchemas2DsMapUiTree(this.gData.schemas);
 
             // kpis to gMap.kpis and gMap.schemas.kpis
             for (let iKpi = 0; iKpi < this.gData.kpis.length; iKpi++) {
@@ -849,8 +895,18 @@ export default class ServicePerformance extends React.PureComponent {
 
             }
 
+            let mapCounters = new Map();
+            this.gData.counters.forEach((item) => {
+                mapCounters.set(item.id, item);
+
+                if (mySchemas.mapDs.has(item.sid)) {
+                    mySchemas.mapDs.get(item.sid).counters.push(item.id);
+                }
+            });
+
             this.gMap.schemas = mySchemas.mapDs;
             this.gMap.kpis = mapKpis;
+            this.gMap.counters = mapCounters;
 
             this.gUi.schemas = mySchemas.uiDs;
             this.setState({
@@ -858,6 +914,7 @@ export default class ServicePerformance extends React.PureComponent {
             })
         })).then(() => {
             this.doInit();
+            // this.doFixKpiCounters(this.gMap.schemas);
         });
     }
 
@@ -888,10 +945,9 @@ export default class ServicePerformance extends React.PureComponent {
             {headers: {'Content-Type': 'application/json'}})
     }
 
-    doGetKpiCounters() {
-        let params = new TadKpiSchema();
-
-        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpi_counters", params,
+    restGetKpiCounters() {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpi_counters",
+            {},
             {headers: {'Content-Type': 'application/json'}})
     }
 
@@ -1116,6 +1172,18 @@ export default class ServicePerformance extends React.PureComponent {
             {headers: {'Content-Type': 'application/json'}});
     }
 
+    restFixKpiCounter(counter) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/fix_kpi_counter",
+            counter,
+            {headers: {'Content-Type': 'application/json'}});
+    }
+
+    restAddCounter(counter) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/add_kpi_counter",
+            counter,
+            {headers: {'Content-Type': 'application/json'}});
+    }
+
     restUpdateKpi(kpi) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/update_kpi",
             kpi,
@@ -1133,6 +1201,12 @@ export default class ServicePerformance extends React.PureComponent {
                             kpi.sid = result.data.data.id;
                             kpi.kpi_id = result.data.data.schema_id + kpi.kpi_id.substr(kpi.kpi_id.length - 2, 2);
                             this.doAddKpi(kpi, "clone");
+                        })
+                        schema.counters.forEach((item) => {
+                            let counter = this.gMap.counters.get(item);
+                            counter.id = null;
+                            counter.sid = result.data.data.id;
+                            this.doAddCounter(counter, "clone");
                         })
                     }
                     this.uiUpdateSchema(result.data.data, what);
@@ -1204,6 +1278,23 @@ export default class ServicePerformance extends React.PureComponent {
                 if (result.data.success) {
                     this.uiUpdateKpi(result.data.data, what);
                     this.dsUpdateKpi(result.data.data, "add");
+                    this.context.showMessage("创建成功，新增指标内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    //TODO:BM >>>>> 数据库新增KPI_COUNTER
+    doAddCounter(counter, what) {
+        this.restAddCounter(counter).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateCounter(result.data.data, what);
+                    this.dsUpdateCounter(result.data.data, "add");
                     this.context.showMessage("创建成功，新增指标内部ID为：" + result.data.data.id);
                 } else {
                     this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
@@ -1293,19 +1384,20 @@ export default class ServicePerformance extends React.PureComponent {
 
     onTreeKpiSchemasSelected(selectedKeys, info) {
         if (info.selected) {
-            let id = selectedKeys[0];
+            let sid = selectedKeys[0];
             let schema;
+            let schemaId;
+            let uiKpis = [];
             let uiKpiCounters = [];
 
-            if (this.gMap.schemas.has(id)) {
-                schema = this.gMap.schemas.get(id);
+            if (this.gMap.schemas.has(sid)) {
+                schema = this.gMap.schemas.get(sid);
+                schemaId = schema.schema_id;
                 this.gCurrent.schema = schema;
-                let schemaId = schema.schema_id;
 
-                let uiKpis = [];
-                schema.kpis.forEach((item) => {
-                    if (this.gMap.kpis.has(item)) {
-                        let kpi = this.gMap.kpis.get(item);
+                schema.kpis.forEach((kid) => {
+                    if (this.gMap.kpis.has(kid)) {
+                        let kpi = this.gMap.kpis.get(kid);
                         let uiKpi = {
                             key: kpi.id,
                             title: <div className={"BoxKpiTitle"}>{kpi.kpi_id + " - " + kpi.kpi_zhname}</div>,
@@ -1316,11 +1408,12 @@ export default class ServicePerformance extends React.PureComponent {
                     }
                 });
 
-                this.gData.counters.forEach((item) => {
-                    if (item.schema_id === schema.schema_id) {
+                schema.counters.forEach((cid) => {
+                    if (this.gMap.counters.has(cid)) {
+                        let counter = this.gMap.counters.get(cid);
                         uiKpiCounters.push({
-                            key: item.counter_enname,
-                            title: <div className={"BoxCounterTitle"}>{item.counter_zhname + " - " + item.counter_enname}</div>,
+                            key: counter.id,
+                            title: <div className={"BoxCounterTitle"}>{counter.counter_zhname + " - " + counter.counter_enname}</div>,
                             children: []
                         })
                     }
@@ -1372,7 +1465,7 @@ export default class ServicePerformance extends React.PureComponent {
                     treeDataKpis: uiKpis,
                     treeDataKpiCounters: uiKpiCounters,
                     selectedSchema: {
-                        id: id,
+                        id: sid,
                         schema_id: schema.schema_id, // 必填
                         schemaIdA1: schemaIdA1,
                         schemaIdA2: schemaIdA2,
@@ -1972,7 +2065,7 @@ export default class ServicePerformance extends React.PureComponent {
 
         if (sv && sv !== "") {
             sv = sv.toLowerCase();
-            let mySchemas = this.toUiSchemas(this.gData.schemas, sv);
+            let mySchemas = this.dataSchemas2DsMapUiTree(this.gData.schemas, sv);
             // let uiSchemas = [];
             // let n = 0;
             // this.gData.schemas.forEach(function (item) {
