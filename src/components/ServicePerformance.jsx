@@ -39,6 +39,15 @@ const {Column} = Table;
 export default class ServicePerformance extends React.PureComponent {
     static contextType = GCtx;
 
+    gMap = {};
+    gData = {};
+    gCurrent = {
+        schema: null,
+        kpi: null,
+        counter: null,
+        indicatorCounters: []
+    };
+
     gUi = {
         tableIndicatorsColumnWidths: {
             key: 4,
@@ -59,22 +68,6 @@ export default class ServicePerformance extends React.PureComponent {
             cgt: 7,
         },
     };
-    // gMap = { schemas: new Map(), kpis : new Map() };
-    // schemas.kpis为数组，只存放kpi的id（简写为：kid，注意不是kpi_id）
-    gMap = {};
-
-    gData = {};
-    gCurrent = {
-        schema: null,
-        kpi: null,
-        counter: null,
-        indicatorCounters: []
-    };
-    gRef = {};
-    refBoxDetail = React.createRef();
-    refTreeSchema = React.createRef();
-    refFormSchemaProperties = React.createRef();
-    refFormKpiProperties = React.createRef();
     gDynamic = {
         schemaId: {
             a1: -99999,
@@ -84,6 +77,11 @@ export default class ServicePerformance extends React.PureComponent {
             index: 0
         }
     }
+    gRef = {};
+    refBoxDetail = React.createRef();
+    refTreeSchema = React.createRef();
+    refFormSchemaProperties = React.createRef();
+    refFormKpiProperties = React.createRef();
     ids = [50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 99, 150, 151, 152, 153, 154, 155, 156, 157, 199];
 
     constructor(props) {
@@ -100,11 +98,28 @@ export default class ServicePerformance extends React.PureComponent {
             treeDataKpiSchemas: [],
             treeDataKpis: [],
             treeDataKpiCounters: [],
-
             optionsSchemaIdA1: [{label: "业务分类", value: -99999}],
             optionsSchemaIdA2: [{label: "时间粒度", value: -99999}],
             optionsSchemaIdB1: [{label: "空间粒度", value: -99999}],
             optionsSchemaIdB2: [{label: "网元类型", value: -99999}],
+            optionsVendor: [{label: "厂家", value: -99999}],
+            optionsObjectClass: [{label: "网元类型", value: -99999}],
+            optionsObjectSubClass: [{label: "网元细分类型", value: -99999}],
+            optionsIntervalFlag: [{label: "采集粒度", value: -99999}],
+            optionsProduct: [{label: "使用该指标的产品", value: -99999}],
+            optionsModule: [{label: "使用该指标的模块", value: -99999}],
+            formSchemaInitialValues: {
+                schemaVendor: -99999,
+                schemaObjectClass: -99999,
+                schemaObjectSubClass: -99999,
+                schemaIntervalFlag: -99999,
+            },
+            formKpiInitialValues: {
+                kpiAlarm: 1,
+                kpiFormat: 1,
+                kpiUsedProduct: -99999,
+                kpiUsedModule: -99999,
+            },
             pageSizeIndicators: 50,
             columnsIndicator: [],
             columnWidths: {
@@ -171,12 +186,17 @@ export default class ServicePerformance extends React.PureComponent {
         this.doInit = this.doInit.bind(this);
         this.doGetAll = this.doGetAll.bind(this);
         this.doGetKpiDict = this.doGetKpiDict.bind(this);
+        this.doGetObjectDefs = this.doGetObjectDefs.bind(this);
+        this.doGetVendors = this.doGetVendors.bind(this);
         this.doGetKpis = this.doGetKpis.bind(this);
         this.doGetKpiSchemas = this.doGetKpiSchemas.bind(this);
         this.doGetIndicators = this.doGetIndicators.bind(this);
         this.doGetIndicatorCounters = this.doGetIndicatorCounters.bind(this);
         this.restGetKpiCounters = this.restGetKpiCounters.bind(this);
         this.doGetExcel = this.doGetExcel.bind(this);
+
+        this.restGetProducts = this.restGetProducts.bind(this);
+        this.restGetModules = this.restGetModules.bind(this);
 
         this.restAddSchema = this.restAddSchema.bind(this);
         this.restDeleteSchema = this.restDeleteSchema.bind(this);
@@ -257,6 +277,9 @@ export default class ServicePerformance extends React.PureComponent {
         this.onFormKpiPropertiesFinishFailed = this.onFormKpiPropertiesFinishFailed.bind(this);
         this.onFormSchemaPropertiesFill = this.onFormSchemaPropertiesFill.bind(this);
         this.onFormKpiPropertiesFill = this.onFormKpiPropertiesFill.bind(this);
+
+        this.onSelectSchemaObjectClassChanged = this.onSelectSchemaObjectClassChanged.bind(this);
+        this.onSelectKpiUsedProductChanged = this.onSelectKpiUsedProductChanged.bind(this);
     }
 
     test() {
@@ -740,6 +763,10 @@ export default class ServicePerformance extends React.PureComponent {
     doGetAll() {
         axios.all([
             this.doGetKpiDict(),
+            this.doGetObjectDefs(),
+            this.doGetVendors(),
+            this.restGetProducts(),
+            this.restGetModules(),
             this.doGetKpis(),
             this.doGetKpiSchemas(),
             this.restGetKpiCounters(),
@@ -747,20 +774,31 @@ export default class ServicePerformance extends React.PureComponent {
             this.doGetIndicatorCounters(),
         ]).then(axios.spread((
             kpiDict,
+            objectDefs,
+            vendors,
+            products,
+            modules,
             kpis,
             schemas,
             counters,
-            // indicators,
-            indicatorCounters) => {
+            indicators,
+            indicatorCounters
+        ) => {
             let mapKpiDict = new Map();
+            let mapObjectDefs = new Map();
+            let mapProducts = new Map();
             let mapKpis = new Map();
-            // let mapIndicators = new Map();
+            let mapIndicators = new Map();
 
             this.gData.kpiDict = kpiDict.data.data;
+            this.gData.objectDefs = objectDefs.data.data;
+            this.gData.vendors = vendors.data.data;
+            this.gData.products = products.data.data;
+            this.gData.modules = modules.data.data;
             this.gData.kpis = kpis.data.data;
             this.gData.schemas = schemas.data.data;
             this.gData.counters = counters.data.data;
-            // this.gData.indicators = indicators.data.data;
+            this.gData.indicators = indicators.data.data;
             this.gData.indicatorCounters = indicatorCounters.data.data;
 
             // kpi dict ...
@@ -813,8 +851,65 @@ export default class ServicePerformance extends React.PureComponent {
                 })
             }
 
+            // 厂家控件
+            let optionsVendor = [{label: "厂家", value: -99999}, {label: "不区分厂家", value: -1}];
+            for(let i = 0; i < this.gData.vendors.length; i++) {
+                if (this.gData.vendors[i].type >= 0 && this.gData.vendors[i].type <= 99) {
+                    optionsVendor.push({label: this.gData.vendors[i].zh_name, value: this.gData.vendors[i].type});
+                }
+            }
+
+            //todo:: 网元类型，网元细分类型控件
+            let optionsObjectClass = [{label: "网元类型", value: -99999}];
+            for(let i = 0; i < this.gData.objectDefs.length; i++) {
+                let item = this.gData.objectDefs[i];
+                if (!mapObjectDefs.has(item.network_type)) {
+                    mapObjectDefs.set(item.network_type, {
+                        className: item.network_type_name,
+                        subClasses: [{
+                            objectClass: item.object_class,
+                            className: item.object_name,
+                        }]});
+                    optionsObjectClass.push({label: item.network_type_name, value: item.network_type});
+                } else {
+                    mapObjectDefs.get(item.network_type).subClasses.push({
+                        objectClass: item.object_class,
+                        className: item.object_name,
+                    });
+                }
+            }
+            this.gMap.objectDefs = mapObjectDefs;
+
+            let optionsObjectSubClass = [{label: "网元细分类型", value: -99999}];
+
+            //todo:: 采集粒度控件
+            let optionsIntervalFlag = [{label: "采集粒度", value: -99999}];
+
+            //todo:: 使用该指标的产品控件
+            let optionsProduct = [{label: "使用该指标的产品", value: -99999}];
+            for(let i = 0; i < this.gData.products.length; i++) {
+                let item = this.gData.products[i];
+                if (!mapProducts.has(item.product_id)) {
+                    mapProducts.set(item.product_id, {
+                        product_name: item.product_name,
+                        modules: []});
+                    optionsProduct.push({label: item.product_name, value: item.product_id});
+                }
+            }
+
+            //todo:: 使用该指标的模块控件
+            let optionsModule = [{label: "使用该指标的模块", value: -99999}];
+            for(let i = 0; i < this.gData.modules.length; i++) {
+                let item = this.gData.modules[i];
+                if (mapProducts.has(item.product_id)) {
+                    mapProducts.get(item.product_id).modules.push({
+                        module_name: item.module_name,
+                        module_id: item.module_id});
+                }
+            }
+            this.gMap.products = mapProducts;
+
             // indicator ...
-            /*
             let dsIndicators = [];
             let nKey = 0;
             let columnWidths = lodash.cloneDeep(this.gUi.tableIndicatorsColumnWidths);
@@ -852,20 +947,9 @@ export default class ServicePerformance extends React.PureComponent {
                 }
             }
 
-            this.gUi.dsIndicators = dsIndicators;
             this.gMap.indicators = mapIndicators;
+            this.gUi.dsIndicators = dsIndicators;
             this.gUi.tableIndicatorsColumnWidths = columnWidths;
-
-            this.setState({
-                pageSizeIndicators: this.gUi.dsIndicators.length,
-                dsIndicators: this.gUi.dsIndicators
-            }, () => {
-                this.setState({
-                    tableIndicatorsIsLoading: false,
-                    message: "共加载：" + this.state.dsIndicators.length + " 个指标"
-                })
-            })
-            */
 
             // schemas to gMap.schemas
             let mySchemas = this.dataSchemas2DsMapUiTree(this.gData.schemas);
@@ -907,14 +991,37 @@ export default class ServicePerformance extends React.PureComponent {
             this.gMap.schemas = mySchemas.mapDs;
             this.gMap.kpis = mapKpis;
             this.gMap.counters = mapCounters;
-
             this.gUi.schemas = mySchemas.uiDs;
+
+            // 尝试垃圾回收
+            this.gData.kpiDict = null;
+            this.gData.objectDefs = null;
+            // this.gData.vendors = vendors;
+            this.gData.products = null;
+            this.gData.modules = null;
+            this.gData.kpis = null;
+            this.gData.schemas = null;
+            this.gData.counters = null;
+            this.gData.indicators = null;
+            this.gData.indicatorCounters = null;
+
             this.setState({
-                treeDataKpiSchemas: mySchemas.uiDs
-            })
+                optionsVendor: optionsVendor,
+                optionsObjectClass: optionsObjectClass,
+                optionsObjectSubClass: optionsObjectSubClass,
+                optionsIntervalFlag: optionsIntervalFlag,
+                optionsProduct: optionsProduct,
+                optionsModule: optionsModule,
+            });
+
+            this.setState({
+                treeDataKpiSchemas: mySchemas.uiDs,
+                pageSizeIndicators: this.gUi.dsIndicators.length,
+                dsIndicators: this.gUi.dsIndicators,
+                tableIndicatorsIsLoading: false,
+            });
         })).then(() => {
             this.doInit();
-            // this.doFixKpiCounters(this.gMap.schemas);
         });
     }
 
@@ -928,6 +1035,20 @@ export default class ServicePerformance extends React.PureComponent {
         params.db_password = "nmosoptr";
 
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpis", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetObjectDefs() {
+        let params = {};
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_object_defs", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetVendors() {
+        let params = {};
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_vendors", params,
             {headers: {'Content-Type': 'application/json'}})
     }
 
@@ -1146,6 +1267,18 @@ export default class ServicePerformance extends React.PureComponent {
             schema,
             {headers: {'Content-Type': 'application/json'}}
         );
+    }
+
+    restGetProducts() {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_products",
+            {},
+            {headers: {'Content-Type': 'application/json'}});
+    }
+
+    restGetModules() {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_modules",
+            {},
+            {headers: {'Content-Type': 'application/json'}});
     }
 
     restAddKpi(kpi) {
@@ -2174,6 +2307,37 @@ export default class ServicePerformance extends React.PureComponent {
         });
     }
 
+    onSelectSchemaObjectClassChanged(v) {
+        let optionsObjectSubClass = [{label: "网元细分类型", value: -99999}];
+        if (this.gMap.objectDefs.has(v)) {
+            this.gMap.objectDefs.get(v).subClasses.forEach((item) => {
+                optionsObjectSubClass.push({
+                    label: item.className,
+                    value: item.objectClass
+                })
+            });
+        }
+        this.setState({
+            optionsObjectSubClass: optionsObjectSubClass
+        })
+    }
+
+    onSelectKpiUsedProductChanged(v) {
+        let optionsModule = [{label: "使用该指标的模块", value: -99999}];
+
+        if (this.gMap.products.has(v)) {
+            this.gMap.products.get(v).modules.forEach((item) => {
+                optionsModule.push({
+                    label: item.module_name,
+                    value: item.module_id
+                })
+            });
+        }
+        this.setState({
+            optionsModule: optionsModule
+        })
+    }
+
     //TODO:BM >>>>> render
     render() {
         return (
@@ -2358,7 +2522,10 @@ export default class ServicePerformance extends React.PureComponent {
                             </Fragment>)}
                         </div>
                         <div className={((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? "BoxPropertiesBorder" : "BoxPropertiesBorder BoxPropertiesBorderSmall"}>
-                            <Form ref={this.refFormSchemaProperties} name="formSchemaProperties" initialValues={{remember: true}} onFinish={this.onFormSchemaPropertiesFinish}
+                            {/*todo::formSchemaProperties */}
+                            <Form ref={this.refFormSchemaProperties} name="formSchemaProperties"
+                                  initialValues={this.state.formSchemaInitialValues}
+                                  onFinish={this.onFormSchemaPropertiesFinish}
                                   onFinishFailed={this.onFormSchemaPropertiesFinishFailed}>
                                 <div className={"BoxTitleBar"}>
                                     <div className={"BoxTitle"}>指标组属性 - {this.state.selectedSchema.schema_id}</div>
@@ -2410,18 +2577,19 @@ export default class ServicePerformance extends React.PureComponent {
                                         </Form.Item>
                                     </div>
                                     <div className={"BoxVendorObjectClass"}>
-                                        <Select defaultValue="-1">
-                                            <Option value="-1">不区分厂家</Option>
-                                        </Select>
-                                        <Select defaultValue="-1">
-                                            <Option value="-1">网元类型</Option>
-                                        </Select>
-                                        <Select defaultValue="-1">
-                                            <Option value="-1">网元细分类型</Option>
-                                        </Select>
-                                        <Select defaultValue="-1">
-                                            <Option value="-1">采集粒度</Option>
-                                        </Select>
+                                        <Form.Item name="schemaVendor" className="BoxFormItemInput">
+                                            <Select options={this.state.optionsVendor} />
+                                        </Form.Item>
+                                        <Form.Item name="schemaObjectClass" className="BoxFormItemInput">
+                                            <Select options={this.state.optionsObjectClass}
+                                                    onChange={this.onSelectSchemaObjectClassChanged}/>
+                                        </Form.Item>
+                                        <Form.Item name="schemaObjectSubClass" className="BoxFormItemInput">
+                                            <Select options={this.state.optionsObjectSubClass} />
+                                        </Form.Item>
+                                        <Form.Item name="schemaIntervalFlag" className="BoxFormItemInput">
+                                            <Select options={this.state.optionsIntervalFlag}/>
+                                        </Form.Item>
                                     </div>
                                     <div>
                                         <Form.Item className="BoxFormItemInput">
@@ -2433,7 +2601,10 @@ export default class ServicePerformance extends React.PureComponent {
                                     </div>
                                 </div>
                             </Form>
-                            <Form ref={this.refFormKpiProperties} name="formKpiProperties" initialValues={{remember: true}} onFinish={this.onFormKpiPropertiesFinish}
+                            {/*todo::formKpiProperties */}
+                            <Form ref={this.refFormKpiProperties} name="formKpiProperties"
+                                  initialValues={this.state.formKpiInitialValues}
+                                  onFinish={this.onFormKpiPropertiesFinish}
                                   onFinishFailed={this.onFormKpiPropertiesFinishFailed}>
                                 <div className={((this.state.styleLayoutUpDown === "NN") || (this.state.styleLayoutUpDown === "NS")) ? "BoxTitleBar" : "BoxTitleBar BoxHidden"}>
                                     <div className={"BoxTitle"}>指标属性 - {this.state.selectedKpi.kpi_id}</div>
@@ -2463,14 +2634,14 @@ export default class ServicePerformance extends React.PureComponent {
                                     <div className={"BoxKpiValues"}>
                                         <Form.Item name="kpiAlarm" className="BoxFormItemInput">
                                             <Select>
-                                                <Option value="0">不发告警</Option>
-                                                <Option value="1">发送告警</Option>
+                                                <Option value={0}>不发告警</Option>
+                                                <Option value={1}>发送告警</Option>
                                             </Select>
                                         </Form.Item>
                                         <Form.Item name="kpiFormat" className="BoxFormItemInput">
                                             <Select>
-                                                <Option value="0">不指定格式</Option>
-                                                <Option value="1">格式：R2</Option>
+                                                <Option value={0}>不指定格式</Option>
+                                                <Option value={1}>格式：R2</Option>
                                             </Select>
                                         </Form.Item>
                                         <Form.Item className="BoxFormItemInput">
@@ -2489,14 +2660,11 @@ export default class ServicePerformance extends React.PureComponent {
                                     <div className={"BoxUsedInfo"}>
                                         <div className={"BoxProductModuleName"}>
                                             <Form.Item name="kpiUsedProduct" className="BoxFormItemInput">
-                                                <Select>
-                                                    <Option value="-1">使用该指标的产品</Option>
-                                                </Select>
+                                                <Select options={this.state.optionsProduct}
+                                                onChange={this.onSelectKpiUsedProductChanged}/>
                                             </Form.Item>
                                             <Form.Item name="kpiUsedModule" className="BoxFormItemInput">
-                                                <Select>
-                                                    <Option value="-1">使用该指标的模块</Option>
-                                                </Select>
+                                                <Select options={this.state.optionsModule} />
                                             </Form.Item>
                                             <Form.Item className="BoxFormItemInput">
                                                 <Form.Item name="kpiUsedTitle" noStyle><Input/></Form.Item>
