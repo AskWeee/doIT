@@ -34,13 +34,6 @@ $colorComponentToolbar: rgb(175, 225, 255);
     }
 }
 
-// .BoxServicePerformanceNormal {
-//     grid-template-columns: 1fr 2fr;
-// }
-
-.BoxServicePerformanceSmall {
-    grid-template-columns: auto 1fr !important;
-}
 
 .BoxHidden {
     width: 0 !important;
@@ -51,6 +44,10 @@ $colorComponentToolbar: rgb(175, 225, 255);
     overflow: hidden !important;
 }
 
+.ServicePerformanceSmall {
+    grid-template-columns: auto 1fr !important;
+}
+
 .ServicePerformance {
     background: rgba(55, 175, 255, 0.25);
     border: 1px solid rgba(55, 55, 55, 1);
@@ -59,11 +56,6 @@ $colorComponentToolbar: rgb(175, 225, 255);
     grid-gap: 5px;
     padding: 5px;
     overflow: hidden;
-
-    // .BoxKpiRelatedNormal {
-    //     grid-template-rows: 7fr 4fr;
-    //     grid-gap: 5px;
-    // }
 
     .BoxFormItemInput {
         margin-bottom: 0;
@@ -77,11 +69,11 @@ $colorComponentToolbar: rgb(175, 225, 255);
                 justify-content: center;
                 align-content: center;
                 padding: 0 3px 0 3px;
-                background: rgb(255,255,255);
+                background: rgb(255, 255, 255);
                 border: {
                     width: 1px 1px 1px 0;
                     style: solid;
-                    color: rgb(225,225,225);
+                    color: rgb(225, 225, 225);
                 }
                 border-radius: 0 5px 5px 0;
             }
@@ -97,15 +89,15 @@ $colorComponentToolbar: rgb(175, 225, 255);
         // }
     }
 
-    .BoxKpiRelatedSmall {
-        grid-template-rows: auto 1fr !important;
-        grid-gap: 0 !important;
-    }
-
-    .BoxKpiRelatedSmaller {
-        grid-template-rows: 1fr auto !important;
-        grid-gap: 0 !important;
-    }
+    //.BoxKpiRelatedSmall {
+    //    grid-template-rows: auto 1fr !important;
+    //    grid-gap: 0 !important;
+    //}
+    //
+    //.BoxKpiRelatedSmaller {
+    //    grid-template-rows: 1fr auto !important;
+    //    grid-gap: 0 !important;
+    //}
 
     .BoxKpiSchemasSmall {
         background: $colorComponentToolbar;
@@ -115,329 +107,77 @@ $colorComponentToolbar: rgb(175, 225, 255);
         justify-content: center;
     }
 
-    .BoxKpiSchemas {
-        background: darkgray;
+    .BoxSchemasAndIndicators {
         display: grid;
-        grid-template-rows: auto 1fr;
-        overflow: hidden;
-        border: 1px solid $colorComponentToolbar;
-
-        .BoxTitleBar {
-            background: $colorComponentToolbar;
-            //border: 1px solid rgba(55,55,55,1);
-            display: grid;
-            grid-template-columns: 1fr auto auto;
-            //justify-content: end;
-            //align-content: center;
-            padding: 3px;
-            font-weight: bold;
-
-            .BoxTitle {
-                margin: 0 0 0 10px;
-                color: black;
-            }
-
-            .BoxButtons {
-                display: grid;
-                grid-template-columns: auto auto auto auto;
-                grid-gap: 3px;
-
-                Button {
-
-                    &:last-child {
-                        margin-right: 3px;
-                    }
-                }
-            }
-        }
-
-        .BoxTree {
-            background: rgba(55, 175, 255, 0.2);
-            display: grid;
-            grid-template-rows: auto auto 1fr;
-            overflow: hidden;
-            margin: 5px;
-            grid-gap: 3px;
-
-            .BoxCommit {
-                display: grid;
-                grid-template-columns: 1fr auto;
-                grid-gap: 3px;
-            }
-
-            .BoxSearch {
-
-            }
-
-            .BoxTreeInstance {
-                display: grid;
-                overflow: auto;
-
-                .BoxSchemaTitle {
-                    white-space: nowrap;
-                }
-            }
-        }
-    }
-
-    .BoxKpiRelated {
-        display: grid;
-        grid-template-rows: 7fr 4fr;
-        grid-gap: 5px;
+        grid-template-rows: 1fr 1fr;
         overflow: hidden;
 
-        .BoxKpisAndProperties {
+        .BoxSchemas {
+            background: darkgray;
             display: grid;
-            grid-template-columns: 5fr 6fr;
-            grid-gap: 5px;
+            grid-template-rows: auto 1fr;
             overflow: hidden;
+            border: 1px solid $colorComponentToolbar;
 
-            // .BoxKpisAndCounterTabNormal {
-            //     grid-template-rows: 1fr 1fr;
-
-            // }
-
-            .BoxKpisAndCounterTabSmall {
-                grid-template-rows: auto 0 !important;
-            }
-
-            .BoxKpisAndCounterTab {
-                border: 1px solid $colorComponentToolbar;
-                background: darkgray;
+            .BoxTitleBar {
+                background: $colorComponentToolbar;
+                //border: 1px solid rgba(55,55,55,1);
                 display: grid;
-                grid-template-rows: 1fr 1fr;
-                overflow: hidden;
+                grid-template-columns: 1fr auto auto;
+                //justify-content: end;
+                //align-content: center;
+                padding: 3px;
+                font-weight: bold;
 
-                .BoxKpis {
-                    border: 1px solid $colorComponentToolbar;
-                    background: darkgray;
-                    display: grid;
-                    grid-template-rows: auto 1fr;
-                    overflow: hidden;
-
-                    .BoxTitleBar {
-                        //border: 1px solid rgba(55,55,55,1);
-                        background: $colorComponentToolbar;
-                        display: grid;
-                        grid-template-columns: 1fr auto auto;
-                        //justify-content: end;
-                        //align-content: center;
-                        padding: 3px;
-                        font-weight: bold;
-
-                        .BoxTitle {
-                            margin: 0 0 0 10px;
-                            color: black;
-                        }
-
-                        .BoxButtons {
-                            display: grid;
-                            grid-template-columns: auto auto;
-                            grid-gap: 3px;
-
-                            Button {
-
-                                &:last-child {
-                                    margin-right: 3px;
-                                }
-                            }
-                        }
-                    }
-
-                    .BoxTree {
-                        background: rgba(255, 255, 255, 1);
-                        display: grid;
-                        overflow: hidden;
-                        margin: 5px;
-                        background: darkgray;
-
-                        .BoxSearch {
-                            background: red;
-                            //box-sizing: border-box;
-                            //padding-bottom: 3px;
-                        }
-
-                        .BoxKpiTitle {
-                            white-space: nowrap;
-                        }
-
-                        .BoxTreeInstance {
-                            display: grid;
-                            overflow: auto;
-                        }
-                    }
-
+                .BoxTitle {
+                    margin: 0 0 0 10px;
+                    color: black;
                 }
 
-                .BoxCounterTab {
-                    border: 1px solid $colorComponentToolbar;
-                    background: darkgray;
+                .BoxButtons {
                     display: grid;
-                    grid-template-rows: auto 1fr;
-                    overflow: hidden;
+                    grid-template-columns: auto auto auto auto;
+                    grid-gap: 3px;
 
-                    .BoxTitleBar {
-                        //border: 1px solid rgba(55,55,55,1);
-                        background: $colorComponentToolbar;
-                        display: grid;
-                        grid-template-columns: 1fr auto auto;
-                        //justify-content: end;
-                        //align-content: center;
-                        padding: 3px;
-                        font-weight: bold;
+                    Button {
 
-                        .BoxTitle {
-                            margin: 0 0 0 10px;
-                            color: black;
-                        }
-
-                        .BoxButtons {
-                            display: grid;
-                            //grid-template-columns: auto auto auto;
-                            grid-gap: 3px;
-
-                            Button {
-
-                                &:last-child {
-                                    margin-right: 3px;
-                                }
-                            }
+                        &:last-child {
+                            margin-right: 3px;
                         }
                     }
-
-                    .BoxTree {
-                        background: rgba(255, 255, 255, 1);
-                        display: grid;
-                        //grid-template-rows:  auto 1fr;
-                        overflow: hidden;
-                        margin: 5px;
-                        //grid-gap: 3px;
-                        background: darkgray;
-
-                        .BoxSearch {
-                            background: red;
-                            //box-sizing: border-box;
-                            //padding-bottom: 3px;
-                        }
-
-                        .BoxCounterTitle {
-                            white-space: nowrap;
-                        }
-
-                        .BoxTreeInstance {
-                            display: grid;
-                            overflow: auto;
-                        }
-                    }
-
                 }
             }
 
-            .BoxPropertiesBorderSmall {
-                grid-template-rows: auto 0 !important;
-            }
-
-            .BoxPropertiesBorder {
-                grid-template-rows: auto auto auto auto 1fr;
-                border: 1px solid $colorComponentToolbar;
-                background: darkgray;
+            .BoxTree {
+                background: rgba(55, 175, 255, 0.2);
                 display: grid;
-                color: black;
+                grid-template-rows: auto auto 1fr;
                 overflow: hidden;
+                margin: 5px;
+                grid-gap: 3px;
 
-                .BoxTitleBar {
-                    background: $colorComponentToolbar;
+                .BoxCommit {
                     display: grid;
-                    grid-template-columns: 1fr auto auto;
-                    padding: 3px;
-                    font-weight: bold;
-
-                    .BoxTitle {
-                        margin: 0 0 0 10px;
-                        color: black;
-                    }
-
-                    .BoxButtons {
-                        display: grid;
-                        //grid-template-columns: auto auto;
-                        grid-gap: 3px;
-
-                        Button {
-
-                            &:last-child {
-                                margin-right: 5px;
-                            }
-                        }
-                    }
+                    grid-template-columns: 1fr auto;
+                    grid-gap: 3px;
                 }
 
-                .BoxPropertiesSchema {
-                    display: grid;
-                    grid-template-rows: auto auto auto;
-                    grid-gap: 5px;
-                    overflow: hidden;
-                    padding: 5px;
-
-                    .BoxSchemaIds {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr 1fr 1fr;
-                        grid-gap: 3px;
-                    }
-
-                    .BoxVendorObjectClass {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr 1fr 1fr;
-                        grid-gap: 3px;
-                    }
+                .BoxSearch {
+                    margin-right: -2px;
                 }
 
-                .BoxPropertiesKpi {
+                .BoxTreeInstance {
                     display: grid;
-                    grid-template-rows: auto auto auto;
-                    grid-gap: 5px;
-                    overflow: hidden;
-                    padding: 5px;
+                    overflow: auto;
 
-                    .BoxUsedInfo {
-                        display: grid;
-
-                        .BoxProductModuleName {
-                            display: grid;
-                            grid-template-columns: 1fr 1fr 1fr auto;
-                            grid-gap: 3px;
-                        }
+                    .BoxSchemaTitle {
+                        white-space: nowrap;
                     }
-
-                    .BoxNames {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        grid-gap: 3px;
-
-                    }
-
-                    .BoxKpiValues {
-                        display: grid;
-                        grid-template-columns:1fr 1fr 1fr 1fr;
-                        grid-gap: 3px;
-                    }
-
-                    .BoxVendorObjectClass {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr 1fr;
-                        grid-gap: 3px;
-                    }
-
-                }
-
-                .BoxKpiExp {
-                    display: grid;
-                    background: white;
-                    margin: 0 5px 5px 5px;
                 }
             }
         }
 
-        .BoxKpisStandard {
+        .BoxIndicators {
             border: 1px solid $colorComponentToolbar;
             display: grid;
             grid-template-rows: auto 1fr;
@@ -473,106 +213,268 @@ $colorComponentToolbar: rgb(175, 225, 255);
                 }
             }
 
-            .BoxTableIndicators {
-                //padding: 5px;
+            .BoxTree {
                 display: grid;
                 grid-template-rows: auto 1fr;
                 overflow: hidden;
                 background: darkgray;
-                //grid-gap: 3px;
 
                 .BoxSearch {
-                    margin: 5px 5px 0 5px;
+                    margin: 5px 3px 0 5px;
                     display: grid;
                 }
 
-                .BoxAuto {
+                .BoxTreeInstance {
+                    margin: 3px 5px 5px 5px;
+                    display: grid;
+                    overflow: auto;
+                }
+            }
+        }
+    }
+
+    .BoxKpisAndProperties {
+        display: grid;
+        grid-template-columns: 5fr 6fr;
+        grid-gap: 5px;
+        overflow: hidden;
+
+        .BoxKpisAndCounterTabSmall {
+            grid-template-rows: auto 0 !important;
+        }
+
+        .BoxKpisAndCounters {
+            border: 1px solid $colorComponentToolbar;
+            background: darkgray;
+            display: grid;
+            grid-template-rows: 1fr 1fr;
+            overflow: hidden;
+
+            .BoxKpis {
+                border: 1px solid $colorComponentToolbar;
+                background: darkgray;
+                display: grid;
+                grid-template-rows: auto 1fr;
+                overflow: hidden;
+
+                .BoxTitleBar {
+                    //border: 1px solid rgba(55,55,55,1);
+                    background: $colorComponentToolbar;
+                    display: grid;
+                    grid-template-columns: 1fr auto auto;
+                    //justify-content: end;
+                    //align-content: center;
+                    padding: 3px;
+                    font-weight: bold;
+
+                    .BoxTitle {
+                        margin: 0 0 0 10px;
+                        color: black;
+                    }
+
+                    .BoxButtons {
+                        display: grid;
+                        grid-template-columns: auto auto;
+                        grid-gap: 3px;
+
+                        Button {
+
+                            &:last-child {
+                                margin-right: 3px;
+                            }
+                        }
+                    }
+                }
+
+                .BoxTree {
+                    background: rgba(255, 255, 255, 1);
                     display: grid;
                     overflow: hidden;
-                    margin: 3px 5px 5px 5px;
+                    margin: 5px;
+                    background: darkgray;
 
-                    ::-webkit-scrollbar {
-                        width: 0;
-                        //height:16px;
-                        //background-color:#F5F5F5;
+                    .BoxSearch {
+                        background: red;
+                        //box-sizing: border-box;
+                        //padding-bottom: 3px;
                     }
 
-                    //::-webkit-scrollbar    //滚动条整体部分
-                    //::-webkit-scrollbar-button   //滚动条两端的按钮
-                    //::-webkit-scrollbar-track   // 外层轨道
-                    //::-webkit-scrollbar-track-piece    //内层轨道，滚动条中间部分（除去）
-                    //::-webkit-scrollbar-thumb //滚动条里面可以拖动的那个
-                    //::-webkit-scrollbar-corner   //边角
-                    //::-webkit-resizer   ///定义右下角拖动块的样式
-                    ::-webkit-scrollbar-track {
-                        //-webkit-box-shadow:inset 0 0 6px rgba(0,0,0,0.3);
-                        //border-radius: 10px;
-                        //border: 1px solid red;
-                        background-color: #F5F5F5;
+                    .BoxKpiTitle {
+                        white-space: nowrap;
                     }
 
-                    ::-webkit-scrollbar-track-piece {
-                        //border: 3px solid green;
-                    }
-
-                    ::-webkit-scrollbar-thumb {
-                        border: 3px solid #F5F5F5;
-                        //border-radius: 8px;
-                        //-webkit-box-shadow:inset 0 0 6px rgba(255,255,255,.3);
-                        background-color: #babbbb;
-                    }
-
-                    .Box2 {
+                    .BoxTreeInstance {
                         display: grid;
                         overflow: auto;
-                        //background: red;
+                    }
+                }
 
-                        ::-webkit-scrollbar {
-                            width: 16px;
-                        }
+            }
 
-                        .ColumnKey {
-                            text-align: center;
-                        }
+            .BoxCounters {
+                border: 1px solid $colorComponentToolbar;
+                background: darkgray;
+                display: grid;
+                grid-template-rows: auto 1fr;
+                overflow: hidden;
 
-                        .ColumnIesn {
-                            text-align: center;
-                        }
+                .BoxTitleBar {
+                    //border: 1px solid rgba(55,55,55,1);
+                    background: $colorComponentToolbar;
+                    display: grid;
+                    grid-template-columns: 1fr auto auto;
+                    //justify-content: end;
+                    //align-content: center;
+                    padding: 3px;
+                    font-weight: bold;
 
-                        .BoxRecordDetail {
-                            display: grid;
-                            grid-template-rows: auto auto;
-                        }
+                    .BoxTitle {
+                        margin: 0 0 0 10px;
+                        color: black;
+                    }
 
-                        .BoxTableIndicatorCounters {
-                            padding: 5px;
+                    .BoxButtons {
+                        display: grid;
+                        //grid-template-columns: auto auto auto;
+                        grid-gap: 3px;
 
-                            .ant-table.ant-table-small {
-                                margin-left: -8px;
-                            }
+                        Button {
 
-                            Table {
-                                border: 1px solid darkgray;
-
-                            }
-                        }
-
-                        .IndicatorCounter {
-                            display: grid;
-                            grid-template-columns: auto auto auto auto auto auto;
-                            grid-gap: 3px;
-
-                            div {
-                                border: 1px solid darkgray;
+                            &:last-child {
+                                margin-right: 3px;
                             }
                         }
                     }
-
-                    //.BoxTable{
-                    //    overflow: auto;
-                    //    height: 100px;
-                    //}
                 }
+
+                .BoxTree {
+                    background: rgba(255, 255, 255, 1);
+                    display: grid;
+                    //grid-template-rows:  auto 1fr;
+                    overflow: hidden;
+                    margin: 5px;
+                    //grid-gap: 3px;
+                    background: darkgray;
+
+                    .BoxSearch {
+                        background: red;
+                        //box-sizing: border-box;
+                        //padding-bottom: 3px;
+                    }
+
+                    .BoxCounterTitle {
+                        white-space: nowrap;
+                    }
+
+                    .BoxTreeInstance {
+                        display: grid;
+                        overflow: auto;
+                    }
+                }
+
+            }
+        }
+
+        .BoxPropertiesBorderSmall {
+            grid-template-rows: auto 0 !important;
+        }
+
+        .BoxProperties {
+            grid-template-rows: auto auto auto auto 1fr;
+            border: 1px solid $colorComponentToolbar;
+            background: darkgray;
+            display: grid;
+            color: black;
+            overflow: hidden;
+
+            .BoxTitleBar {
+                background: $colorComponentToolbar;
+                display: grid;
+                grid-template-columns: 1fr auto auto;
+                padding: 3px;
+                font-weight: bold;
+
+                .BoxTitle {
+                    margin: 0 0 0 10px;
+                    color: black;
+                }
+
+                .BoxButtons {
+                    display: grid;
+                    //grid-template-columns: auto auto;
+                    grid-gap: 3px;
+
+                    Button {
+
+                        &:last-child {
+                            margin-right: 5px;
+                        }
+                    }
+                }
+            }
+
+            .BoxPropertiesSchema {
+                display: grid;
+                grid-template-rows: auto auto auto;
+                grid-gap: 5px;
+                overflow: hidden;
+                padding: 5px;
+
+                .BoxSchemaIds {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr 1fr 1fr;
+                    grid-gap: 3px;
+                }
+
+                .BoxVendorObjectClass {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr 1fr 1fr;
+                    grid-gap: 3px;
+                }
+            }
+
+            .BoxPropertiesKpi {
+                display: grid;
+                grid-template-rows: auto auto auto;
+                grid-gap: 5px;
+                overflow: hidden;
+                padding: 5px;
+
+                .BoxUsedInfo {
+                    display: grid;
+
+                    .BoxProductModuleName {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr 1fr auto;
+                        grid-gap: 3px;
+                    }
+                }
+
+                .BoxNames {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    grid-gap: 3px;
+
+                }
+
+                .BoxKpiValues {
+                    display: grid;
+                    grid-template-columns:1fr 1fr 1fr 1fr;
+                    grid-gap: 3px;
+                }
+
+                .BoxVendorObjectClass {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr 1fr;
+                    grid-gap: 3px;
+                }
+
+            }
+
+            .BoxKpiExp {
+                display: grid;
+                background: white;
+                margin: 0 5px 5px 5px;
             }
         }
     }
