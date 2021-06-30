@@ -1,41 +1,29 @@
 import React from 'react'
 import './ServicePerformance.scss'
-import moment from 'moment';
+import GCtx from "../GCtx";
+import Mock from 'mockjs'
 import axios from "axios";
 import lodash from "lodash";
-import GCtx from "../GCtx";
-import {Button, Input, Select, Tree, Modal, Form, Tooltip} from 'antd'
-import {
-    BranchesOutlined,
-    CaretDownOutlined,
-    CaretLeftOutlined,
-    CaretRightOutlined,
-    CaretUpOutlined,
-    CloudDownloadOutlined,
-    CloudUploadOutlined,
-    CopyOutlined,
-    MinusSquareOutlined,
-    PlusOutlined,
-    PlusSquareOutlined,
-    SaveOutlined,
-    QuestionCircleOutlined,
-    EllipsisOutlined,
-} from '@ant-design/icons'
-import Mock from 'mockjs'
-import {produce} from 'immer';
+import moment from 'moment';
+import hljs from 'highlight.js';
+// import 'highlight.js/styles/github.css';
+// import js from './javascript';
+import './github.css';
 import XLSX from 'xlsx';
 import TadKpiSchema from "../entity/TadKpiSchema";
 import TadKpi from "../entity/TadKpi";
 import TadIndicator from "../entity/TadIndicator";
 import TadIndicatorCounter from "../entity/TadIndicatorCounter";
 import TadKpiCounter from "../entity/TadKpiCounter";
+import {produce,} from 'immer';
+import {Button, Input, Select, Tree, Modal, Form, Tooltip,} from 'antd'
+import {BranchesOutlined, CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, CaretUpOutlined, CloudDownloadOutlined, CloudUploadOutlined, CopyOutlined, MinusSquareOutlined, PlusOutlined, PlusSquareOutlined, SaveOutlined, QuestionCircleOutlined, EllipsisOutlined, EditOutlined, ShoppingCartOutlined,} from '@ant-design/icons'
 
 const {Option} = Select;
 const {TextArea} = Input;
 
 export default class ServicePerformance extends React.PureComponent {
     static contextType = GCtx;
-
     gMap = {};
     gData = {};
     gCurrent = {
@@ -44,7 +32,6 @@ export default class ServicePerformance extends React.PureComponent {
         counter: null,
         indicatorCounters: []
     };
-
     gUi = {};
     gDynamic = {
         schemaId: {
@@ -56,7 +43,11 @@ export default class ServicePerformance extends React.PureComponent {
         }
     }
     gRef = {};
-    refBoxDetail = React.createRef();
+
+    //registeredLanguages = {};
+    js;
+
+    refKpiExpDisplay = React.createRef();
     refTreeSchema = React.createRef();
     refFormSchemaProperties = React.createRef();
     refFormKpiProperties = React.createRef();
@@ -128,6 +119,7 @@ export default class ServicePerformance extends React.PureComponent {
                 kpi_used_module: -1,
                 kpi_used_title: "界面呈现标题",
             },
+            kpiExpDisplay: "(arguments + thisisatest + arguments + 100)*100}",
         }
         //TODO:BM: >>>>> bind(this)
         this.test = this.test.bind(this);
@@ -135,6 +127,17 @@ export default class ServicePerformance extends React.PureComponent {
 
         this.doPrepare = this.doPrepare.bind(this);
         this.doInit = this.doInit.bind(this);
+
+        this.dataSchemas2DsMapUiTree = this.dataSchemas2DsMapUiTree.bind(this);
+        this.isFoundKpis = this.isFoundKpis.bind(this);
+        this.isFoundIndicatorCounters = this.isFoundIndicatorCounters.bind(this);
+        this.uiUpdateSchema = this.uiUpdateSchema.bind(this);
+        this.dsUpdateSchema = this.dsUpdateSchema.bind(this);
+        this.uiUpdateKpi = this.uiUpdateKpi.bind(this);
+        this.dsUpdateKpi = this.dsUpdateKpi.bind(this);
+        this.uiUpdateCounter = this.uiUpdateCounter.bind(this);
+        this.dsUpdateCounter = this.dsUpdateCounter.bind(this);
+        this.doInsertIntoKpiExp = this.doInsertIntoKpiExp.bind(this);
 
         this.doGetAll = this.doGetAll.bind(this);
         this.doGetKpiDict = this.doGetKpiDict.bind(this);
@@ -180,35 +183,22 @@ export default class ServicePerformance extends React.PureComponent {
         this.onButtonSchemasExportClicked = this.onButtonSchemasExportClicked.bind(this);
         this.onButtonSchemasResetClicked = this.onButtonSchemasResetClicked.bind(this);
         this.onButtonSchemasCommitClicked = this.onButtonSchemasCommitClicked.bind(this);
-
         this.onButtonKpisAddClicked = this.onButtonKpisAddClicked.bind(this);
         this.onButtonKpisCopyPasteClicked = this.onButtonKpisCopyPasteClicked.bind(this);
         this.onButtonKpisDeleteClicked = this.onButtonKpisDeleteClicked.bind(this);
-
         this.onButtonIndicatorsCopy2CountersClicked = this.onButtonIndicatorsCopy2CountersClicked.bind(this);
         this.onButtonIndicatorsImportClicked = this.onButtonIndicatorsImportClicked.bind(this);
         this.onButtonIndicatorsExportClicked = this.onButtonIndicatorsExportClicked.bind(this);
-        this.onModalButtonOkClicked = this.onModalButtonOkClicked.bind(this);
-        this.onModalButtonCancelClicked = this.onModalButtonCancelClicked.bind(this);
+        this.onButtonInsertIntoKpiExpClicked = this.onButtonInsertIntoKpiExpClicked.bind(this);
+        this.onButtonKpisShoppingClicked = this.onButtonKpisShoppingClicked.bind(this);
 
         this.onInputSchemaZhNameChanged = this.onInputSchemaZhNameChanged.bind(this);
-
         this.onInputSearchSchemasSearched = this.onInputSearchSchemasSearched.bind(this);
         this.onInputSearchIndicatorsSearched = this.onInputSearchIndicatorsSearched.bind(this);
 
         this.onSelectSchemaIdChanged = this.onSelectSchemaIdChanged.bind(this);
-
-        this.dataSchemas2DsMapUiTree = this.dataSchemas2DsMapUiTree.bind(this);
-        this.isFoundKpis = this.isFoundKpis.bind(this);
-        this.isFoundIndicatorCounters = this.isFoundIndicatorCounters.bind(this);
-        this.uiUpdateSchema = this.uiUpdateSchema.bind(this);
-        this.dsUpdateSchema = this.dsUpdateSchema.bind(this);
-        this.uiUpdateKpi = this.uiUpdateKpi.bind(this);
-        this.dsUpdateKpi = this.dsUpdateKpi.bind(this);
-        this.uiUpdateCounter = this.uiUpdateCounter.bind(this);
-        this.dsUpdateCounter = this.dsUpdateCounter.bind(this);
-
-        this.showModal = this.showModal.bind(this);
+        this.onSelectSchemaObjectClassChanged = this.onSelectSchemaObjectClassChanged.bind(this);
+        this.onSelectKpiUsedProductChanged = this.onSelectKpiUsedProductChanged.bind(this);
 
         this.onFormSchemaPropertiesFinish = this.onFormSchemaPropertiesFinish.bind(this);
         this.onFormSchemaPropertiesFinishFailed = this.onFormSchemaPropertiesFinishFailed.bind(this);
@@ -217,8 +207,9 @@ export default class ServicePerformance extends React.PureComponent {
         this.onFormSchemaPropertiesFill = this.onFormSchemaPropertiesFill.bind(this);
         this.onFormKpiPropertiesFill = this.onFormKpiPropertiesFill.bind(this);
 
-        this.onSelectSchemaObjectClassChanged = this.onSelectSchemaObjectClassChanged.bind(this);
-        this.onSelectKpiUsedProductChanged = this.onSelectKpiUsedProductChanged.bind(this);
+        this.showModal = this.showModal.bind(this);
+        this.onModalButtonOkClicked = this.onModalButtonOkClicked.bind(this);
+        this.onModalButtonCancelClicked = this.onModalButtonCancelClicked.bind(this);
     }
 
     test() {
@@ -245,7 +236,18 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     doPrepare() {
-
+        let language = "javascript";
+        try {
+            // const newLanguage = require(`highlight.js/lib/languages/${language}`);
+            // const newLanguage = require(`./${language}`);
+            this.js = require(`./${language}`);
+            console.log(this.js);
+            hljs.registerLanguage(language, this.js);
+            //this.registeredLanguages[language] = true;
+        } catch (e) {
+            console.error(e);
+            throw Error(`Cannot register and higlight language ${language}`);
+        }
     }
 
     doInit() {
@@ -256,9 +258,10 @@ export default class ServicePerformance extends React.PureComponent {
         let myResult = false;
 
         for (let i = 0; i < ds.length; i++) {
-            if (ds[i].kpi_zhname?.toLowerCase().indexOf(sv) >= 0
-                || ds[i].kpi_enname?.toLowerCase().indexOf(sv) >= 0
-                || ds[i].kpi_id?.toString().indexOf(sv) >= 0) {
+            let kpi = this.gMap.kpis.get(ds[i]);
+            if (kpi.kpi_zhname?.toLowerCase().indexOf(sv) >= 0
+                || kpi.kpi_enname?.toLowerCase().indexOf(sv) >= 0
+                || kpi.kpi_id?.toString().indexOf(sv) >= 0) {
                 myResult = true;
                 break;
             }
@@ -320,7 +323,6 @@ export default class ServicePerformance extends React.PureComponent {
                     && indicator.indicator_zhname.toLowerCase().indexOf(sv) < 0
                     && indicatorEnName.toLowerCase().indexOf(sv) < 0) {
                     if (this.gMap.indicators.has(indicator.id)) {
-                        console.log(this.gMap.indicators.get(indicator.id));
                         if (!this.isFoundIndicatorCounters(this.gMap.indicators.get(indicator.id).counters, sv)) {
                             continue;
                         }
@@ -362,53 +364,44 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     dataSchemas2DsMapUiTree(ds, sv) {
-        let myResult = {mapDs: new Map(), uiDs: [], mapRelation: new Map()}
+        let myResult = {mapDs: new Map(), uiDs: []}; //, mapRelation: new Map()}
 
         for (let i = 0; i < ds.length; i++) {
             let item = ds[i];
-            let id = item.id;
-            let schemaId = item.schema_id === null ? (99260000261 + item.id).toString() : item.schema_id;
+            console.log(item);
+            let sid = item.id;
+            // 新增指标组，默认schema_id为空
+            let schemaId = item.schema_id === null ? ("33260" + 33333333 + item.id).toString() : item.schema_id;
             let schemaName = item.schema_zhname === null ? "" : item.schema_zhname;
 
-            if (schemaId !== -1 &&
-                schemaName !== "" &&
-                schemaName.length > 0 &&
-                schemaName[0] !== "?" &&
-                schemaName[schemaName.length - 1] !== "?") {
+            if (schemaName === "") continue
 
-                if (sv
-                    && (sv !== "")
-                    && schemaName.toLowerCase().indexOf(sv) < 0
-                    && schemaId.toString().indexOf(sv) < 0) {
-                    if (this.gMap.schemas.has(schemaId)) {
-                        if (!this.isFoundKpis(this.gMap.schemas.get(schemaId).kpis, sv)) {
-                            continue;
-                        }
-                    } else {
-                        continue;
-                    }
-                }
-
-                if (!myResult.mapDs.has(id)) {
-                    let schemaClone = lodash.cloneDeep(item);
-
-                    schemaClone.schema_id = schemaId;
-                    schemaClone.kpis = [];
-                    schemaClone.counters = [];
-                    myResult.mapDs.set(id, schemaClone)
-
-                    let uiSchema = {
-                        key: schemaClone.id,
-                        title: <div className={"BoxSchemaTitle"}>{schemaClone.schema_id + " - " + schemaClone.schema_zhname}</div>,
-                        children: []
-                    }
-                    myResult.uiDs.push(uiSchema);
-                }
-
-                if (!myResult.mapRelation.has(schemaId)) {
-                    myResult.mapRelation.set(schemaId, id);
+            if (sv !== undefined) {
+                if (schemaName.toLowerCase().indexOf(sv) < 0 && schemaId.toString().indexOf(sv) < 0) {
+                    if (!this.isFoundKpis(this.gMap.schemas.get(sid).kpis, sv)) continue
                 }
             }
+
+            if (!myResult.mapDs.has(sid)) {
+                let schemaClone = lodash.cloneDeep(item);
+
+                schemaClone.schema_id = schemaId;
+                schemaClone.kpis = [];
+                schemaClone.counters = [];
+                myResult.mapDs.set(sid, schemaClone)
+
+                let uiSchema = {
+                    key: schemaClone.id,
+                    title: <div className={"BoxSchemaTitle"}>{schemaClone.schema_id + " - " + schemaClone.schema_zhname}</div>,
+                    children: []
+                }
+                myResult.uiDs.push(uiSchema);
+            }
+
+            // if (!myResult.mapRelation.has(schemaId)) {
+            //     myResult.mapRelation.set(schemaId, id);
+            // }
+            //}
         }
 
         return myResult;
@@ -420,7 +413,6 @@ export default class ServicePerformance extends React.PureComponent {
 
         let treeDataKpiSchemas = lodash.cloneDeep(this.state.treeDataKpiSchemas);
 
-        console.log(schema, what);
         switch (what) {
             case "add":
                 treeDataKpiSchemas.push({
@@ -647,7 +639,6 @@ export default class ServicePerformance extends React.PureComponent {
                         }
                     }
                     treeDataCounters.splice(index, 1);
-                    console.log(index, counter, treeDataCounters);
                 });
                 let newKpi = new TadKpi();
                 newKpi.init();
@@ -692,9 +683,8 @@ export default class ServicePerformance extends React.PureComponent {
             let counter = new TadKpiCounter();
             counter.sid = key;
             counter.schema_id2 = value.schema_id;
-            console.log(counter);
             this.restFixKpiCounter(counter).then((result) => {
-                console.log(result);
+                this.context.showMessage("result");
             });
         })
     }
@@ -1282,7 +1272,7 @@ export default class ServicePerformance extends React.PureComponent {
         let idObjectClassFirst = ids[0];
         let idFixed = "260";
         let idType = ids[1][0];
-        let idTime = ids[1][1];
+        // let idTime = ids[1][1];
         let regionClass = "";
         let idObjectClassSecond = ids[1].substr(2, 2);
         let idIndex = ids[1].substr(4, 2);
@@ -1346,7 +1336,6 @@ export default class ServicePerformance extends React.PureComponent {
         this.restAddCounter(counter).then((result) => {
             if (result.status === 200) {
                 if (result.data.success) {
-                    console.log(result);
                     this.uiUpdateCounter(result.data.data, what);
                     this.dsUpdateCounter(result.data.data, "add");
                     this.context.showMessage("创建成功，新增指标内部ID为：" + result.data.data.id);
@@ -1420,7 +1409,6 @@ export default class ServicePerformance extends React.PureComponent {
         this.restDeleteCounter(counter).then((result) => {
             if (result.status === 200) {
                 if (result.data.success) {
-                    console.log(result.data.data);
                     this.uiUpdateCounter(result.data.data, "delete");
                     this.dsUpdateCounter(result.data.data, "delete");
                     this.context.showMessage("删除成功，被删除指标ID为：" + result.data.data.id);
@@ -1457,6 +1445,7 @@ export default class ServicePerformance extends React.PureComponent {
         this.gCurrent.indicatorsChecked = checkedKeys;
     }
 
+    //TODO::BM >>>>> 点击 SCHEMA 树
     onTreeKpiSchemasSelected(selectedKeys, info) {
         if (info.selected) {
             let sid = selectedKeys[0];
@@ -1577,6 +1566,8 @@ export default class ServicePerformance extends React.PureComponent {
             this.gCurrent.schema = null;
             this.gCurrent.kpi = null;
             this.gCurrent.counter = null;
+            // todo::取消 Tree 控件的节点选中状态
+            // 当再次选中时，会自动显示为选中状态，但此时因没有激发select事件，所有gCurrent没有更新
 
             this.setState({
                 treeDataKpis: [],
@@ -1613,6 +1604,7 @@ export default class ServicePerformance extends React.PureComponent {
         }
     };
 
+    //TODO::BM >>>>> 点击 KPI 树
     onTreeKpisSelected(selectedKeys, info) {
         if (info.selected) {
             let kid = selectedKeys[0];
@@ -1639,8 +1631,11 @@ export default class ServicePerformance extends React.PureComponent {
                 this.setState({
                     selectedKpi: selectedKpi
                 })
+            } else {
+                this.gCurrent.kpi = null;
             }
         } else {
+            this.gCurrent.kpi = null;
             let selectedKpi = lodash.cloneDeep(this.state.selectedKpi);
             selectedKpi.id = -1;
             selectedKpi.kpi_id = "";
@@ -1883,6 +1878,35 @@ export default class ServicePerformance extends React.PureComponent {
         this.context.showMessage("导出规范指标，开发中...");
     }
 
+    onButtonKpisShoppingClicked(e) {
+        this.context.showMessage("开发中，目标：将选中指标添加到购物车中，以备导出使用。");
+    }
+
+    //todo:: 将 counter 插入表达式编辑控件
+    doInsertIntoKpiExp(counter) {
+        console.log("counter = ", counter);
+        this.refFormKpiProperties.current.setFieldsValue({
+            kpiExp: counter.counter_enname
+        });
+
+        // //let r = this.js.addKeywords("thisisatest");
+        // this.js
+        console.log(this.js.name);
+        console.log(this.js.keys);
+        //this.js.add("test");
+        this.refKpiExpDisplay && this.refKpiExpDisplay.current && hljs.highlightElement(this.refKpiExpDisplay.current);
+
+    }
+
+    onButtonInsertIntoKpiExpClicked(e) {
+        console.log(!this.gCurrent.kpi, this.gCurrent);
+        if (this.gCurrent.kpi) {
+            if (this.gCurrent.counter) {
+                this.doInsertIntoKpiExp(this.gCurrent.counter);
+            }
+        }
+    }
+
     // >>>>> 确认对话框
     onModalButtonOkClicked() {
         const {modalWhat} = this.state;
@@ -2005,6 +2029,7 @@ export default class ServicePerformance extends React.PureComponent {
     //     // });
     // }
 
+    //TODO::BM >>>>> 搜索 INDICATOR & COUNTER
     onInputSearchIndicatorsSearched(value, event) {
         let sv = value;
 
@@ -2024,11 +2049,12 @@ export default class ServicePerformance extends React.PureComponent {
 
     }
 
+    //TODO::BM >>>>> 搜索 SCHEMA & KPI
     onInputSearchSchemasSearched(value, event) {
         let sv = value;
 
-        if (sv && sv !== "") {
-            sv = sv.toLowerCase();
+        if (sv !== null && sv !== undefined && sv.trim() !== "") {
+            sv = sv.trim().toLowerCase();
             let mySchemas = this.dataSchemas2DsMapUiTree(this.gData.schemas, sv);
 
             this.setState({
@@ -2109,6 +2135,7 @@ export default class ServicePerformance extends React.PureComponent {
         });
     }
 
+    // 为 FROM.ITEM 赋值
     onFormKpiPropertiesFill(kpi) {
         this.refFormKpiProperties.current.setFieldsValue({
             kpiZhName: kpi.kpi_zhname,
@@ -2200,8 +2227,8 @@ export default class ServicePerformance extends React.PureComponent {
 
                             </div>
                             <div className={"BoxSearch"}>
-                            <Input.Search placeholder="Search" enterButton
-                                onSearch={this.onInputSearchSchemasSearched}/>
+                                <Input.Search placeholder="Search" enterButton
+                                              onSearch={this.onInputSearchSchemasSearched}/>
                             </div>
                             <div className={"BoxTreeInstance"}>
                                 <Tree
@@ -2252,18 +2279,9 @@ export default class ServicePerformance extends React.PureComponent {
                             <div className={"BoxTitleBar"}>
                                 <div className={"BoxTitle"}>指标</div>
                                 <div className={"BoxButtons"}>
-                                    <Button
-                                        size={"small"}
-                                        type={"primary"}
-                                        icon={<PlusSquareOutlined/>}
-                                        onClick={this.onButtonKpisAddClicked}>新增</Button>
-                                    <Button
-                                        size={"small"}
-                                        type={"primary"}
-                                        icon={<MinusSquareOutlined/>}
-                                        onClick={() => {
-                                            this.showModal("删除指标")
-                                        }}>删除</Button>
+                                    <Button size={"small"} type={"primary"} icon={<ShoppingCartOutlined/>} onClick={this.onButtonKpisShoppingClicked}>购物车</Button>
+                                    <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonKpisAddClicked}>新增</Button>
+                                    <Button size={"small"} type={"primary"} icon={<MinusSquareOutlined/>} onClick={() => {this.showModal("删除指标")}}>删除</Button>
                                 </div>
                                 <div>
                                     <Button size={"small"} type={"ghost"} icon={<EllipsisOutlined/>}/>
@@ -2271,14 +2289,7 @@ export default class ServicePerformance extends React.PureComponent {
                             </div>
                             <div className={"BoxTree"}>
                                 <div className={"BoxTreeInstance"}>
-                                    <Tree treeData={this.state.treeDataKpis}
-                                          blockNode
-                                          draggable
-                                          showIcon
-                                          showLine={{showLeafIcon: false}}
-                                          switcherIcon={<CaretDownOutlined/>}
-                                          onSelect={this.onTreeKpisSelected}
-                                          onDrop={this.onTreeKpisDrop}/>
+                                    <Tree treeData={this.state.treeDataKpis} blockNode draggable showIcon showLine={{showLeafIcon: false}} switcherIcon={<CaretDownOutlined/>} onSelect={this.onTreeKpisSelected} onDrop={this.onTreeKpisDrop}/>
                                 </div>
                             </div>
                         </div>
@@ -2286,13 +2297,8 @@ export default class ServicePerformance extends React.PureComponent {
                             <div className={"BoxTitleBar"}>
                                 <div className={"BoxTitle"}>原始指标</div>
                                 <div className={"BoxButtons"}>
-                                    <Button
-                                        size={"small"}
-                                        type={"primary"}
-                                        icon={<MinusSquareOutlined/>}
-                                        onClick={() => {
-                                            this.showModal("删除统计数据")
-                                        }}>删除</Button>
+                                    <Button size={"small"} type={"primary"} icon={<EditOutlined/>} onClick={this.onButtonInsertIntoKpiExpClicked}>插入表达式</Button>
+                                    <Button size={"small"} type={"primary"} icon={<MinusSquareOutlined/>} onClick={() => {this.showModal("删除统计数据")}}>删除</Button>
                                 </div>
                                 <div>
                                     <Button size={"small"} type={"ghost"} icon={<EllipsisOutlined/>}/>
@@ -2300,20 +2306,13 @@ export default class ServicePerformance extends React.PureComponent {
                             </div>
                             <div className={"BoxTree"}>
                                 <div className={"BoxTreeInstance"}>
-                                    <Tree
-                                        blockNode={true}
-                                        showLine={{showLeafIcon: false}}
-                                        showIcon={true}
-                                        switcherIcon={<CaretDownOutlined/>}
-                                        onSelect={this.onTreeKpiCountersSelected}
-                                        treeData={this.state.treeDataKpiCounters}
-                                    /></div>
+                                    <Tree blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} switcherIcon={<CaretDownOutlined/>} onSelect={this.onTreeKpiCountersSelected} treeData={this.state.treeDataKpiCounters}/>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div className="BoxProperties">
-                        <Form ref={this.refFormSchemaProperties} name="formSchemaProperties" initialValues={this.state.formSchemaInitialValues} onFinish={this.onFormSchemaPropertiesFinish}
-                              onFinishFailed={this.onFormSchemaPropertiesFinishFailed}>
+                        <Form className="FormOne" ref={this.refFormSchemaProperties} name="formSchemaProperties" initialValues={this.state.formSchemaInitialValues} onFinish={this.onFormSchemaPropertiesFinish} onFinishFailed={this.onFormSchemaPropertiesFinishFailed}>
                             <div className={"BoxTitleBar"}>
                                 <div className={"BoxTitle"}>指标组属性 - {this.state.selectedSchema.schema_id}</div>
                                 <div className="BoxButtons">
@@ -2388,8 +2387,7 @@ export default class ServicePerformance extends React.PureComponent {
                                 </div>
                             </div>
                         </Form>
-                        <Form ref={this.refFormKpiProperties} name="formKpiProperties" initialValues={this.state.formKpiInitialValues} onFinish={this.onFormKpiPropertiesFinish}
-                              onFinishFailed={this.onFormKpiPropertiesFinishFailed}>
+                        <Form className="FormTwo" ref={this.refFormKpiProperties} name="formKpiProperties" initialValues={this.state.formKpiInitialValues} onFinish={this.onFormKpiPropertiesFinish} onFinishFailed={this.onFormKpiPropertiesFinishFailed}>
                             <div className="BoxTitleBar">
                                 <div className={"BoxTitle"}>指标属性 - {this.state.selectedKpi.kpi_id}</div>
                                 <div className={"BoxButtons"}>
@@ -2467,6 +2465,13 @@ export default class ServicePerformance extends React.PureComponent {
                                         <div className="input-icon"><QuestionCircleOutlined/></div>
                                     </Tooltip>
                                 </Form.Item>
+                                <div className="BoxKpiExpDisplay">
+                                    <pre>
+                                        <code ref={this.refKpiExpDisplay} className="javascript">
+                                            {this.state.kpiExpDisplay}
+                                        </code>
+                                    </pre>
+                                </div>
                             </div>
                         </Form>
                     </div>
