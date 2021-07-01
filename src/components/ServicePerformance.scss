@@ -44,6 +44,13 @@ $colorComponentToolbar: rgb(175, 225, 255);
     overflow: hidden !important;
 }
 
+.shadowElement {
+    top: -999px;
+    left: -999px;
+    opacity: 0;
+    position: absolute;
+}
+
 .ServicePerformanceSmall {
     grid-template-columns: auto 1fr !important;
 }
@@ -182,6 +189,7 @@ $colorComponentToolbar: rgb(175, 225, 255);
             display: grid;
             grid-template-rows: auto 1fr;
             overflow: hidden;
+            background: darkgray;
 
             .BoxTitleBar {
                 //border: 1px solid rgba(55,55,55,1);
@@ -439,6 +447,7 @@ $colorComponentToolbar: rgb(175, 225, 255);
             .FormTwo {
                 display: grid;
                 grid-template-rows: auto auto 1fr;
+                overflow: hidden;
 
                 .BoxTitleBar {
                     background: $colorComponentToolbar;
@@ -508,6 +517,7 @@ $colorComponentToolbar: rgb(175, 225, 255);
                     display: grid;
                     grid-template-rows: auto 1fr;
                     margin: 0 5px 5px 5px;
+                    overflow: hidden;
 
                     .BoxKpiExpDisplay {
                         display: grid;
@@ -518,6 +528,85 @@ $colorComponentToolbar: rgb(175, 225, 255);
                         }
                         margin-top: 3px;
                         background: white;
+                        overflow: hidden;
+
+                        .Expression {
+                            overflow: auto;
+
+                            div {
+                                display: inline-block;
+                                margin: 2px;
+                            }
+
+                            .expKb_01, .expKe_01 {
+                                color: #b85b00;
+                                font: {
+                                    size: 35px;
+                                }
+                            }
+
+                            .expKb_02, .expKe_02 {
+                                color: #b85b00;
+                                font: {
+                                    size: 30px;
+                                }
+                            }
+
+                            .expKb_03, .expKe_03 {
+                                color: #b85b00;
+                                font: {
+                                    size: 25px;
+                                }
+                            }
+
+                            .expKb_04, .expKe_04 {
+                                color: #b85b00;
+                                font: {
+                                    size: 20px;
+                                }
+                            }
+
+                            .expKb_05, .expKe_05 {
+                                color: #b85b00;
+                                font: {
+                                    size: 15px;
+                                }
+                            }
+
+                            .expKb_error {
+                                color: red;
+                                font: {
+                                    size: 38px;
+                                }
+                            }
+                            .expVar {
+                                color: black;
+                                font: {
+                                    weight: bold;
+                                }
+                            }
+                            .expVarError {
+                                color: red;
+                                font: {
+                                    weight: bold;
+                                }
+
+                            }
+                            .expOperator {
+                                color: blueviolet;
+                                font: {
+                                    weight: bold;
+                                    size: 20px;
+                                }
+                            }
+
+                            .expNumber {
+                                color: green;
+                                font: {
+                                    weight: bold;
+                                }
+                            }
+                        }
                     }
                 }
             }

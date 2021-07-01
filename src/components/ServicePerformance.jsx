@@ -1,13 +1,10 @@
-import React from 'react'
+import React, {Fragment} from 'react'
 import './ServicePerformance.scss'
 import GCtx from "../GCtx";
 import Mock from 'mockjs'
 import axios from "axios";
 import lodash from "lodash";
 import moment from 'moment';
-import hljs from 'highlight.js';
-// import 'highlight.js/styles/github.css';
-// import js from './javascript';
 import './github.css';
 import XLSX from 'xlsx';
 import TadKpiSchema from "../entity/TadKpiSchema";
@@ -17,7 +14,7 @@ import TadIndicatorCounter from "../entity/TadIndicatorCounter";
 import TadKpiCounter from "../entity/TadKpiCounter";
 import {produce,} from 'immer';
 import {Button, Input, Select, Tree, Modal, Form, Tooltip,} from 'antd'
-import {BranchesOutlined, CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, CaretUpOutlined, CloudDownloadOutlined, CloudUploadOutlined, CopyOutlined, MinusSquareOutlined, PlusOutlined, PlusSquareOutlined, SaveOutlined, QuestionCircleOutlined, EllipsisOutlined, EditOutlined, ShoppingCartOutlined,} from '@ant-design/icons'
+import {BranchesOutlined, CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, CloudDownloadOutlined, CloudUploadOutlined, CopyOutlined, MinusSquareOutlined, PlusOutlined, PlusSquareOutlined, SaveOutlined, QuestionCircleOutlined, EllipsisOutlined, EditOutlined, ShoppingCartOutlined,} from '@ant-design/icons'
 
 const {Option} = Select;
 const {TextArea} = Input;
@@ -42,12 +39,11 @@ export default class ServicePerformance extends React.PureComponent {
             index: 0
         }
     }
-    gRef = {};
+    gRef = {
+        textAreaKpiExp: React.createRef(),
+    };
 
-    //registeredLanguages = {};
-    js;
 
-    refKpiExpDisplay = React.createRef();
     refTreeSchema = React.createRef();
     refFormSchemaProperties = React.createRef();
     refFormKpiProperties = React.createRef();
@@ -61,7 +57,7 @@ export default class ServicePerformance extends React.PureComponent {
             isModalVisible: false,
             modalWhat: "",
             modalMessage: "",
-            styleLayout: "NNN",
+            styleLayout: "NN",
             treeDataKpiSchemas: [],
             treeDataIndicators: [],
             treeDataKpis: [],
@@ -138,6 +134,7 @@ export default class ServicePerformance extends React.PureComponent {
         this.uiUpdateCounter = this.uiUpdateCounter.bind(this);
         this.dsUpdateCounter = this.dsUpdateCounter.bind(this);
         this.doInsertIntoKpiExp = this.doInsertIntoKpiExp.bind(this);
+        this.doDisplayExpression = this.doDisplayExpression.bind(this);
 
         this.doGetAll = this.doGetAll.bind(this);
         this.doGetKpiDict = this.doGetKpiDict.bind(this);
@@ -195,6 +192,7 @@ export default class ServicePerformance extends React.PureComponent {
         this.onInputSchemaZhNameChanged = this.onInputSchemaZhNameChanged.bind(this);
         this.onInputSearchSchemasSearched = this.onInputSearchSchemasSearched.bind(this);
         this.onInputSearchIndicatorsSearched = this.onInputSearchIndicatorsSearched.bind(this);
+        this.onInputKpiExpChanged = this.onInputKpiExpChanged.bind(this);
 
         this.onSelectSchemaIdChanged = this.onSelectSchemaIdChanged.bind(this);
         this.onSelectSchemaObjectClassChanged = this.onSelectSchemaObjectClassChanged.bind(this);
@@ -236,18 +234,7 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     doPrepare() {
-        let language = "javascript";
-        try {
-            // const newLanguage = require(`highlight.js/lib/languages/${language}`);
-            // const newLanguage = require(`./${language}`);
-            this.js = require(`./${language}`);
-            console.log(this.js);
-            hljs.registerLanguage(language, this.js);
-            //this.registeredLanguages[language] = true;
-        } catch (e) {
-            console.error(e);
-            throw Error(`Cannot register and higlight language ${language}`);
-        }
+
     }
 
     doInit() {
@@ -368,7 +355,6 @@ export default class ServicePerformance extends React.PureComponent {
 
         for (let i = 0; i < ds.length; i++) {
             let item = ds[i];
-            console.log(item);
             let sid = item.id;
             // 新增指标组，默认schema_id为空
             let schemaId = item.schema_id === null ? ("33260" + 33333333 + item.id).toString() : item.schema_id;
@@ -1665,7 +1651,6 @@ export default class ServicePerformance extends React.PureComponent {
             let cid = selectedKeys[0];
             let counter = this.gMap.counters.get(cid);
             this.gCurrent.counter = counter;
-            console.log(cid, counter);
         } else {
             this.gCurrent.counter = null;
         }
@@ -1787,6 +1772,7 @@ export default class ServicePerformance extends React.PureComponent {
 
         if (this.state.styleLayout !== "SN") styleLayout = "SN";
 
+        console.log(styleLayout);
         this.setState({
             styleLayout: styleLayout
         })
@@ -1884,22 +1870,106 @@ export default class ServicePerformance extends React.PureComponent {
 
     //todo:: 将 counter 插入表达式编辑控件
     doInsertIntoKpiExp(counter) {
-        console.log("counter = ", counter);
-        this.refFormKpiProperties.current.setFieldsValue({
-            kpiExp: counter.counter_enname
-        });
-
-        // //let r = this.js.addKeywords("thisisatest");
-        // this.js
-        console.log(this.js.name);
-        console.log(this.js.keys);
-        //this.js.add("test");
-        this.refKpiExpDisplay && this.refKpiExpDisplay.current && hljs.highlightElement(this.refKpiExpDisplay.current);
-
+        // this.refFormKpiProperties.current.setFieldsValue({
+        //     kpiExp: counter.counter_enname
+        // });
+        this.doCopyToClipboard(counter.counter_enname);
     }
 
+    doDisplayExpression(exp) {
+        let expTest = exp;
+        exp = exp.replace(/^\s+/g, "");
+        exp = exp.replace(/\s+$/g, "");
+        exp = exp.replace(/(\w)+/g, "__KKK__$&");
+        exp = exp.replace(/\s+/g, "");
+        let arrExp = exp.match(/(\W?\w*)/g);
+        console.log(arrExp);
+        arrExp.pop();
+        console.log(arrExp);
+        let kIndex = 0;
+        let kpiExpDisplay = <div className="Expression">
+            {arrExp.map((item, index) => {
+                let ov = item.split("__KKK__");
+                let operator = ov[0];
+                let className = "";
+                switch (operator) {
+                    case "(":
+                        kIndex++;
+                        className = "expKb_" + kIndex.toString().padStart(2, "0");
+                        break
+                    case ")":
+                        if (kIndex > 0) {
+                            className = "expKb_" + kIndex.toString().padStart(2, "0");
+                            kIndex--;
+                        } else {
+                            kIndex = 0;
+                            className = "expKb_error";
+                        }
+                        break
+                    default:
+                        className = "expOperator";
+                        break
+                }
+                if (ov.length === 1) {
+                    return <Fragment>
+                        <div key={index} className={className}>{operator}</div>
+                    </Fragment>
+                } else if (ov.length === 2) {
+                    let classNameV =  "expVar";
+                    if ((index + 1) < arrExp.length) {
+                        if (!(arrExp[index + 1].startsWith("+") ||
+                            arrExp[index + 1].startsWith("-") ||
+                            arrExp[index + 1].startsWith("*") ||
+                            arrExp[index + 1].startsWith("/") ||
+                            arrExp[index + 1].startsWith(")"))) {
+                            classNameV = "expVarError";
+                        }
+                    }
+                    return <Fragment>
+                        <div key={"operator_" + index} className={className}>{operator}</div>
+                        <div key={"value_" + index} className={classNameV}>{ov[1]}</div>
+                    </Fragment>
+                } else {
+                    let v = "";
+                    for(let i = 1; i < ov.length; i++) {
+                        v += ov[i] + " ";
+                    }
+                    v = v.replace(/\s+$/, "");
+                    return <Fragment>
+                        <div key={"operator_" + index} className={className}>{operator}</div>
+                        <div key={"value_" + index} className="expVarError">{v}</div>
+                    </Fragment>
+                }
+            })}
+        </div>;
+        this.setState({
+            kpiExpDisplay: kpiExpDisplay
+        }, () => {
+            try {
+                expTest = "let t = 1; \n let test = " + expTest + "; console.log(test);";
+                eval(expTest);
+            } catch(err) {
+                console.log(err.toString());
+            }
+        });
+    }
+
+    doCopyToClipboard(text) {
+        let input = document.getElementById("shadowInputForClipboard");
+        input.value = text;
+        input.select();
+        document.execCommand("copy");
+    }
+
+    onInputKpiExpChanged = lodash.debounce((e) => {
+        this.doDisplayExpression(e.target.value);
+    }, 500);
+
+    // onInputKpiExpChanged(e) {
+    //     this.test(e.target.value);
+    // }
+
     onButtonInsertIntoKpiExpClicked(e) {
-        console.log(!this.gCurrent.kpi, this.gCurrent);
         if (this.gCurrent.kpi) {
             if (this.gCurrent.counter) {
                 this.doInsertIntoKpiExp(this.gCurrent.counter);
@@ -1947,87 +2017,6 @@ export default class ServicePerformance extends React.PureComponent {
     onInputSchemaZhNameChanged(e) {
 
     }
-
-    // onInputSearchKpiChange(e) {
-    //     const {value} = e.target;
-    //
-    //     let uiSchemas = [];
-    //     let uiKpis = [];
-    //     let n = 0;
-    //     let setSchemas = new Set();
-    //
-    //     if (value !== "") {
-    //         this.gData.kpis.forEach(function (item) {
-    //             let kid = item.id;
-    //             let kpiId = item.kpi_id === null ? -1 : item.kpi_id;
-    //             let kpiName = item.kpi_zhname === null ? "" : item.kpi_zhname;
-    //             let schemaId = item.sid === null ? -1 : item.sid;
-    //             // let schemaName = item.schema_zhname === null ? "" : item.schema_zhname;
-    //
-    //             if (kpiId !== -1 &&
-    //                 schemaId !== -1 &&
-    //                 kpiName !== "" &&
-    //                 kpiName.length > 0 &&
-    //                 kpiName[0] !== "?" &&
-    //                 kpiName[kpiName.length - 1] !== "?") {
-    //                 if ((kpiName.indexOf(value) >= 0) || (kpiId.toString().indexOf(value) >= 0)) {
-    //                     setSchemas.add(schemaId);
-    //                     let uiKpi = {
-    //                         key: kid,
-    //                         title: kpiId + " - " + kpiName,
-    //                         children: []
-    //                     }
-    //                     uiKpis.push(uiKpi);
-    //                 }
-    //             }
-    //         });
-    //
-    //         setSchemas.forEach((value, key) => {
-    //             n++;
-    //             if (this.gMap.schemas.has(key)) {
-    //                 let schema = this.gMap.schemas.get(key);
-    //                 let uiSchema = {
-    //                     key: n + "_" + key,
-    //                     title: n + " - " + schema.schema_id + "-" + schema.schema_zhname,
-    //                     children: []
-    //                 }
-    //                 uiSchemas.push(uiSchema);
-    //             }
-    //         })
-    //         this.setState({
-    //             treeDataKpiSchemas: uiSchemas,
-    //             treeDataKpis: uiKpis,
-    //         })
-    //     } else {
-    //         this.gMap.schemas.forEach((value, key) => {
-    //             n++;
-    //             //let schema = this.gMap.schemas.get(key);
-    //             let uiSchema = {
-    //                 key: n + "_" + key,
-    //                 title: n + " - " + value.schema_id + "-" + value.schema_zhname,
-    //                 children: []
-    //             }
-    //             uiSchemas.push(uiSchema);
-    //         })
-    //         this.setState({
-    //             treeDataKpiSchemas: uiSchemas,
-    //             treeDataKpis: uiKpis,
-    //         })
-    //
-    //     }
-    //
-    //     // const expandedKeys = dataList
-    //     //     .map(item => {
-    //     //         if (item.title.indexOf(value) > -1) {
-    //     //             return getParentKey(item.key, gData);
-    //     //         }
-    //     //         return null;
-    //     //     })
-    //     //     .filter((item, i, self) => item && self.indexOf(item) === i);
-    //     // this.setState({
-    //     //     searchValueSchemaName: value
-    //     // });
-    // }
 
     //TODO::BM >>>>> 搜索 INDICATOR & COUNTER
     onInputSearchIndicatorsSearched(value, event) {
@@ -2177,98 +2166,55 @@ export default class ServicePerformance extends React.PureComponent {
     //TODO:BM >>>>> render
     render() {
         return (
-            <div className={this.state.styleLayout === "NNN" ? "ServicePerformance" : "ServicePerformance ServicePerformanceSmall"}>
-                <div className="BoxSchemasAndIndicators">
+            <div className={this.state.styleLayout === "NN" ? "ServicePerformance" : "ServicePerformance ServicePerformanceSmall"}>
+                <div className={"BoxSchemasAndIndicators"}>
                     <div className={"BoxSchemas"}>
                         <div className={"BoxTitleBar"}>
-                            <div className={"BoxTitle"}>指标组</div>
-                            <div className={"BoxButtons"}>
-                                <Button
-                                    size={"small"}
-                                    type={"primary"}
-                                    icon={<PlusSquareOutlined/>}
-                                    onClick={this.onButtonSchemasAddClicked}>新增</Button>
-                                <Button
-                                    size={"small"}
-                                    type={"primary"}
-                                    icon={<CopyOutlined/>}
-                                    onClick={this.onButtonSchemasCopyPasteClicked}>复制</Button>
-                                <Button
-                                    size={"small"}
-                                    type={"primary"}
-                                    icon={<MinusSquareOutlined/>}
-                                    // onClick={this.onButtonSchemasDeleteClicked}
-                                    onClick={() => {
-                                        this.showModal("删除指标组")
-                                    }}>删除</Button>
-                                <Button
-                                    size={"small"}
-                                    type={"primary"}
-                                    icon={<CloudDownloadOutlined/>}
-                                    onClick={this.onButtonSchemasExportClicked}>导出</Button>
+                            <div className={this.state.styleLayout === "NN" ? "BoxTitle" : "BoxTitle BoxHidden"}>指标组</div>
+                            <div className={this.state.styleLayout === "NN" ? "BoxButtons" : "BoxButtons BoxHidden"}>
+                                <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonSchemasAddClicked}>新增</Button>
+                                <Button size={"small"} type={"primary"} icon={<CopyOutlined/>} onClick={this.onButtonSchemasCopyPasteClicked}>复制</Button>
+                                <Button size={"small"} type={"primary"} icon={<MinusSquareOutlined/>} onClick={() => {this.showModal("删除指标组")}}>删除</Button>
+                                <Button size={"small"} type={"primary"} icon={<CloudDownloadOutlined/>} onClick={this.onButtonSchemasExportClicked}>导出</Button>
                             </div>
                             <div>
-                                <Button size={"small"} type={"ghost"} icon={this.state.styleLayout === "NNN" ? <CaretLeftOutlined/> : <CaretRightOutlined/>}
-                                    // onClick={this.onButtonChangeStyleLayoutClicked}
-                                />
+                                <Button size={"small"} type={"ghost"} icon={this.state.styleLayout === "NN" ? <CaretLeftOutlined/> : <CaretRightOutlined/>} onClick={this.onButtonChangeStyleLayoutClicked}/>
                             </div>
                         </div>
-                        <div className={"BoxTree"}>
+                        <div className={this.state.styleLayout === "NN" ? "BoxTree" : "BoxTree BoxHidden"}>
                             <div className={"BoxCommit"}>
                                 <Select defaultValue="-1">
                                     <Option value="-1">变更：全集</Option>
                                     <Option value="1">变更：K - 新增话务指标 - 2021-07-01</Option>
                                 </Select>
-                                <Button
-                                    // size={"small"}
-                                    type={"primary"}
-                                    icon={<BranchesOutlined/>}
-                                    onClick={this.onButtonSchemasCommitClicked}>提交变更</Button>
-
+                                <Button type={"primary"} icon={<BranchesOutlined/>} onClick={this.onButtonSchemasCommitClicked}>提交变更</Button>
                             </div>
                             <div className={"BoxSearch"}>
-                                <Input.Search placeholder="Search" enterButton
-                                              onSearch={this.onInputSearchSchemasSearched}/>
+                                <Input.Search placeholder="Search" enterButton onSearch={this.onInputSearchSchemasSearched}/>
                             </div>
                             <div className={"BoxTreeInstance"}>
-                                <Tree
-                                    ref={this.refTreeSchema}
-                                    // checkable
-                                    // onCheck={this.onTreeKpiSchemasChecked}
-                                    blockNode={true}
-                                    showLine={{showLeafIcon: false}}
-                                    showIcon={true}
-                                    switcherIcon={<CaretDownOutlined/>}
-                                    onSelect={this.onTreeKpiSchemasSelected}
-                                    treeData={this.state.treeDataKpiSchemas}
-                                />
+                                <Tree treeData={this.state.treeDataKpiSchemas} ref={this.refTreeSchema} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} switcherIcon={<CaretDownOutlined/>} onSelect={this.onTreeKpiSchemasSelected}/>
                             </div>
                         </div>
                     </div>
-                    <div className={"BoxIndicators"}>
-                        <div className={"BoxTitleBar"}>
-                            <div className={"BoxTitle"}>规范指标集</div>
-                            <div className={"BoxButtons"}>
-                                <Button size="small" type={"primary"} icon={<CloudUploadOutlined/>}
-                                        onClick={this.onButtonIndicatorsCopy2CountersClicked}>移入指标组</Button>
-                                <Button size="small" type={"primary"} icon={<CloudUploadOutlined/>}
-                                        onClick={this.onButtonIndicatorsImportClicked}>导入</Button>
-                                <Button size="small" type={"primary"} icon={<CloudDownloadOutlined/>}
-                                        onClick={this.onButtonIndicatorsExportClicked}>导出</Button>
+                    <div className="BoxIndicators">
+                        <div className="BoxTitleBar">
+                            <div className={this.state.styleLayout === "NN" ? "BoxTitle" : "BoxTitle BoxHidden"}>规范指标集</div>
+                            <div className={this.state.styleLayout === "NN" ? "BoxButtons" : "BoxButtons BoxHidden"}>
+                                <Button size="small" type={"primary"} icon={<CloudUploadOutlined/>} onClick={this.onButtonIndicatorsCopy2CountersClicked}>移入指标组</Button>
+                                <Button size="small" type={"primary"} icon={<CloudUploadOutlined/>} onClick={this.onButtonIndicatorsImportClicked}>导入</Button>
+                                <Button size="small" type={"primary"} icon={<CloudDownloadOutlined/>} onClick={this.onButtonIndicatorsExportClicked}>导出</Button>
                             </div>
                             <div>
-                                <Button size="small" type={"ghost"} icon={(this.state.styleLayout === "NNN") ? <CaretUpOutlined/> : <CaretDownOutlined/>}/>
+                                <Button size="small" type={"ghost"} icon={<EllipsisOutlined/>}/>
                             </div>
                         </div>
-                        <div className={"BoxTree"}>
+                        <div className={this.state.styleLayout === "NN" ? "BoxTree" : "BoxTree BoxHidden"}>
                             <div className={"BoxSearch"}>
-                                <Input.Search placeholder="Search" enterButton
-                                              onSearch={this.onInputSearchIndicatorsSearched}/>
+                                <Input.Search placeholder="Search" enterButton onSearch={this.onInputSearchIndicatorsSearched}/>
                             </div>
                             <div className="BoxTreeInstance">
-                                <Tree switcherIcon={<CaretDownOutlined/>} checkable blockNode={true} showLine={{showLeafIcon: false}} showIcon={true}
-                                      treeData={this.state.treeDataIndicators}
-                                      onCheck={this.onTreeIndicatorsChecked}/>
+                                <Tree switcherIcon={<CaretDownOutlined/>} checkable blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} treeData={this.state.treeDataIndicators} onCheck={this.onTreeIndicatorsChecked}/>
                             </div>
                         </div>
                     </div>
@@ -2289,7 +2235,7 @@ export default class ServicePerformance extends React.PureComponent {
                             </div>
                             <div className={"BoxTree"}>
                                 <div className={"BoxTreeInstance"}>
-                                    <Tree treeData={this.state.treeDataKpis} blockNode draggable showIcon showLine={{showLeafIcon: false}} switcherIcon={<CaretDownOutlined/>} onSelect={this.onTreeKpisSelected} onDrop={this.onTreeKpisDrop}/>
+                                    <Tree treeData={this.state.treeDataKpis} checkable blockNode draggable showIcon showLine={{showLeafIcon: false}} switcherIcon={<CaretDownOutlined/>} onSelect={this.onTreeKpisSelected} onDrop={this.onTreeKpisDrop}/>
                                 </div>
                             </div>
                         </div>
@@ -2298,7 +2244,9 @@ export default class ServicePerformance extends React.PureComponent {
                                 <div className={"BoxTitle"}>原始指标</div>
                                 <div className={"BoxButtons"}>
                                     <Button size={"small"} type={"primary"} icon={<EditOutlined/>} onClick={this.onButtonInsertIntoKpiExpClicked}>插入表达式</Button>
-                                    <Button size={"small"} type={"primary"} icon={<MinusSquareOutlined/>} onClick={() => {this.showModal("删除统计数据")}}>删除</Button>
+                                    <Button size={"small"} type={"primary"} icon={<MinusSquareOutlined/>} onClick={() => {
+                                        this.showModal("删除统计数据")
+                                    }}>删除</Button>
                                 </div>
                                 <div>
                                     <Button size={"small"} type={"ghost"} icon={<EllipsisOutlined/>}/>
@@ -2317,7 +2265,6 @@ export default class ServicePerformance extends React.PureComponent {
                                 <div className={"BoxTitle"}>指标组属性 - {this.state.selectedSchema.schema_id}</div>
                                 <div className="BoxButtons">
                                     <Button size={"small"} type={"primary"} icon={<SaveOutlined/>} htmlType="submit">保存</Button>
-                                    {/*<Button size={"small"} type={"primary"} icon={<UndoOutlined />} onClick={this.onButtonSchemasResetClicked}>恢复</Button>*/}
                                 </div>
                                 <div>
                                     <Button size={"small"} type={"ghost"} icon={<EllipsisOutlined/>}/>
@@ -2325,34 +2272,18 @@ export default class ServicePerformance extends React.PureComponent {
                             </div>
                             <div className="BoxPropertiesSchema">
                                 <div className={"BoxSchemaIds"}>
-                                    <Select
-                                        defaultValue={-99999}
-                                        value={this.state.selectedSchema.schemaIdA1}
-                                        options={this.state.optionsSchemaIdA1}
-                                        onChange={(e) => {
-                                            this.onSelectSchemaIdChanged(e, "a1")
-                                        }}/>
-                                    <Select
-                                        defaultValue={-99999}
-                                        value={this.state.selectedSchema.schemaIdA2}
-                                        options={this.state.optionsSchemaIdA2}
-                                        onChange={(e) => {
-                                            this.onSelectSchemaIdChanged(e, "a2")
-                                        }}/>
-                                    <Select
-                                        defaultValue={-99999}
-                                        value={this.state.selectedSchema.schemaIdB1}
-                                        options={this.state.optionsSchemaIdB1}
-                                        onChange={(e) => {
-                                            this.onSelectSchemaIdChanged(e, "b1")
-                                        }}/>
-                                    <Select
-                                        defaultValue={-99999}
-                                        value={this.state.selectedSchema.schemaIdB2}
-                                        options={this.state.optionsSchemaIdB2}
-                                        onChange={(e) => {
-                                            this.onSelectSchemaIdChanged(e, "b2")
-                                        }}/>
+                                    <Select defaultValue={-99999} value={this.state.selectedSchema.schemaIdA1} options={this.state.optionsSchemaIdA1} onChange={(e) => {
+                                        this.onSelectSchemaIdChanged(e, "a1")
+                                    }}/>
+                                    <Select defaultValue={-99999} value={this.state.selectedSchema.schemaIdA2} options={this.state.optionsSchemaIdA2} onChange={(e) => {
+                                        this.onSelectSchemaIdChanged(e, "a2")
+                                    }}/>
+                                    <Select defaultValue={-99999} value={this.state.selectedSchema.schemaIdB1} options={this.state.optionsSchemaIdB1} onChange={(e) => {
+                                        this.onSelectSchemaIdChanged(e, "b1")
+                                    }}/>
+                                    <Select defaultValue={-99999} value={this.state.selectedSchema.schemaIdB2} options={this.state.optionsSchemaIdB2} onChange={(e) => {
+                                        this.onSelectSchemaIdChanged(e, "b2")
+                                    }}/>
                                 </div>
                                 <div>
                                     <Form.Item className="BoxFormItemInput">
@@ -2392,7 +2323,6 @@ export default class ServicePerformance extends React.PureComponent {
                                 <div className={"BoxTitle"}>指标属性 - {this.state.selectedKpi.kpi_id}</div>
                                 <div className={"BoxButtons"}>
                                     <Button size={"small"} type={"primary"} icon={<SaveOutlined/>} htmlType="submit">保存</Button>
-                                    {/*<Button size={"small"} type={"primary"} icon={<UndoOutlined />} onClick={this.onButtonKpisResetClicked}>恢复</Button>*/}
                                 </div>
                                 <div>
                                     <Button size={"small"} type={"ghost"} icon={<EllipsisOutlined/>}/>
@@ -2442,8 +2372,7 @@ export default class ServicePerformance extends React.PureComponent {
                                 <div className={"BoxUsedInfo"}>
                                     <div className={"BoxProductModuleName"}>
                                         <Form.Item name="kpiUsedProduct" className="BoxFormItemInput">
-                                            <Select options={this.state.optionsProduct}
-                                                    onChange={this.onSelectKpiUsedProductChanged}/>
+                                            <Select options={this.state.optionsProduct} onChange={this.onSelectKpiUsedProductChanged}/>
                                         </Form.Item>
                                         <Form.Item name="kpiUsedModule" className="BoxFormItemInput">
                                             <Select options={this.state.optionsModule}/>
@@ -2460,17 +2389,15 @@ export default class ServicePerformance extends React.PureComponent {
                             </div>
                             <div className="BoxKpiExp">
                                 <Form.Item className="BoxFormItemInput">
-                                    <Form.Item name="kpiExp" noStyle><TextArea autoSize={{minRows: 3, maxRows: 5}}/></Form.Item>
+                                    <Form.Item name="kpiExp" noStyle>
+                                        <TextArea id="textKpiExp" ref={this.gRef.textAreaKpiExp} autoSize={{minRows: 3, maxRows: 5}} onChange={this.onInputKpiExpChanged}/>
+                                    </Form.Item>
                                     <Tooltip placement="topLeft" title="输入指标计算表达式" arrowPointAtCenter>
                                         <div className="input-icon"><QuestionCircleOutlined/></div>
                                     </Tooltip>
                                 </Form.Item>
                                 <div className="BoxKpiExpDisplay">
-                                    <pre>
-                                        <code ref={this.refKpiExpDisplay} className="javascript">
-                                            {this.state.kpiExpDisplay}
-                                        </code>
-                                    </pre>
+                                    {this.state.kpiExpDisplay}
                                 </div>
                             </div>
                         </Form>
@@ -2479,6 +2406,8 @@ export default class ServicePerformance extends React.PureComponent {
                 <Modal title="系统提示窗口" visible={this.state.isModalVisible} onOk={this.onModalButtonOkClicked} onCancel={this.onModalButtonCancelClicked}>
                     <p>{this.state.modalMessage}</p>
                 </Modal>
+                <input id="shadowInputForClipboard" className="shadowElement"/>
+                <button id="shadowButton" className="shadowElement">shadow button</button>
             </div>
         )
     }
