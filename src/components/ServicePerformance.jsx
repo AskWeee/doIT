@@ -27,7 +27,21 @@ export default class ServicePerformance extends React.PureComponent {
         schema: null,
         kpi: null,
         counter: null,
-        indicatorCounters: []
+        indicator: null,
+        indicatorCounter: null,
+        indicatorsChecked: [],
+        kpisChecked: [],
+        counterNames: [],
+        initForSchema: function () {
+            this.schema = null;
+            this.kpi = null;
+            this.counter = null;
+            // this.indicator = null;
+            // this.indicatorCounter = null;
+            // this.indicatorsChecked = [];
+            this.kpisChecked = [];
+            this.counterNames = [];
+        }
     };
     gUi = {};
     gDynamic = {
@@ -41,12 +55,20 @@ export default class ServicePerformance extends React.PureComponent {
     }
     gRef = {
         textAreaKpiExp: React.createRef(),
+        treeSchemas: React.createRef(),
+        treeIndicators: React.createRef(),
+        treeKpis: React.createRef(),
+        treeCounters: React.createRef(),
+        formSchemaProperties: React.createRef(),
+        formKpiProperties: React.createRef(),
     };
+    gShoppingCart = {
+        kpis: [],
+        clear: function () {
+            this.kpis = [];
+        }
+    }
 
-
-    refTreeSchema = React.createRef();
-    refFormSchemaProperties = React.createRef();
-    refFormKpiProperties = React.createRef();
     ids = [50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 99, 150, 151, 152, 153, 154, 155, 156, 157, 199];
 
     constructor(props) {
@@ -115,7 +137,7 @@ export default class ServicePerformance extends React.PureComponent {
                 kpi_used_module: -1,
                 kpi_used_title: "界面呈现标题",
             },
-            kpiExpDisplay: "(arguments + thisisatest + arguments + 100)*100}",
+            kpiExpDisplay: "",
         }
         //TODO:BM: >>>>> bind(this)
         this.test = this.test.bind(this);
@@ -1427,13 +1449,24 @@ export default class ServicePerformance extends React.PureComponent {
         // }
     }
 
+    //TODO::BM >>>>> 复选 INDICATOR 树
     onTreeIndicatorsChecked(checkedKeys, info) {
         this.gCurrent.indicatorsChecked = checkedKeys;
     }
 
+    //TODO::BM >>>>> 点击 INDICATOR 树
+    onTreeIndicatorsSelected(selectedKeys, info) {
+
+    }
+
     //TODO::BM >>>>> 点击 SCHEMA 树
     onTreeKpiSchemasSelected(selectedKeys, info) {
+        this.gCurrent.counterNames = [];
+
         if (info.selected) {
+            this.gRef.treeKpis.current.state.selectedKeys = [];
+            this.gRef.treeCounters.current.state.selectedKeys = [];
+
             let sid = selectedKeys[0];
             let schema;
             let schemaId;
@@ -1466,6 +1499,7 @@ export default class ServicePerformance extends React.PureComponent {
                             title: <div className={"BoxCounterTitle"}>{counter.counter_zhname + " - " + counter.counter_enname}</div>,
                             children: []
                         })
+                        this.gCurrent.counterNames.push(counter.counter_enname);
                     }
                 })
 
@@ -1544,16 +1578,22 @@ export default class ServicePerformance extends React.PureComponent {
                     }
                 })
             } else {
-                this.gCurrent.schema = null;
-                this.gCurrent.kpi = null;
-                this.gCurrent.counter = null;
+                this.gCurrent.initForSchema();
+                let emptySchema = new TadKpiSchema();
+                emptySchema.init();
+                this.onFormSchemaPropertiesFill(emptySchema);
+                let emptyKpi = new TadKpi();
+                emptyKpi.init();
+                this.onFormKpiPropertiesFill(emptyKpi);
             }
         } else {
-            this.gCurrent.schema = null;
-            this.gCurrent.kpi = null;
-            this.gCurrent.counter = null;
-            // todo::取消 Tree 控件的节点选中状态
-            // 当再次选中时，会自动显示为选中状态，但此时因没有激发select事件，所有gCurrent没有更新
+            this.gCurrent.initForSchema();
+            let emptySchema = new TadKpiSchema();
+            emptySchema.init();
+            this.onFormSchemaPropertiesFill(emptySchema);
+            let emptyKpi = new TadKpi();
+            emptyKpi.init();
+            this.onFormKpiPropertiesFill(emptyKpi);
 
             this.setState({
                 treeDataKpis: [],
@@ -1589,6 +1629,11 @@ export default class ServicePerformance extends React.PureComponent {
             });
         }
     };
+
+    //TODO::BM >>>>> 复选 KPI 树
+    onTreeKpisChecked(checkedKeys, info) {
+        this.gCurrent.kpisChecked = checkedKeys;
+    }
 
     //TODO::BM >>>>> 点击 KPI 树
     onTreeKpisSelected(selectedKeys, info) {
@@ -1646,6 +1691,7 @@ export default class ServicePerformance extends React.PureComponent {
         }
     }
 
+    //TODO::BM >>>>> 点击 COUNTER 树
     onTreeKpiCountersSelected(selectedKeys, info) {
         if (info.selected) {
             let cid = selectedKeys[0];
@@ -1868,28 +1914,39 @@ export default class ServicePerformance extends React.PureComponent {
         this.context.showMessage("开发中，目标：将选中指标添加到购物车中，以备导出使用。");
     }
 
-    //todo:: 将 counter 插入表达式编辑控件
+    // 复制到剪贴板
     doInsertIntoKpiExp(counter) {
-        // this.refFormKpiProperties.current.setFieldsValue({
-        //     kpiExp: counter.counter_enname
-        // });
+        console.log(counter);
         this.doCopyToClipboard(counter.counter_enname);
     }
 
+    // 判断是否为有效数值
+    isNumber(strValue) {
+        let regPos = /^\d+(\.\d+)?$/; //非负浮点数
+        let regNeg = /^(-(([0-9]+\.[0-9]*[1-9][0-9]*)|([0-9]*[1-9][0-9]*\.[0-9]+)|([0-9]*[1-9][0-9]*)))$/;//负浮点数
+
+        return regPos.test(strValue) || regNeg.test(strValue);
+    }
+
+    // 表达式格式化及算法验证
     doDisplayExpression(exp) {
+        // 自动将中文符号，转为英文符号：( ) . + - * /
+        // 自动将连写符号，转为单个符号：. + - * /
+        // 限定有效字符，可用：( ) . + - * / a-z 0-9 _
+        let hasError = false;
+        let expVarNames = [];
         let expTest = exp;
-        exp = exp.replace(/^\s+/g, "");
-        exp = exp.replace(/\s+$/g, "");
-        exp = exp.replace(/(\w)+/g, "__KKK__$&");
-        exp = exp.replace(/\s+/g, "");
-        let arrExp = exp.match(/(\W?\w*)/g);
-        console.log(arrExp);
+        let expTestNew = "";
+        exp = exp.replace(/^\s+|\s+$/g, "");                // 去除前后端空格
+        exp = exp.replace(/[\w.*]*\w[.]*/g, "__KV__$&");    // 标识counter名称，范例：((nmosdb....table_name.field01+nmosdb.test.field + a01 +abce_test 0.0.5) ..100. 100..200))
+        exp = exp.replace(/[.]/g, "__KD__");                // 标识符号：“.”
+        exp = exp.replace(/\s+/g, "");                      // 清除内部空格
+        let arrExp = exp.match(/(\W?\w*)/g);                // 分解出代码段
         arrExp.pop();
-        console.log(arrExp);
         let kIndex = 0;
         let kpiExpDisplay = <div className="Expression">
             {arrExp.map((item, index) => {
-                let ov = item.split("__KKK__");
+                let ov = item.split("__KV__");
                 let operator = ov[0];
                 let className = "";
                 switch (operator) {
@@ -1904,6 +1961,7 @@ export default class ServicePerformance extends React.PureComponent {
                         } else {
                             kIndex = 0;
                             className = "expKb_error";
+                            hasError = true;
                         }
                         break
                     default:
@@ -1911,10 +1969,12 @@ export default class ServicePerformance extends React.PureComponent {
                         break
                 }
                 if (ov.length === 1) {
+                    expTestNew += operator;
                     return <Fragment>
                         <div key={index} className={className}>{operator}</div>
                     </Fragment>
                 } else if (ov.length === 2) {
+                    let varName = ov[1].replace(/__KD__/g, ".");
                     let classNameV =  "expVar";
                     if ((index + 1) < arrExp.length) {
                         if (!(arrExp[index + 1].startsWith("+") ||
@@ -1923,18 +1983,37 @@ export default class ServicePerformance extends React.PureComponent {
                             arrExp[index + 1].startsWith("/") ||
                             arrExp[index + 1].startsWith(")"))) {
                             classNameV = "expVarError";
+                            hasError = true;
                         }
                     }
+
+                    if (this.isNumber(varName)) {
+                        varName = varName.replace(/\./g, "__KDN__");
+                    } else {
+                        if (!this.gCurrent.counterNames.includes(varName)) {
+                            classNameV = "expVarError";
+                            hasError = true;
+                        } else {
+                            expVarNames.push(varName);
+                        }
+                    }
+
+                    expTestNew += operator + varName;
+                    varName = varName.replace(/__KDN__/g, ".");
                     return <Fragment>
                         <div key={"operator_" + index} className={className}>{operator}</div>
-                        <div key={"value_" + index} className={classNameV}>{ov[1]}</div>
+                        <div key={"value_" + index} className={classNameV}>{varName}</div>
                     </Fragment>
                 } else {
+                    hasError = true;
                     let v = "";
                     for(let i = 1; i < ov.length; i++) {
                         v += ov[i] + " ";
                     }
                     v = v.replace(/\s+$/, "");
+                    v = v.replace(/__KD__/g, ".");
+
+                    expTestNew += operator + v;
                     return <Fragment>
                         <div key={"operator_" + index} className={className}>{operator}</div>
                         <div key={"value_" + index} className="expVarError">{v}</div>
@@ -1945,15 +2024,33 @@ export default class ServicePerformance extends React.PureComponent {
         this.setState({
             kpiExpDisplay: kpiExpDisplay
         }, () => {
-            try {
-                expTest = "let t = 1; \n let test = " + expTest + "; console.log(test);";
-                eval(expTest);
-            } catch(err) {
-                console.log(err.toString());
+            if (!hasError) {
+                try {
+                    console.log(expTestNew);
+                    let _dynamicTest;
+                    // expTest = expTest.replace(/\./g, "_");
+                    expTestNew = expTestNew.replace(/\./g, "_");
+                    let strLets = "() => {\n";
+                    expVarNames.forEach((item) => {
+                        if (!this.isNumber(item)) {
+                            strLets += "let " + item.replace(/\./g, "_") + " = 1;\n";
+                        }
+                    });
+                    expTestNew = strLets + "let test = " + expTestNew + ";\nconsole.log(test);\nreturn test;\n}";
+                    expTestNew = expTestNew.replace(/__KDN__/g, ".");
+
+                    console.log(expTestNew);
+                    _dynamicTest = eval(expTestNew);
+                    let r = _dynamicTest();
+                    this.context.showMessage("模拟运算结果 = " + r + "（所有变量赋值为 1）");
+                } catch (err) {
+                    this.context.showMessage(err.toString());
+                }
             }
         });
     }
 
+    // 复制到剪贴板
     doCopyToClipboard(text) {
         let input = document.getElementById("shadowInputForClipboard");
         input.value = text;
@@ -1964,10 +2061,6 @@ export default class ServicePerformance extends React.PureComponent {
     onInputKpiExpChanged = lodash.debounce((e) => {
         this.doDisplayExpression(e.target.value);
     }, 500);
-
-    // onInputKpiExpChanged(e) {
-    //     this.test(e.target.value);
-    // }
 
     onButtonInsertIntoKpiExpClicked(e) {
         if (this.gCurrent.kpi) {
@@ -2018,7 +2111,7 @@ export default class ServicePerformance extends React.PureComponent {
 
     }
 
-    //TODO::BM >>>>> 搜索 INDICATOR & COUNTER
+    // >>>>> 搜索 INDICATOR & COUNTER
     onInputSearchIndicatorsSearched(value, event) {
         let sv = value;
 
@@ -2038,7 +2131,7 @@ export default class ServicePerformance extends React.PureComponent {
 
     }
 
-    //TODO::BM >>>>> 搜索 SCHEMA & KPI
+    // >>>>> 搜索 SCHEMA & KPI
     onInputSearchSchemasSearched(value, event) {
         let sv = value;
 
@@ -2118,18 +2211,37 @@ export default class ServicePerformance extends React.PureComponent {
 
     }
 
+    // >>>>> 为 SCHEMA FROM.ITEM 赋值
     onFormSchemaPropertiesFill(schema) {
-        this.refFormSchemaProperties.current.setFieldsValue({
+        this.gRef.formSchemaProperties.current.setFieldsValue({
+            schemaIdA1: schema.schemaIdA1,
+            schemaIdA2: schema.schemaIdA2,
+            schemaIdB1: schema.schemaIdB1,
+            schemaIdB2: schema.schemaIdB2,
             schemaZhName: schema.schema_zhname,
+            schemaVendor: schema.vendor_id,
+            schemaObjectClass: schema.object_class,
+            schemaObjectSubClass: schema.sub_class,
+            schemaIntervalFlag: schema.interval_flag,
+            counterTabName: schema.counter_tab_name,
         });
     }
 
-    // 为 FROM.ITEM 赋值
+    // >>>>> 为 KPI FROM.ITEM 赋值
     onFormKpiPropertiesFill(kpi) {
-        this.refFormKpiProperties.current.setFieldsValue({
+        this.gRef.formKpiProperties.current.setFieldsValue({
             kpiZhName: kpi.kpi_zhname,
             kpiEnName: kpi.kpi_enname,
+            kpiAlarm: kpi.kpi_alarm,
+            kpiFormat: kpi.kpi_format,
+            kpiMinValue: kpi.kpi_min_value,
+            kpiMaxValue: kpi.kpi_max_value,
+            kpiUsedProduct: -99999,
+            kpiUsedModule: -99999,
+            kpiUsedTitle: "",
+            kpiExp: kpi.kpi_exp
         });
+        this.doDisplayExpression(kpi.kpi_exp);
     }
 
     onSelectSchemaObjectClassChanged(v) {
@@ -2193,7 +2305,7 @@ export default class ServicePerformance extends React.PureComponent {
                                 <Input.Search placeholder="Search" enterButton onSearch={this.onInputSearchSchemasSearched}/>
                             </div>
                             <div className={"BoxTreeInstance"}>
-                                <Tree treeData={this.state.treeDataKpiSchemas} ref={this.refTreeSchema} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} switcherIcon={<CaretDownOutlined/>} onSelect={this.onTreeKpiSchemasSelected}/>
+                                <Tree ref={this.gRef.treeSchemas} treeData={this.state.treeDataKpiSchemas} onSelect={this.onTreeKpiSchemasSelected} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} switcherIcon={<CaretDownOutlined/>}/>
                             </div>
                         </div>
                     </div>
@@ -2214,7 +2326,7 @@ export default class ServicePerformance extends React.PureComponent {
                                 <Input.Search placeholder="Search" enterButton onSearch={this.onInputSearchIndicatorsSearched}/>
                             </div>
                             <div className="BoxTreeInstance">
-                                <Tree switcherIcon={<CaretDownOutlined/>} checkable blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} treeData={this.state.treeDataIndicators} onCheck={this.onTreeIndicatorsChecked}/>
+                                <Tree ref={this.gRef.treeIndicators} treeData={this.state.treeDataIndicators} onCheck={this.onTreeIndicatorsChecked} switcherIcon={<CaretDownOutlined/>} checkable blockNode={true} showLine={{showLeafIcon: false}} showIcon={true}/>
                             </div>
                         </div>
                     </div>
@@ -2235,7 +2347,7 @@ export default class ServicePerformance extends React.PureComponent {
                             </div>
                             <div className={"BoxTree"}>
                                 <div className={"BoxTreeInstance"}>
-                                    <Tree treeData={this.state.treeDataKpis} checkable blockNode draggable showIcon showLine={{showLeafIcon: false}} switcherIcon={<CaretDownOutlined/>} onSelect={this.onTreeKpisSelected} onDrop={this.onTreeKpisDrop}/>
+                                    <Tree ref={this.gRef.treeKpis} treeData={this.state.treeDataKpis} onSelect={this.onTreeKpisSelected} onDrop={this.onTreeKpisDrop} checkable blockNode draggable showIcon showLine={{showLeafIcon: false}} switcherIcon={<CaretDownOutlined/>}/>
                                 </div>
                             </div>
                         </div>
@@ -2243,7 +2355,7 @@ export default class ServicePerformance extends React.PureComponent {
                             <div className={"BoxTitleBar"}>
                                 <div className={"BoxTitle"}>原始指标</div>
                                 <div className={"BoxButtons"}>
-                                    <Button size={"small"} type={"primary"} icon={<EditOutlined/>} onClick={this.onButtonInsertIntoKpiExpClicked}>插入表达式</Button>
+                                    <Button size={"small"} type={"primary"} icon={<EditOutlined/>} onClick={this.onButtonInsertIntoKpiExpClicked}>复制到剪贴板</Button>
                                     <Button size={"small"} type={"primary"} icon={<MinusSquareOutlined/>} onClick={() => {
                                         this.showModal("删除统计数据")
                                     }}>删除</Button>
@@ -2254,13 +2366,13 @@ export default class ServicePerformance extends React.PureComponent {
                             </div>
                             <div className={"BoxTree"}>
                                 <div className={"BoxTreeInstance"}>
-                                    <Tree blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} switcherIcon={<CaretDownOutlined/>} onSelect={this.onTreeKpiCountersSelected} treeData={this.state.treeDataKpiCounters}/>
+                                    <Tree ref={this.gRef.treeCounters} treeData={this.state.treeDataKpiCounters} onSelect={this.onTreeKpiCountersSelected} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} switcherIcon={<CaretDownOutlined/>}/>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div className="BoxProperties">
-                        <Form className="FormOne" ref={this.refFormSchemaProperties} name="formSchemaProperties" initialValues={this.state.formSchemaInitialValues} onFinish={this.onFormSchemaPropertiesFinish} onFinishFailed={this.onFormSchemaPropertiesFinishFailed}>
+                        <Form className="FormOne" ref={this.gRef.formSchemaProperties} name="formSchemaProperties" initialValues={this.state.formSchemaInitialValues} onFinish={this.onFormSchemaPropertiesFinish} onFinishFailed={this.onFormSchemaPropertiesFinishFailed}>
                             <div className={"BoxTitleBar"}>
                                 <div className={"BoxTitle"}>指标组属性 - {this.state.selectedSchema.schema_id}</div>
                                 <div className="BoxButtons">
@@ -2318,7 +2430,7 @@ export default class ServicePerformance extends React.PureComponent {
                                 </div>
                             </div>
                         </Form>
-                        <Form className="FormTwo" ref={this.refFormKpiProperties} name="formKpiProperties" initialValues={this.state.formKpiInitialValues} onFinish={this.onFormKpiPropertiesFinish} onFinishFailed={this.onFormKpiPropertiesFinishFailed}>
+                        <Form className="FormTwo" ref={this.gRef.formKpiProperties} name="formKpiProperties" initialValues={this.state.formKpiInitialValues} onFinish={this.onFormKpiPropertiesFinish} onFinishFailed={this.onFormKpiPropertiesFinishFailed}>
                             <div className="BoxTitleBar">
                                 <div className={"BoxTitle"}>指标属性 - {this.state.selectedKpi.kpi_id}</div>
                                 <div className={"BoxButtons"}>
