@@ -12,7 +12,6 @@ import TadKpi from "../entity/TadKpi";
 import TadIndicator from "../entity/TadIndicator";
 import TadIndicatorCounter from "../entity/TadIndicatorCounter";
 import TadKpiCounter from "../entity/TadKpiCounter";
-import {produce,} from 'immer';
 import {Button, Input, Select, Tree, Modal, Form, Tooltip,} from 'antd'
 import {BranchesOutlined, CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, CloudDownloadOutlined, CloudUploadOutlined, CopyOutlined, MinusSquareOutlined, PlusOutlined, PlusSquareOutlined, SaveOutlined, QuestionCircleOutlined, EllipsisOutlined, EditOutlined, ShoppingCartOutlined,} from '@ant-design/icons'
 
@@ -69,7 +68,8 @@ export default class ServicePerformance extends React.PureComponent {
         }
     }
 
-    ids = [50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 99, 150, 151, 152, 153, 154, 155, 156, 157, 199];
+    gSchemaIdRegionCodes = [50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 99, 150, 151, 152, 153, 154, 155, 156, 157, 199];
+    gSchemaIdDefault = "260959975"; // 通用-天-全国-保留
 
     constructor(props) {
         super(props);
@@ -123,7 +123,7 @@ export default class ServicePerformance extends React.PureComponent {
 
             kpiExpDisplay: "",
         }
-        //TODO:BM: >>>>> bind(this)
+        //todo >>>>> bind(this)
         this.test = this.test.bind(this);
         this.doMock = this.doMock.bind(this);
 
@@ -151,6 +151,7 @@ export default class ServicePerformance extends React.PureComponent {
         this.doGetIndicators = this.doGetIndicators.bind(this);
         this.doGetIndicatorCounters = this.doGetIndicatorCounters.bind(this);
         this.doGetExcel = this.doGetExcel.bind(this);
+        this.doGetMySchemas = this.doGetMySchemas.bind(this);
 
         this.restGetKpiCounters = this.restGetKpiCounters.bind(this);
         this.restGetProducts = this.restGetProducts.bind(this);
@@ -356,6 +357,7 @@ export default class ServicePerformance extends React.PureComponent {
         return myResult;
     }
 
+    //todo <<<<< now >>>>> dataSchemas to DsMap and UiTree
     dataSchemas2DsMapUiTree(ds, sv) {
         let myResult = {mapDs: new Map(), uiDs: []}; //, mapRelation: new Map()}
 
@@ -363,7 +365,7 @@ export default class ServicePerformance extends React.PureComponent {
             let item = ds[i];
             let sid = item.id;
             // 新增指标组，默认schema_id为空
-            let schemaId = item.schema_id === null ? ("33260" + 33333333 + item.id).toString() : item.schema_id;
+            let schemaId = item.schema_id === null ? this.gSchemaIdDefault : item.schema_id;
             let schemaName = item.schema_zhname === null ? "" : item.schema_zhname;
 
             if (schemaName === "") continue
@@ -399,7 +401,7 @@ export default class ServicePerformance extends React.PureComponent {
         return myResult;
     }
 
-    //todo >>>>> ui Update Schema
+    // >>>>> ui Update Schema
     uiUpdateSchema(schema, what) {
         let sid = schema.id;
         let treeDataKpiSchemas = lodash.cloneDeep(this.state.treeDataKpiSchemas);
@@ -449,7 +451,6 @@ export default class ServicePerformance extends React.PureComponent {
                 let index = -1;
                 for (let i = 0; i < treeDataKpiSchemas.length; i++) {
                     let item = treeDataKpiSchemas[i];
-                    console.log(item.key, this.gCurrent.schema.id);
                     if (item.key === this.gCurrent.schema.id) {
                         index = i;
                         break
@@ -475,16 +476,16 @@ export default class ServicePerformance extends React.PureComponent {
         }
 
         this.setState({
-            treeDataKpiSchemas: treeDataKpiSchemas
-        }
-        // , () => {
-        //     console.log(schema.id);
-        //     this.gRef.treeSchemas.current.scrollTo({key: schema.id});
-        // }
+                treeDataKpiSchemas: treeDataKpiSchemas
+            }, () => {
+                if (what === "add") {
+                    this.gRef.treeSchemas.current.scrollTo({key: schema.id});
+                }
+            }
         )
     }
 
-    //todo >>>>> ds Update Schema
+    // >>>>> ds Update Schema
     dsUpdateSchema(schema, what) {
         switch (what) {
             case "add":
@@ -527,7 +528,7 @@ export default class ServicePerformance extends React.PureComponent {
         }
     }
 
-    //todo >>>>> ui Update Kpi
+    // >>>>> ui Update Kpi
     uiUpdateKpi(kpi, what) {
         let treeDataKpis;
 
@@ -688,11 +689,12 @@ export default class ServicePerformance extends React.PureComponent {
         }
     }
 
-    //todo >>>>> ds Update Counter
+    // ds Update Counter
     dsUpdateCounter(counter, what) {
         switch (what) {
             case "add":
                 this.gMap.schemas.get(counter.sid).counters.push(counter.id);
+                this.gCurrent.counterNames.push(counter.counter_enname);
                 this.gMap.counters.set(counter.id, counter);
                 break
             case "delete":
@@ -705,6 +707,8 @@ export default class ServicePerformance extends React.PureComponent {
                         }
                     }
                 }
+
+                this.gCurrent.counterNames.splice(this.gCurrent.counterNames.indexOf(counter.counter_enname), 1);
                 break
             default:
                 break;
@@ -751,7 +755,7 @@ export default class ServicePerformance extends React.PureComponent {
         })
     };
 
-    //TODO:BM: >>>>> do Get All
+    //todo >>>>> do Get All
     doGetAll() {
         axios.all([
             this.doGetKpiDict(),
@@ -823,7 +827,7 @@ export default class ServicePerformance extends React.PureComponent {
             if (this.gMap.kpiDict.has(1023)) {
                 let options = [{label: "空间粒度", value: -99999}];
                 this.gMap.kpiDict.get(1023).forEach((value, key) => {
-                    if (this.ids.includes(value.id)) {
+                    if (this.gSchemaIdRegionCodes.includes(value.id)) {
                         options.push({label: value.txt + "-" + value.id, value: value.id});
                     }
                 });
@@ -834,7 +838,7 @@ export default class ServicePerformance extends React.PureComponent {
             if (this.gMap.kpiDict.has(1023)) {
                 let options = [{label: "网元类型", value: -99999}];
                 this.gMap.kpiDict.get(1023).forEach((value, key) => {
-                    if (!this.ids.includes(value.id)) {
+                    if (!this.gSchemaIdRegionCodes.includes(value.id)) {
                         options.push({label: value.txt, value: value.id});
                     }
                 });
@@ -980,6 +984,15 @@ export default class ServicePerformance extends React.PureComponent {
         })).then(() => {
             this.doInit();
         });
+    }
+
+    //todo <<<<< noew >>>>> do Get My Schemas
+    doGetMySchemas(user, tb, te) {
+        console.log(user, tb, te);
+
+        let myResult = this.gUi.schemas;
+
+        return myResult;
     }
 
     doGetObjectDefs() {
@@ -1267,7 +1280,7 @@ export default class ServicePerformance extends React.PureComponent {
             {headers: {'Content-Type': 'application/json'}});
     }
 
-    //todo >>>>> do Add Schema
+    // >>>>> do Add Schema
     doAddSchema(schema, what) {
         this.restAddSchema(schema).then((result) => {
             if (result.status === 200) {
@@ -1285,7 +1298,7 @@ export default class ServicePerformance extends React.PureComponent {
                         })
                         schema.counters.forEach((item) => {
                             let counter = lodash.cloneDeep(this.gMap.counters.get(item));
-                            console.log(counter);
+
                             counter.id = null;
                             counter.sid = result.data.data.id;
                             this.doAddCounter(counter, "clone");
@@ -1301,37 +1314,65 @@ export default class ServicePerformance extends React.PureComponent {
         });
     }
 
-    //todo >>>>> do Clone Schema
+    // >>>>> split schema id
+    splitSchemaId(sid) {
+        let ids = {
+            id: sid,
+            a1: "",
+            a2: "",
+            b1: "",
+            b2: "",
+            index: "",
+            hasRegion: false
+        }
+
+        let idFixed = "260";
+        let sids = sid.split(idFixed);
+        let idObjectClassFirst = sids[0];
+        let idType = sids[1][0];
+        let idTime = sids[1][1];
+        let regionCode = "";
+        let idObjectClassSecond = sids[1].substr(2, 2);
+        let idIndex = sids[1].substr(sids[1].length - 2, 2);
+        let objectClass = parseInt(idObjectClassFirst + idObjectClassSecond);
+        if (this.gSchemaIdRegionCodes.includes(objectClass)) {
+            ids.hasRegion = true;
+            regionCode = objectClass;
+            objectClass = sids[1].substr(4, sids[1].length - 4);
+            idIndex = "";
+        }
+        let schemaIdNew = "";
+        if (regionCode === "") {
+            schemaIdNew = idObjectClassFirst + idFixed + idType + idTime + idObjectClassSecond + idIndex;
+        } else {
+            schemaIdNew = idObjectClassFirst + idFixed + idType + idTime + idObjectClassSecond + objectClass;
+        }
+
+        ids.id = schemaIdNew;
+        ids.a1 = parseInt(idType);
+        ids.a2 = parseInt(idTime);
+        if (ids.hasRegion) {
+            ids.b1 = parseInt(regionCode);
+            ids.b2 = parseInt(objectClass);
+        } else {
+            ids.b1 = parseInt(objectClass);
+            ids.b2 = parseInt(idIndex);
+        }
+
+        return ids;
+    }
+
+    // >>>>> do Clone Schema
     doCloneSchema(schema) {
-        // let schemaId = schema.schema_id;
-        // let ids = schemaId.split("260");
-        // let idObjectClassFirst = ids[0];
-        // let idFixed = "260";
-        // let idType = ids[1][0];
-        // // let idTime = ids[1][1];
-        // let regionClass = "";
-        // let idObjectClassSecond = ids[1].substr(2, 2);
-        // let idIndex = ids[1].substr(4, 2);
-        // let objectClass = parseInt(idObjectClassFirst + idObjectClassSecond);
-        // if (((objectClass >= 50) && (objectClass <= 59)) || ((objectClass >= 50) && (objectClass <= 59)) || (objectClass === 99) || (objectClass === 199)) {
-        //     regionClass = objectClass;
-        //     objectClass = idIndex;
-        //     idIndex = "";
-        // }
-        // let schemaIdNew = "";
-        // if (regionClass === "") {
-        //     schemaIdNew = idObjectClassFirst + idFixed + idType + "0" + idObjectClassSecond + idIndex;
-        // } else {
-        //     schemaIdNew = idObjectClassFirst + idFixed + idType + "0" + idObjectClassSecond + idIndex;
-        // }
+        let sids = this.splitSchemaId(schema.schema_id);
 
         schema.id = null;
-        // schema.schema_id = schemaIdNew;
-        schema.schema_zhname += "-副本-" + moment().format("MMDDHHmmss");;
+        schema.schema_zhname += "-副本-" + moment().format("MMDDHHmmss");
+
         this.doAddSchema(schema, "clone");
     }
 
-    //todo >>>>> do Delete Schema
+    // >>>>> do Delete Schema
     doDeleteSchema() {
         let schema = new TadKpiSchema();
         schema.id = this.gCurrent.schema.id;
@@ -1351,7 +1392,7 @@ export default class ServicePerformance extends React.PureComponent {
         });
     }
 
-    //todo >>>>> do Add KPI
+    // >>>>> do Add KPI
     doAddKpi(kpi, what) {
         this.restAddKpi(kpi).then((result) => {
             if (result.status === 200) {
@@ -1368,7 +1409,7 @@ export default class ServicePerformance extends React.PureComponent {
         });
     }
 
-    //todo >>>>> do Add KPI Counter
+    // >>>>> do Add KPI Counter
     doAddCounter(counter, what) {
         this.restAddCounter(counter).then((result) => {
             if (result.status === 200) {
@@ -1478,17 +1519,17 @@ export default class ServicePerformance extends React.PureComponent {
         // }
     }
 
-    //TODO::BM >>>>> 复选 INDICATOR 树
+    // >>>>> check Indicators
     onTreeIndicatorsChecked(checkedKeys, info) {
         this.gCurrent.indicatorsChecked = checkedKeys;
     }
 
-    //TODO::BM >>>>> 点击 INDICATOR 树
+    // >>>>> click Indicators
     onTreeIndicatorsSelected(selectedKeys, info) {
 
     }
 
-    //TODO::BM >>>>> 点击 SCHEMA 树
+    //todo >>>>> click schema
     onTreeKpiSchemasSelected(selectedKeys, info) {
         this.gCurrent.counterNames = [];
 
@@ -1530,8 +1571,6 @@ export default class ServicePerformance extends React.PureComponent {
                 }
             })
 
-            console.log(schema);
-
             this.onFormSchemaPropertiesFill(schema);
             let newKpi = new TadKpi();
             newKpi.init();
@@ -1557,12 +1596,12 @@ export default class ServicePerformance extends React.PureComponent {
         }
     };
 
-    //TODO::BM >>>>> 复选 KPI 树
+    // >>>>> check KPI
     onTreeKpisChecked(checkedKeys, info) {
         this.gCurrent.kpisChecked = checkedKeys;
     }
 
-    //TODO::BM >>>>> 点击 KPI 树
+    // >>>>> click KPI
     onTreeKpisSelected(selectedKeys, info) {
         if (info.selected) {
             let kid = selectedKeys[0];
@@ -1580,7 +1619,7 @@ export default class ServicePerformance extends React.PureComponent {
         }
     }
 
-    //TODO::BM >>>>> 点击 COUNTER 树
+    // >>>>> click counter
     onTreeKpiCountersSelected(selectedKeys, info) {
         if (info.selected) {
             let cid = selectedKeys[0];
@@ -1642,6 +1681,7 @@ export default class ServicePerformance extends React.PureComponent {
         }
     }
 
+    // >>>>> on Select SchemaId Changed
     onSelectSchemaIdChanged(e, sender) {
         let schemaId = "";
 
@@ -1662,8 +1702,9 @@ export default class ServicePerformance extends React.PureComponent {
                 break
         }
         let strA1 = "", strA2 = "", strBb = "", strB = "", strC = "";
-        if (this.gDynamic.schemaId.a1 !== -99999) strA1 = this.gDynamic.schemaId.a1.toString();
-        if (this.gDynamic.schemaId.a2 !== -99999) strA2 = this.gDynamic.schemaId.a2.toString();
+
+        strA1 = (this.gDynamic.schemaId.a1 === -99999) ? "9" : this.gDynamic.schemaId.a1.toString();
+        strA2 = (this.gDynamic.schemaId.a2 === -99999) ? "5" : this.gDynamic.schemaId.a2.toString();
         if (this.gDynamic.schemaId.b1 !== -99999) {  // 空间 + 网元
             if (this.gDynamic.schemaId.b1 > 99) {
                 strBb = this.gDynamic.schemaId.b1.toString()[0];
@@ -1673,6 +1714,8 @@ export default class ServicePerformance extends React.PureComponent {
             }
             if (this.gDynamic.schemaId.b2 !== -99999) {
                 strC = this.gDynamic.schemaId.b2.toString()
+            } else {
+                strC = "75";
             }
         } else if (this.gDynamic.schemaId.b2 !== -99999) { // 网元 + 序号
             if (this.gDynamic.schemaId.b2 > 99) {
@@ -1681,8 +1724,25 @@ export default class ServicePerformance extends React.PureComponent {
             } else {
                 strB = this.gDynamic.schemaId.b2.toString();
             }
-            strC = (++this.gDynamic.schemaId.index).toString();
-
+            let sidHead = strBb + "260" + strA1 + strA2 + strB;
+            let sidIndexes = [];
+            for (let item of this.gMap.schemas.values()) {
+                let sidTemp = item.schema_id;
+                if (sidTemp.startsWith(sidHead)) {
+                    let i = sidTemp.substr(sidHead.length, sidTemp.length - sidHead.length);
+                    sidIndexes.push(parseInt(i));
+                }
+            }
+            let sidIndex = 1;
+            for (let i = 0; i < sidIndexes.length; i++) {
+                if (sidIndexes.includes(sidIndex)) {
+                    sidIndex++;
+                    continue
+                }
+            }
+            strC = sidIndex.toString().padStart(2, "0");
+        } else {
+            strC = "75";
         }
         schemaId = strBb + "260" + strA1 + strA2 + strB + strC;
 
@@ -1706,7 +1766,7 @@ export default class ServicePerformance extends React.PureComponent {
         let schema = new TadKpiSchema();
 
         schema.schema_zhname = "新增指标组";
-        schema.schema_id = "0260000000";
+        schema.schema_id = this.gSchemaIdDefault;
 
         this.doAddSchema(schema, "add");
     }
@@ -1773,7 +1833,6 @@ export default class ServicePerformance extends React.PureComponent {
                     counter.counter_field = "COUNTER" + (this.gCurrent.schema.counters.length).toString().padStart(2, "0");
 
                     this.doAddCounter(counter, "add");
-                    //todo:: 更新指标组counter表，问题：多个来源表如何处理？
                 }
             });
         } else {
@@ -1794,7 +1853,7 @@ export default class ServicePerformance extends React.PureComponent {
         this.context.showMessage("开发中，目标：将选中指标添加到购物车中，以备导出使用。");
     }
 
-    // 复制到剪贴板
+    // >>>>> do copy counter name and InsertInto KpiExp
     doInsertIntoKpiExp(counter) {
         this.doCopyToClipboard(counter.counter_enname);
     }
@@ -1818,7 +1877,6 @@ export default class ServicePerformance extends React.PureComponent {
         // 限定有效字符，可用：( ) . + - * / a-z 0-9 _
         let hasError = false;
         let expVarNames = [];
-        let expTest = exp;
         let expTestNew = "";
         exp = exp.replace(/^\s+|\s+$/g, "");                // 去除前后端空格
         exp = exp.replace(/[\w.*]*\w[.]*/g, "__KV__$&");    // 标识counter名称，范例：((nmosdb....table_name.field01+nmosdb.test.field + a01 +abce_test 0.0.5) ..100. 100..200))
@@ -1909,11 +1967,11 @@ export default class ServicePerformance extends React.PureComponent {
         }, () => {
             if (!hasError) {
                 try {
-                    console.log(expTestNew);
                     let _dynamicTest;
-                    // expTest = expTest.replace(/\./g, "_");
-                    expTestNew = expTestNew.replace(/\./g, "_");
                     let strLets = "() => {\n";
+
+                    expTestNew = expTestNew.replace(/\./g, "_");
+
                     expVarNames.forEach((item) => {
                         if (!this.isNumber(item)) {
                             strLets += "let " + item.replace(/\./g, "_") + " = 1;\n";
@@ -1922,7 +1980,6 @@ export default class ServicePerformance extends React.PureComponent {
                     expTestNew = strLets + "let test = " + expTestNew + ";\nreturn test;\n}";
                     expTestNew = expTestNew.replace(/__KDN__/g, ".");
 
-                    console.log(expTestNew);
                     _dynamicTest = eval(expTestNew);
                     let r = _dynamicTest();
                     this.context.showMessage("模拟运算结果 = " + r + "（所有变量赋值为 1）");
@@ -1933,7 +1990,7 @@ export default class ServicePerformance extends React.PureComponent {
         });
     }
 
-    // 复制到剪贴板
+    // >>>>> 复制到剪贴板
     doCopyToClipboard(text) {
         let input = document.getElementById("shadowInputForClipboard");
         input.value = text;
@@ -1946,10 +2003,8 @@ export default class ServicePerformance extends React.PureComponent {
     }, 500);
 
     onButtonInsertIntoKpiExpClicked(e) {
-        if (this.gCurrent.kpi) {
-            if (this.gCurrent.counter) {
-                this.doInsertIntoKpiExp(this.gCurrent.counter);
-            }
+        if (this.gCurrent.counter) {
+            this.doInsertIntoKpiExp(this.gCurrent.counter);
         }
     }
 
@@ -2014,13 +2069,23 @@ export default class ServicePerformance extends React.PureComponent {
 
     }
 
-    // >>>>> 搜索 SCHEMA & KPI
+    //todo <<<<< now >>>>> 搜索 SCHEMA & KPI
     onInputSearchSchemasSearched(value, event) {
         let sv = value;
 
         if (sv !== null && sv !== undefined && sv.trim() !== "") {
-            sv = sv.trim().toLowerCase();
-            let mySchemas = this.dataSchemas2DsMapUiTree(this.gData.schemas, sv);
+            let mySchemas;
+
+            if (sv.trim().startsWith("变更：") || sv.trim().startsWith("变更:")) {
+                sv = sv.trim().toLowerCase();
+                let user = "KKK";
+                let timeBegin = "2021-01-01";
+                let timeEnd = "2021-12-31";
+                mySchemas = this.doGetMySchemas(user, timeBegin, timeEnd);
+            } else {
+                sv = sv.trim().toLowerCase();
+                mySchemas = this.dataSchemas2DsMapUiTree(this.gData.schemas, sv);
+            }
 
             this.setState({
                 treeDataKpiSchemas: mySchemas.uiDs
@@ -2108,30 +2173,16 @@ export default class ServicePerformance extends React.PureComponent {
         let schemaIdIndex = 0;
 
         if (schemaId !== "") {
-            let ids = schemaId.split("260");
+            let sids = this.splitSchemaId(schemaId);
 
-            if ((ids[0] !== "") && (ids[0] !== "99")) {
-                schemaIdA1 = parseInt(schemaId.substr(4, 1));
-                schemaIdA2 = parseInt(schemaId.substr(5, 1));
-                schemaIdB1 = parseInt(schemaId.substr(0, 1) + schemaId.substr(6, 2));
-                if (this.ids.includes(schemaIdB1)) {
-                    schemaIdB2 = parseInt(schemaId.substr(8, 2));
-                } else {
-                    schemaIdB2 = schemaIdB1;
-                    schemaIdB1 = -99999;
-                    schemaIdIndex = parseInt(schemaId.substr(8, 2));
-                }
-            } else if (ids[0] === "") {
-                schemaIdA1 = parseInt(schemaId.substr(3, 1));
-                schemaIdA2 = parseInt(schemaId.substr(4, 1));
-                schemaIdB1 = parseInt(schemaId.substr(5, 2));
-                if (this.ids.includes(schema.schema_id)) {
-                    schemaIdB2 = parseInt(schemaId.substr(7, 2));
-                } else {
-                    schemaIdB2 = schemaIdB1;
-                    schemaIdB1 = -99999;
-                    schemaIdIndex = parseInt(schemaId.substr(7, 2));
-                }
+            schemaIdA1 = sids.a1;
+            schemaIdA2 = sids.a2;
+            if (sids.hasRegion) {
+                schemaIdB1 = sids.b1;
+                schemaIdB2 = sids.b2;
+            } else {
+                schemaIdB2 = sids.b1;
+                schemaIdIndex = sids.index;
             }
 
             this.gDynamic.schemaId.a1 = schema.schemaIdA1 = schemaIdA1;
@@ -2209,7 +2260,7 @@ export default class ServicePerformance extends React.PureComponent {
         })
     }
 
-    //TODO:BM >>>>> render
+    //todo >>>>> render
     render() {
         return (
             <div className={this.state.styleLayout === "NN" ? "ServicePerformance" : "ServicePerformance ServicePerformanceSmall"}>
@@ -2230,13 +2281,13 @@ export default class ServicePerformance extends React.PureComponent {
                             </div>
                         </div>
                         <div className={this.state.styleLayout === "NN" ? "BoxTree" : "BoxTree BoxHidden"}>
-                            <div className={"BoxCommit"}>
-                                <Select defaultValue="-1">
-                                    <Option value="-1">变更：全集</Option>
-                                    <Option value="1">变更：K - 新增话务指标 - 2021-07-01</Option>
-                                </Select>
-                                <Button type={"primary"} icon={<BranchesOutlined/>} onClick={this.onButtonSchemasCommitClicked}>提交变更</Button>
-                            </div>
+                            {/*<div className={"BoxCommit"}>*/}
+                            {/*    <Select defaultValue="-1">*/}
+                            {/*        <Option value="-1">变更：全集</Option>*/}
+                            {/*        <Option value="1">变更：K - 新增话务指标 - 2021-07-01</Option>*/}
+                            {/*    </Select>*/}
+                            {/*    <Button type={"primary"} icon={<BranchesOutlined/>} onClick={this.onButtonSchemasCommitClicked}>提交变更</Button>*/}
+                            {/*</div>*/}
                             <div className={"BoxSearch"}>
                                 <Input.Search placeholder="Search" enterButton onSearch={this.onInputSearchSchemasSearched}/>
                             </div>

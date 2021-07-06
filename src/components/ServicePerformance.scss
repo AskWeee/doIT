@@ -158,16 +158,16 @@ $colorComponentToolbar: rgb(175, 225, 255);
             .BoxTree {
                 background: rgba(55, 175, 255, 0.2);
                 display: grid;
-                grid-template-rows: auto auto 1fr;
+                grid-template-rows: auto 1fr;
                 overflow: hidden;
                 margin: 5px;
                 grid-gap: 3px;
 
-                .BoxCommit {
-                    display: grid;
-                    grid-template-columns: 1fr auto;
-                    grid-gap: 3px;
-                }
+                //.BoxCommit {
+                //    display: grid;
+                //    grid-template-columns: 1fr auto;
+                //    grid-gap: 3px;
+                //}
 
                 .BoxSearch {
                     margin-right: -2px;
