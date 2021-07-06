@@ -31,7 +31,7 @@ export default class ServicePerformance extends React.PureComponent {
         indicatorCounter: null,
         indicatorsChecked: [],
         kpisChecked: [],
-        counterNames: [],
+        //counterNames: [],                       // 当前指标组所包含的可用的counter英文名称，也可以直接使用schema.counters ???
         initForSchema: function () {
             this.schema = null;
             this.kpi = null;
@@ -40,7 +40,7 @@ export default class ServicePerformance extends React.PureComponent {
             // this.indicatorCounter = null;
             // this.indicatorsChecked = [];
             this.kpisChecked = [];
-            this.counterNames = [];
+            //this.counterNames = [];
         }
     };
     gUi = {};
@@ -95,48 +95,32 @@ export default class ServicePerformance extends React.PureComponent {
             optionsProduct: [{label: "使用该指标的产品", value: -99999}],
             optionsModule: [{label: "使用该指标的模块", value: -99999}],
             formSchemaInitialValues: {
-                schemaVendor: -99999,
-                schemaObjectClass: -99999,
-                schemaObjectSubClass: -99999,
-                schemaIntervalFlag: -99999,
-            },
-            formKpiInitialValues: {
-                kpiAlarm: 1,
-                kpiFormat: 1,
-                kpiUsedProduct: -99999,
-                kpiUsedModule: -99999,
-            },
-            selectedSchema: {
-                id: -1,
-                schema_id: "",
+                schemaId: "",
                 schemaIdA1: -99999,
                 schemaIdA2: -99999,
                 schemaIdB1: -99999,
                 schemaIdB2: -99999,
-                schema_zhname: "指标组名称",
-                schema_vendor_id: -1,
-                schema_object_class: -1,
-                schema_sub_class: -1,
-                schema_interval_flag: -1,
-                schema_counter_tab_name: "COUNTER表名称",
+                schemaZhName: "",
+                schemaVendor: -99999,
+                schemaObjectClass: -99999,
+                schemaObjectSubClass: -99999,
+                schemaIntervalFlag: -99999,
+                counterTabName: "",
             },
-            selectedKpi: {
-                id: -1,
-                sid: -1,
-                kpi_id: "",
-                kpi_field: "",
-                kpi_zhname: "指标中文名称",
-                kpi_enname: "指标英文名称",
-                kpi_alarm: 1, // 默认告警
-                kpi_format: 1, // 默认格式R2
-                kpi_min_value: "最小值",
-                kpi_max_value: "最大值",
-                kpi_exp: "指标计算表达式",
-                kpi_used_info: "",
-                kpi_used_product: -1,
-                kpi_used_module: -1,
-                kpi_used_title: "界面呈现标题",
+            formKpiInitialValues: {
+                kpiId: "",
+                kpiZhName: "",
+                kpiEnName: "",
+                kpiAlarm: 1,
+                kpiFormat: 1,
+                kpiMinValue: "",
+                kpiMaxValue: "",
+                kpiUsedProduct: -99999,
+                kpiUsedModule: -99999,
+                kpiUsedTitle: "",
+                kpiExp: "",
             },
+
             kpiExpDisplay: "",
         }
         //TODO:BM: >>>>> bind(this)
@@ -415,22 +399,21 @@ export default class ServicePerformance extends React.PureComponent {
         return myResult;
     }
 
+    //todo >>>>> ui Update Schema
     uiUpdateSchema(schema, what) {
-        const {selectedSchema} = this.state;
-        let sid = selectedSchema.id;
-
+        let sid = schema.id;
         let treeDataKpiSchemas = lodash.cloneDeep(this.state.treeDataKpiSchemas);
 
         switch (what) {
             case "add":
                 treeDataKpiSchemas.push({
                     key: schema.id,
-                    title: schema.schema_id + " - " + schema.schema_zhname,
+                    title: <div className="BoxSchemaTitle">{schema.schema_id + " - " + schema.schema_zhname}</div>,
                 });
                 break
             case "clone":
                 for (let i = 0; i < treeDataKpiSchemas.length; i++) {
-                    if (treeDataKpiSchemas[i].key === sid) {
+                    if (treeDataKpiSchemas[i].key === this.gCurrent.schema.id) {
                         treeDataKpiSchemas.splice(i + 1, 0, {
                             key: schema.id,
                             title: schema.schema_id + " - " + schema.schema_zhname,
@@ -442,95 +425,126 @@ export default class ServicePerformance extends React.PureComponent {
             case "update":
                 for (let i = 0; i < treeDataKpiSchemas.length; i++) {
                     let item = treeDataKpiSchemas[i];
-                    if (item.key === selectedSchema.id) {
-                        item.title = <div className="BoxSchemaTitle">{this.state.selectedSchema.schema_id + " - " + this.state.selectedSchema.schema_zhname}</div>
+                    if (item.key === sid) {
+                        item.title = <div className="BoxSchemaTitle">{schema.schema_id + " - " + schema.schema_zhname}</div>;
                         break
                     }
                 }
+
+                let treeDataKpis = lodash.cloneDeep(this.state.treeDataKpis);
+
+                for (let i = 0; i < treeDataKpis.length; i++) {
+                    let item = treeDataKpis[i];
+                    let kid = item.key;
+                    let kpi = this.gMap.kpis.get(kid);
+                    let kpi_id = schema.schema_id + kpi.kpi_id.substr(kpi.kpi_id.length - 2, 2);
+                    item.title = <div className="BoxKpiTitle">{kpi_id + " - " + kpi.kpi_zhname}</div>
+                }
+                this.setState({
+                    treeDataKpis: treeDataKpis
+                })
+
                 break
             case "delete":
                 let index = -1;
                 for (let i = 0; i < treeDataKpiSchemas.length; i++) {
                     let item = treeDataKpiSchemas[i];
-                    if (item.key === selectedSchema.id) {
+                    console.log(item.key, this.gCurrent.schema.id);
+                    if (item.key === this.gCurrent.schema.id) {
                         index = i;
                         break
                     }
                 }
                 treeDataKpiSchemas.splice(index, 1);
-                let schemaNew = new TadKpiSchema();
-                schemaNew.init();
+
+                this.gCurrent.initForSchema();
+                let emptySchema = new TadKpiSchema();
+                emptySchema.init();
+                this.onFormSchemaPropertiesFill(emptySchema);
+                let emptyKpi = new TadKpi();
+                emptyKpi.init();
+                this.onFormKpiPropertiesFill(emptyKpi);
+
                 this.setState({
-                    selectedSchema: schemaNew
+                    treeDataKpis: [],
+                    treeDataKpiCounters: [],
                 });
                 break
             default:
                 break;
         }
 
-
         this.setState({
             treeDataKpiSchemas: treeDataKpiSchemas
-        })
+        }
+        // , () => {
+        //     console.log(schema.id);
+        //     this.gRef.treeSchemas.current.scrollTo({key: schema.id});
+        // }
+        )
     }
 
+    //todo >>>>> ds Update Schema
     dsUpdateSchema(schema, what) {
         switch (what) {
             case "add":
-                this.gMap.schemas.set(schema.id, schema);
+                this.gMap.schemas.set(schema.id, lodash.cloneDeep(schema));
+                break
+            case "clone":
+                let schemaCopy = lodash.cloneDeep(schema);
+                schemaCopy.kpis = [];
+                schemaCopy.counters = [];
+                this.gMap.schemas.set(schema.id, schemaCopy);
+
                 break
             case "update":
-                if (this.gMap.schemas.has(schema.id)) {
-                    let oldSchema = this.gMap.schemas.get(schema.id);
-                    oldSchema.schema_id = schema.schema_id;
-                    oldSchema.schema_zhname = schema.schema_zhname;
-                    oldSchema.vendor_id = schema.vendor_id;
-                    oldSchema.object_class = schema.object_class;
-                    oldSchema.sub_class = schema.sub_class;
-                    oldSchema.interval_flag = schema.interval_flag;
+                let oldSchema = this.gMap.schemas.get(schema.id);
+                oldSchema.schema_id = schema.schema_id;
+                oldSchema.schema_zhname = schema.schema_zhname;
+                oldSchema.vendor_id = schema.vendor_id;
+                oldSchema.object_class = schema.object_class;
+                oldSchema.sub_class = schema.sub_class;
+                oldSchema.interval_flag = schema.interval_flag;
+                oldSchema.counter_tab_name = schema.counter_tab_name;
 
-                    this.gMap.schemas.get(schema.id).kpis.forEach((kpi) => {
-                        if (this.gMap.schemas.get(schema.id).kpis.has(kpi.id)) {
-                            let mapKpi = this.gMap.schemas.get(schema.id).kpis.get(kpi.id);
-                            let oldSchemaId = oldSchema.schema_id;
-                            let newSchemaId = schema.schema_id;
-                            let oldKpiIndex = mapKpi.kpi_id.split(oldSchemaId)[1]
-                            mapKpi.kpi_id = newSchemaId + oldKpiIndex;
-                        }
-                    })
-                }
+                this.gMap.schemas.get(schema.id).kpis.forEach((kid) => {
+                    let kpi = this.gMap.kpis.get(kid);
+                    let newKpi = new TadKpi();
+
+                    newKpi.id = kid;
+                    newKpi.kpi_id = schema.schema_id + kpi.kpi_id.substr(kpi.kpi_id.length - 2, 2);
+
+                    this.doUpdateKpi(newKpi);
+                })
                 break
             case "delete":
-                if (this.gMap.schemas.has(schema.id)) {
-
-                    this.gMap.schemas.get(schema.id).kpis.forEach((kpi) => {
-                        if (this.gMap.schemas.get(schema.id).kpis.has(kpi.id)) {
-                            this.gMap.schemas.get(schema.id).kpis.delete(kpi.id);
-                        }
-                    })
-                    this.gMap.schemas.delete(schema.id);
-                }
+                this.gMap.schemas.delete(schema.id);
+                //todo delete kpis
+                //todo delete counters
                 break
             default:
                 break;
         }
     }
 
+    //todo >>>>> ui Update Kpi
     uiUpdateKpi(kpi, what) {
         let treeDataKpis;
 
         switch (what) {
             case "add":
+                treeDataKpis = lodash.cloneDeep(this.state.treeDataKpis);
+
                 let uiKpi = {
                     key: kpi.id,
-                    title: kpi.kpi_id + " - " + kpi.kpi_zhname,
+                    title: <div className="BoxKpiTitle">{kpi.kpi_id + " - " + kpi.kpi_zhname}</div>,
                     children: []
                 }
 
-                this.setState((prevState) => {
-                    return produce(prevState, draftState => {
-                        draftState.treeDataKpis.push(uiKpi);
-                    })
+                treeDataKpis.push(uiKpi);
+
+                this.setState({
+                    treeDataKpis: treeDataKpis
                 })
                 break
             case "clone":
@@ -577,28 +591,39 @@ export default class ServicePerformance extends React.PureComponent {
     dsUpdateKpi(kpi, what) {
         switch (what) {
             case "add":
-                if (this.gMap.schemas.has(kpi.sid)) {
-                    this.gMap.schemas.get(kpi.sid).kpis.push(lodash.cloneDeep(kpi));
-                }
+                this.gMap.kpis.set(kpi.id, lodash.cloneDeep(kpi));
+                this.gMap.schemas.get(kpi.sid).kpis.push(kpi.id);
                 break
             case "update":
-                if (this.gMap.schemas.has(kpi.sid)) {
-                    let kpis = this.gMap.schemas.get(kpi.sid).kpis;
-                    for (let i = 0; i < kpis.length; i++) {
-                        if (kpis[i].id === kpi.id) {
-                            kpis[i].kpi_zhname = kpi.kpi_zhname;
-                            kpis[i].kpi_enname = kpi.kpi_enname;
-                            kpis[i].kpi_field = kpi.kpi_field;
-                            kpis[i].kpi_alarm = kpi.kpi_alarm;
-                            kpis[i].kpi_format = kpi.kpi_format;
-                            kpis[i].kpi_min_value = kpi.kpi_min_value;
-                            kpis[i].kpi_max_value = kpi.kpi_max_value;
-                            kpis[i].kpi_exp = kpi.kpi_exp;
-                            kpis[i].used_info = kpi.used_info;
-                            break
-                        }
-                    }
-                }
+                let oldKpi = this.gMap.kpis.get(kpi.id);
+                oldKpi.kpi_id = kpi.kpi_id;
+                oldKpi.kpi_zhname = kpi.kpi_zhname;
+                oldKpi.kpi_enname = kpi.kpi_enname;
+                oldKpi.kpi_field = kpi.kpi_field;
+                oldKpi.kpi_alarm = kpi.kpi_alarm;
+                oldKpi.kpi_format = kpi.kpi_format;
+                oldKpi.kpi_min_value = kpi.kpi_min_value;
+                oldKpi.kpi_max_value = kpi.kpi_max_value;
+                oldKpi.kpi_exp = kpi.kpi_exp;
+                oldKpi.used_info = kpi.used_info;
+
+                // if (this.gMap.schemas.has(kpi.sid)) {
+                //     let kpis = this.gMap.schemas.get(kpi.sid).kpis;
+                //     for (let i = 0; i < kpis.length; i++) {
+                //         if (kpis[i].id === kpi.id) {
+                //             kpis[i].kpi_zhname = kpi.kpi_zhname;
+                //             kpis[i].kpi_enname = kpi.kpi_enname;
+                //             kpis[i].kpi_field = kpi.kpi_field;
+                //             kpis[i].kpi_alarm = kpi.kpi_alarm;
+                //             kpis[i].kpi_format = kpi.kpi_format;
+                //             kpis[i].kpi_min_value = kpi.kpi_min_value;
+                //             kpis[i].kpi_max_value = kpi.kpi_max_value;
+                //             kpis[i].kpi_exp = kpi.kpi_exp;
+                //             kpis[i].used_info = kpi.used_info;
+                //             break
+                //         }
+                //     }
+                // }
                 break
             case "delete":
                 if (this.gMap.schemas.has(kpi.sid)) {
@@ -621,17 +646,18 @@ export default class ServicePerformance extends React.PureComponent {
 
         switch (what) {
             case "add":
+                treeDataCounters = lodash.cloneDeep(this.state.treeDataKpiCounters);
+
                 let uiCounter = {
                     key: counters.id,
                     title: counters.counter_zhname + " - " + counters.counter_enname,
                     children: []
                 }
 
-                this.setState((prevState) => {
-                    return produce(prevState, draftState => {
-                        draftState.treeDataKpiCounters.push(uiCounter);
-                    })
-                })
+                treeDataCounters.push(uiCounter);
+                this.setState({
+                    treeDataKpiCounters: treeDataCounters
+                });
                 break
             case "clone":
                 break
@@ -662,12 +688,11 @@ export default class ServicePerformance extends React.PureComponent {
         }
     }
 
+    //todo >>>>> ds Update Counter
     dsUpdateCounter(counter, what) {
         switch (what) {
             case "add":
-                if (this.gMap.schemas.has(counter.sid)) {
-                    this.gMap.schemas.get(counter.sid).counters.push(counter.id);
-                }
+                this.gMap.schemas.get(counter.sid).counters.push(counter.id);
                 this.gMap.counters.set(counter.id, counter);
                 break
             case "delete":
@@ -726,7 +751,7 @@ export default class ServicePerformance extends React.PureComponent {
         })
     };
 
-    //TODO:BM: >>>>> doGetAll
+    //TODO:BM: >>>>> do Get All
     doGetAll() {
         axios.all([
             this.doGetKpiDict(),
@@ -1242,27 +1267,30 @@ export default class ServicePerformance extends React.PureComponent {
             {headers: {'Content-Type': 'application/json'}});
     }
 
+    //todo >>>>> do Add Schema
     doAddSchema(schema, what) {
         this.restAddSchema(schema).then((result) => {
             if (result.status === 200) {
                 if (result.data.success) {
+                    this.uiUpdateSchema(result.data.data, what);
+                    this.dsUpdateSchema(result.data.data, what);
+
                     if (what === "clone") {
                         schema.kpis.forEach((item) => {
-                            let kpi = this.gMap.kpis.get(item);
+                            let kpi = lodash.cloneDeep(this.gMap.kpis.get(item));
                             kpi.id = null;
                             kpi.sid = result.data.data.id;
                             kpi.kpi_id = result.data.data.schema_id + kpi.kpi_id.substr(kpi.kpi_id.length - 2, 2);
                             this.doAddKpi(kpi, "clone");
                         })
                         schema.counters.forEach((item) => {
-                            let counter = this.gMap.counters.get(item);
+                            let counter = lodash.cloneDeep(this.gMap.counters.get(item));
+                            console.log(counter);
                             counter.id = null;
                             counter.sid = result.data.data.id;
                             this.doAddCounter(counter, "clone");
                         })
                     }
-                    this.uiUpdateSchema(result.data.data, what);
-                    this.dsUpdateSchema(result.data.data, "add");
                     this.context.showMessage("创建成功，新增指标组内部ID为：" + result.data.data.id);
                 } else {
                     this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
@@ -1273,45 +1301,46 @@ export default class ServicePerformance extends React.PureComponent {
         });
     }
 
-    // >>>>> 数据库克隆SCHEMA
+    //todo >>>>> do Clone Schema
     doCloneSchema(schema) {
-        let schemaId = schema.schema_id;
-        let ids = schemaId.split("260");
-        let idObjectClassFirst = ids[0];
-        let idFixed = "260";
-        let idType = ids[1][0];
-        // let idTime = ids[1][1];
-        let regionClass = "";
-        let idObjectClassSecond = ids[1].substr(2, 2);
-        let idIndex = ids[1].substr(4, 2);
-        let objectClass = parseInt(idObjectClassFirst + idObjectClassSecond);
-        if (((objectClass >= 50) && (objectClass <= 59)) || ((objectClass >= 50) && (objectClass <= 59)) || (objectClass === 99) || (objectClass === 199)) {
-            regionClass = objectClass;
-            objectClass = idIndex;
-            idIndex = "";
-        }
-        let schemaIdNew = "";
-        if (regionClass === "") {
-            schemaIdNew = idObjectClassFirst + idFixed + idType + "0" + idObjectClassSecond + idIndex;
-        } else {
-            schemaIdNew = idObjectClassFirst + idFixed + idType + "0" + idObjectClassSecond + idIndex;
-        }
+        // let schemaId = schema.schema_id;
+        // let ids = schemaId.split("260");
+        // let idObjectClassFirst = ids[0];
+        // let idFixed = "260";
+        // let idType = ids[1][0];
+        // // let idTime = ids[1][1];
+        // let regionClass = "";
+        // let idObjectClassSecond = ids[1].substr(2, 2);
+        // let idIndex = ids[1].substr(4, 2);
+        // let objectClass = parseInt(idObjectClassFirst + idObjectClassSecond);
+        // if (((objectClass >= 50) && (objectClass <= 59)) || ((objectClass >= 50) && (objectClass <= 59)) || (objectClass === 99) || (objectClass === 199)) {
+        //     regionClass = objectClass;
+        //     objectClass = idIndex;
+        //     idIndex = "";
+        // }
+        // let schemaIdNew = "";
+        // if (regionClass === "") {
+        //     schemaIdNew = idObjectClassFirst + idFixed + idType + "0" + idObjectClassSecond + idIndex;
+        // } else {
+        //     schemaIdNew = idObjectClassFirst + idFixed + idType + "0" + idObjectClassSecond + idIndex;
+        // }
 
         schema.id = null;
-        schema.schema_id = schemaIdNew;
-        schema.schema_zhname += "-副本";
+        // schema.schema_id = schemaIdNew;
+        schema.schema_zhname += "-副本-" + moment().format("MMDDHHmmss");;
         this.doAddSchema(schema, "clone");
     }
 
+    //todo >>>>> do Delete Schema
     doDeleteSchema() {
         let schema = new TadKpiSchema();
-        const {selectedSchema} = this.state;
-        schema.id = selectedSchema.id;
+        schema.id = this.gCurrent.schema.id;
 
         this.restDeleteSchema(schema).then((result) => {
             if (result.status === 200) {
                 if (result.data.success) {
                     this.uiUpdateSchema(result.data.data, "delete");
+                    this.dsUpdateSchema(result.data.data, "delete");
                     this.context.showMessage("保存成功，指标组ID为：" + result.data.schema_id);
                 } else {
                     this.context.showMessage("调用服务接口出现问题，详情：" + result.message);
@@ -1322,7 +1351,7 @@ export default class ServicePerformance extends React.PureComponent {
         });
     }
 
-    // >>>>> 数据库新增KPI
+    //todo >>>>> do Add KPI
     doAddKpi(kpi, what) {
         this.restAddKpi(kpi).then((result) => {
             if (result.status === 200) {
@@ -1339,7 +1368,7 @@ export default class ServicePerformance extends React.PureComponent {
         });
     }
 
-    // 数据库新增KPI_COUNTER
+    //todo >>>>> do Add KPI Counter
     doAddCounter(counter, what) {
         this.restAddCounter(counter).then((result) => {
             if (result.status === 200) {
@@ -1386,7 +1415,7 @@ export default class ServicePerformance extends React.PureComponent {
         let schema_id = this.gMap.schemas.get(sid).schema_id;
         for (let i = 0; i < this.gCurrent.schema.kpis.length; i++) {
             let kid = this.gCurrent.schema.kpis[i];
-            let kpi = this.gMap.kpis.get(kid);
+            let kpi = lodash.cloneDeep(this.gMap.kpis.get(kid));
             kpi.kpi_id = schema_id + (i + 1).toString().padStart(2, "0");
             kpi.kpi_field = "field" + (i + 1).toString().padStart(2, "0");
 
@@ -1396,7 +1425,7 @@ export default class ServicePerformance extends React.PureComponent {
 
     // >>>>> 数据库更新KPI
     doUpdateKpi(kpi) {
-        this.restAddKpi(kpi).then((result) => {
+        this.restUpdateKpi(kpi).then((result) => {
             if (result.status === 200) {
                 if (result.data.success) {
                     this.uiUpdateKpi(result.data.data, "update");
@@ -1464,128 +1493,54 @@ export default class ServicePerformance extends React.PureComponent {
         this.gCurrent.counterNames = [];
 
         if (info.selected) {
-            this.gRef.treeKpis.current.state.selectedKeys = [];
-            this.gRef.treeCounters.current.state.selectedKeys = [];
+            this.gRef.treeKpis.current.state.selectedKeys = [];     // 清除之前的选中项
+            this.gRef.treeCounters.current.state.selectedKeys = []; // 清除之前的选中项
 
             let sid = selectedKeys[0];
             let schema;
-            let schemaId;
             let uiKpis = [];
             let uiKpiCounters = [];
 
-            if (this.gMap.schemas.has(sid)) {
-                schema = this.gMap.schemas.get(sid);
-                schemaId = schema.schema_id;
-                this.gCurrent.schema = schema;
+            schema = this.gMap.schemas.get(sid);
+            this.gCurrent.schema = schema;
 
-                schema.kpis.forEach((kid) => {
-                    if (this.gMap.kpis.has(kid)) {
-                        let kpi = this.gMap.kpis.get(kid);
-                        let uiKpi = {
-                            key: kpi.id,
-                            title: <div className={"BoxKpiTitle"}>{kpi.kpi_id + " - " + kpi.kpi_zhname}</div>,
-                            children: []
-                        }
-                        let index = parseInt(kpi.kpi_id?.substr(kpi.kpi_id.length - 2, 2)) - 1;
-                        uiKpis[index] = uiKpi;
-                    }
-                });
+            schema.kpis.forEach((kid) => {
+                if (this.gMap.kpis.has(kid)) {
 
-                schema.counters.forEach((cid) => {
-                    if (this.gMap.counters.has(cid)) {
-                        let counter = this.gMap.counters.get(cid);
-                        uiKpiCounters.push({
-                            key: counter.id,
-                            title: <div className={"BoxCounterTitle"}>{counter.counter_zhname + " - " + counter.counter_enname}</div>,
-                            children: []
-                        })
-                        this.gCurrent.counterNames.push(counter.counter_enname);
+                    let kpi = this.gMap.kpis.get(kid);
+                    let uiKpi = {
+                        key: kpi.id,
+                        title: <div className={"BoxKpiTitle"}>{kpi.kpi_id + " - " + kpi.kpi_zhname}</div>,
+                        children: []
                     }
-                })
-
-                let schemaIdA1 = -99999;
-                let schemaIdA2 = -99999;
-                let schemaIdB1 = -99999;
-                let schemaIdB2 = -99999;
-                let schemaIdIndex = 0;
-                let ids = schemaId.split("260");
-
-                if ((ids[0] !== "") && (ids[0] !== "99")) {
-                    schemaIdA1 = parseInt(schemaId.substr(4, 1));
-                    schemaIdA2 = parseInt(schemaId.substr(5, 1));
-                    schemaIdB1 = parseInt(schemaId.substr(0, 1) + schemaId.substr(6, 2));
-                    if (this.ids.includes(schemaIdB1)) {
-                        schemaIdB2 = parseInt(schemaId.substr(8, 2));
-                    } else {
-                        schemaIdB2 = schemaIdB1;
-                        schemaIdB1 = -99999;
-                        schemaIdIndex = parseInt(schemaId.substr(8, 2));
-                    }
-                } else if (ids[0] === "") {
-                    schemaIdA1 = parseInt(schemaId.substr(3, 1));
-                    schemaIdA2 = parseInt(schemaId.substr(4, 1));
-                    schemaIdB1 = parseInt(schemaId.substr(5, 2));
-                    if (this.ids.includes(schema.schema_id)) {
-                        schemaIdB2 = parseInt(schemaId.substr(7, 2));
-                    } else {
-                        schemaIdB2 = schemaIdB1;
-                        schemaIdB1 = -99999;
-                        schemaIdIndex = parseInt(schemaId.substr(7, 2));
-                    }
+                    let index = parseInt(kpi.kpi_id?.substr(kpi.kpi_id.length - 2, 2)) - 1;
+                    uiKpis[index] = uiKpi;
                 }
+            });
 
-                this.gDynamic.schemaId.a1 = schemaIdA1;
-                this.gDynamic.schemaId.a2 = schemaIdA2;
-                this.gDynamic.schemaId.b1 = schemaIdB1;
-                this.gDynamic.schemaId.b2 = schemaIdB2;
-                this.gDynamic.schemaId.index = schemaIdIndex;
+            schema.counters.forEach((cid) => {
+                if (this.gMap.counters.has(cid)) {
+                    let counter = this.gMap.counters.get(cid);
+                    uiKpiCounters.push({
+                        key: counter.id,
+                        title: <div className={"BoxCounterTitle"}>{counter.counter_zhname + " - " + counter.counter_enname}</div>,
+                        children: []
+                    })
+                    this.gCurrent.counterNames.push(counter.counter_enname);
+                }
+            })
 
-                this.onFormSchemaPropertiesFill(schema);
-                let newKpi = new TadKpi();
-                newKpi.init();
-                this.onFormKpiPropertiesFill(newKpi);
+            console.log(schema);
 
-                this.setState({
-                    treeDataKpis: uiKpis,
-                    treeDataKpiCounters: uiKpiCounters,
-                    selectedSchema: {
-                        id: sid,
-                        schema_id: schema.schema_id, // 必填
-                        schemaIdA1: schemaIdA1,
-                        schemaIdA2: schemaIdA2,
-                        schemaIdB1: schemaIdB1,
-                        schemaIdB2: schemaIdB2,
-                        schema_zhname: schema.schema_zhname, // 必填
-                        schema_vendor_id: schema.vendor_id, // 默认 -1
-                        schema_object_class: schema.object_class,  // 必填
-                        schema_sub_class: schema.sub_class,  // 必填
-                        schema_interval_flag: schema.interval_flag,  // 必填
-                        schema_counter_tab_name: schema.counter_tab_name, // 必填
-                    },
-                    selectedKpi: {
-                        id: -1,
-                        kpi_id: "",
-                        kpi_zhname: "指标中文名称",
-                        kpi_enname: "指标英文名称",
-                        kpi_exp: "指标计算表达式",
-                        kpi_alarm: 1, // 默认告警
-                        kpi_format: 1, // 默认格式R2
-                        kpi_min_value: "最小值",
-                        kpi_max_value: "最大值",
-                        kpi_used_product: -1,
-                        kpi_used_module: -1,
-                        kpi_used_title: "界面呈现标题",
-                    }
-                })
-            } else {
-                this.gCurrent.initForSchema();
-                let emptySchema = new TadKpiSchema();
-                emptySchema.init();
-                this.onFormSchemaPropertiesFill(emptySchema);
-                let emptyKpi = new TadKpi();
-                emptyKpi.init();
-                this.onFormKpiPropertiesFill(emptyKpi);
-            }
+            this.onFormSchemaPropertiesFill(schema);
+            let newKpi = new TadKpi();
+            newKpi.init();
+            this.onFormKpiPropertiesFill(newKpi);
+
+            this.setState({
+                treeDataKpis: uiKpis,
+                treeDataKpiCounters: uiKpiCounters,
+            });
         } else {
             this.gCurrent.initForSchema();
             let emptySchema = new TadKpiSchema();
@@ -1598,34 +1553,6 @@ export default class ServicePerformance extends React.PureComponent {
             this.setState({
                 treeDataKpis: [],
                 treeDataKpiCounters: [],
-                selectedSchema: {
-                    id: -1,
-                    schema_id: "",
-                    schemaIdA1: -99999,
-                    schemaIdA2: -99999,
-                    schemaIdB1: -99999,
-                    schemaIdB2: -99999,
-                    schema_zhname: "指标组名称",
-                    schema_vendor_id: -1,
-                    schema_object_class: -1,
-                    schema_sub_class: -1,
-                    schema_interval_flag: -1,
-                    schema_counter_tab_name: "COUNTER表名称",
-                },
-                selectedKpi: {
-                    id: -1,
-                    kpi_id: "",
-                    kpi_zhname: "指标中文名称",
-                    kpi_enname: "指标英文名称",
-                    kpi_exp: "指标计算表达式",
-                    kpi_alarm: 1, // 默认告警
-                    kpi_format: 1, // 默认格式R2
-                    kpi_min_value: "最小值",
-                    kpi_max_value: "最大值",
-                    kpi_used_product: -1,
-                    kpi_used_module: -1,
-                    kpi_used_title: "界面呈现标题",
-                }
             });
         }
     };
@@ -1640,54 +1567,16 @@ export default class ServicePerformance extends React.PureComponent {
         if (info.selected) {
             let kid = selectedKeys[0];
 
-            if (this.gMap.kpis.has(kid)) {
-                let selectedKpi = lodash.cloneDeep(this.state.selectedKpi);
-                let kpi = this.gMap.kpis.get(kid);
-                this.gCurrent.kpi = kpi;
+            let kpi = this.gMap.kpis.get(kid);
+            this.gCurrent.kpi = kpi;
 
-                selectedKpi.id = kpi.id;
-                selectedKpi.kpi_id = kpi.kpi_id;
-                selectedKpi.kpi_zhname = kpi.kpi_zhname;
-                selectedKpi.kpi_enname = kpi.kpi_enname;
-                selectedKpi.kpi_exp = kpi.kpi_exp;
-                selectedKpi.kpi_alarm = kpi.kpi_alarm; // 默认告
-                selectedKpi.kpi_format = kpi.kpi_format; // 默认格式R2
-                selectedKpi.kpi_min_value = kpi.kpi_min_value;
-                selectedKpi.kpi_max_value = kpi.kpi_max_value;
-                selectedKpi.kpi_used_product = -1;
-                selectedKpi.kpi_used_module = -1;
-                selectedKpi.kpi_used_title = "界面呈现标题";
-
-                this.onFormKpiPropertiesFill(kpi);
-                this.setState({
-                    selectedKpi: selectedKpi
-                })
-            } else {
-                this.gCurrent.kpi = null;
-            }
+            this.onFormKpiPropertiesFill(kpi);
         } else {
             this.gCurrent.kpi = null;
-            let selectedKpi = lodash.cloneDeep(this.state.selectedKpi);
-            selectedKpi.id = -1;
-            selectedKpi.kpi_id = "";
-            selectedKpi.kpi_zhname = "指标中文名称";
-            selectedKpi.kpi_enname = "指标英文名称";
-            selectedKpi.kpi_exp = "指标计算表达式";
-            selectedKpi.kpi_alarm = 1;
-            selectedKpi.kpi_format = 1;
-            selectedKpi.kpi_min_value = "最小值";
-            selectedKpi.kpi_max_value = "最大值";
-            selectedKpi.kpi_used_product = -1;
-            selectedKpi.kpi_used_module = -1;
-            selectedKpi.kpi_used_title = "界面呈现标题";
 
             let newKpi = new TadKpi();
             newKpi.init();
             this.onFormKpiPropertiesFill(newKpi);
-            this.setState({
-                    selectedKpi: selectedKpi
-                }
-            )
         }
     }
 
@@ -1744,35 +1633,30 @@ export default class ServicePerformance extends React.PureComponent {
         let schema_id = this.gMap.schemas.get(sid).schema_id;
         for (let i = 0; i < this.gCurrent.schema.kpis.length; i++) {
             let kid = this.gCurrent.schema.kpis[i].id;
-            let kpi = this.gMap.kpis.get(kid);
+            let kpi = lodash.cloneDeep(this.gMap.kpis.get(kid));
+
             kpi.kpi_id = schema_id + (i + 1).toString().padStart(2, "0");
             kpi.kpi_field = "field" + (i + 1).toString().padStart(2, "0");
+
             this.doUpdateKpi(kpi);
         }
     }
 
-    // >>> SELECT <<<
-
     onSelectSchemaIdChanged(e, sender) {
         let schemaId = "";
-        const {selectedSchema} = this.state;
 
         switch (sender) {
             case "a1":
                 this.gDynamic.schemaId.a1 = e;
-                selectedSchema.schemaIdA1 = e;
                 break
             case "a2":
                 this.gDynamic.schemaId.a2 = e;
-                selectedSchema.schemaIdA2 = e;
                 break
             case "b1":
                 this.gDynamic.schemaId.b1 = e;
-                selectedSchema.schemaIdB1 = e;
                 break
             case "b2":
                 this.gDynamic.schemaId.b2 = e;
-                selectedSchema.schemaIdB2 = e;
                 break
             default:
                 break
@@ -1800,25 +1684,18 @@ export default class ServicePerformance extends React.PureComponent {
             strC = (++this.gDynamic.schemaId.index).toString();
 
         }
-        // schemaId = strBb + "-260-" + strA1 + "-" + strA2 + "-" + strB + "-" + strC;
         schemaId = strBb + "260" + strA1 + strA2 + strB + strC;
 
-        selectedSchema.schema_id = schemaId;
-
-        this.setState({selectedSchema: selectedSchema});
+        this.gRef.formSchemaProperties.current.setFieldsValue({
+            schemaId: schemaId,
+        });
     }
 
-    // >>> CHECKBOX <<<
-
-    // >>> BUTTON <<<
-
     onButtonChangeStyleLayoutClicked(e) {
-
         let styleLayout = "NN";
 
         if (this.state.styleLayout !== "SN") styleLayout = "SN";
 
-        console.log(styleLayout);
         this.setState({
             styleLayout: styleLayout
         })
@@ -1827,18 +1704,18 @@ export default class ServicePerformance extends React.PureComponent {
     // >>>>> 点击按钮，新增 SCHEMA
     onButtonSchemasAddClicked(e) {
         let schema = new TadKpiSchema();
+
         schema.schema_zhname = "新增指标组";
         schema.schema_id = "0260000000";
 
         this.doAddSchema(schema, "add");
     }
 
+    // >>>>> 点击按钮，复制 SCHEMA
     onButtonSchemasCopyPasteClicked(e) {
         let sid = this.gCurrent.schema.id;
-        if (this.gMap.schemas.has(sid)) {
-            let schema = this.gMap.schemas.get(sid);
-            this.doCloneSchema(schema);
-        }
+        let schema = lodash.cloneDeep(this.gMap.schemas.get(sid));
+        this.doCloneSchema(schema);
     }
 
     onButtonSchemasExportClicked(e) {
@@ -1853,16 +1730,19 @@ export default class ServicePerformance extends React.PureComponent {
         this.context.showMessage("提交近期指标组变更，开发中...");
     }
 
-    // >>>>> 点击按钮，新增KPI
+    //>>>>> 点击按钮，新增KPI
     onButtonKpisAddClicked(e) {
         let kpi = new TadKpi();
-        const {selectedSchema} = this.state;
         let index = this.gCurrent.schema.kpis.length + 1;
-        kpi.sid = selectedSchema.id;
-        kpi.kpi_id = selectedSchema.schema_id + index.toString().padStart(2, "0");
+
+        kpi.sid = this.gCurrent.schema.id;
+        kpi.kpi_id = this.gCurrent.schema.schema_id + index.toString().padStart(2, "0");
         kpi.kpi_zhname = "新增指标";
-        kpi.kpi_enname = "newIndicator" + index.toString().padStart(2, "0");
+        kpi.kpi_enname = "newKpi" + index.toString().padStart(2, "0");
         kpi.kpi_field = "field" + index.toString().padStart(2, "0");
+        kpi.kpi_alarm = 1;
+        kpi.kpi_format = 1;
+
         this.doAddKpi(kpi, "add");
     }
 
@@ -1916,7 +1796,6 @@ export default class ServicePerformance extends React.PureComponent {
 
     // 复制到剪贴板
     doInsertIntoKpiExp(counter) {
-        console.log(counter);
         this.doCopyToClipboard(counter.counter_enname);
     }
 
@@ -1930,6 +1809,10 @@ export default class ServicePerformance extends React.PureComponent {
 
     // 表达式格式化及算法验证
     doDisplayExpression(exp) {
+        if (exp === null) return;
+        if (exp.trim() === "" || exp === "指标计算表达式") return;
+        ;
+
         // 自动将中文符号，转为英文符号：( ) . + - * /
         // 自动将连写符号，转为单个符号：. + - * /
         // 限定有效字符，可用：( ) . + - * / a-z 0-9 _
@@ -1975,7 +1858,7 @@ export default class ServicePerformance extends React.PureComponent {
                     </Fragment>
                 } else if (ov.length === 2) {
                     let varName = ov[1].replace(/__KD__/g, ".");
-                    let classNameV =  "expVar";
+                    let classNameV = "expVar";
                     if ((index + 1) < arrExp.length) {
                         if (!(arrExp[index + 1].startsWith("+") ||
                             arrExp[index + 1].startsWith("-") ||
@@ -2007,7 +1890,7 @@ export default class ServicePerformance extends React.PureComponent {
                 } else {
                     hasError = true;
                     let v = "";
-                    for(let i = 1; i < ov.length; i++) {
+                    for (let i = 1; i < ov.length; i++) {
                         v += ov[i] + " ";
                     }
                     v = v.replace(/\s+$/, "");
@@ -2036,7 +1919,7 @@ export default class ServicePerformance extends React.PureComponent {
                             strLets += "let " + item.replace(/\./g, "_") + " = 1;\n";
                         }
                     });
-                    expTestNew = strLets + "let test = " + expTestNew + ";\nconsole.log(test);\nreturn test;\n}";
+                    expTestNew = strLets + "let test = " + expTestNew + ";\nreturn test;\n}";
                     expTestNew = expTestNew.replace(/__KDN__/g, ".");
 
                     console.log(expTestNew);
@@ -2085,7 +1968,7 @@ export default class ServicePerformance extends React.PureComponent {
                 break
             case "删除统计数据":
                 let cid = this.gCurrent.counter.id;
-                let counter = this.gMap.counters.get(cid);
+                let counter = lodash.cloneDeep(this.gMap.counters.get(cid));
                 counter.sid = null;
                 this.doDeleteCounter(counter);
                 break
@@ -2151,18 +2034,21 @@ export default class ServicePerformance extends React.PureComponent {
 
     onFormSchemaPropertiesFinish(values) {
         let schema = new TadKpiSchema();
-        const {selectedSchema} = this.state;
-        schema.id = selectedSchema.id;
-        schema.schema_id = selectedSchema.schema_id;
 
+        schema.id = this.gCurrent.schema.id;
+        schema.schema_id = values.schemaId;
         schema.schema_zhname = values.schemaZhName;
+        schema.vendor_id = values.schemaVendor === -99999 ? null : values.schemaVendor;
+        schema.object_class = values.schemaObjectClass === -99999 ? null : values.schemaObjectClass;
+        schema.sub_class = values.schemaObjectSubClass === -99999 ? null : values.schemaObjectSubClass;
+        schema.interval_flag = values.schemaIntervalFlag === -99999 ? null : values.schemaIntervalFlag;
         schema.counter_tab_name = values.counterTabName;
 
         this.doUpdateSchema(schema).then((result) => {
             if (result.status === 200) {
                 if (result.data.success) {
                     this.uiUpdateSchema(result.data.data, "update");
-                    //todo:: this.dsUpdateKpi(result.data.data, "update");
+                    this.dsUpdateSchema(result.data.data, "update");
                     this.context.showMessage("更新成功，更新指标组内部ID为：" + result.data.data.id);
                 } else {
                     this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
@@ -2191,6 +2077,7 @@ export default class ServicePerformance extends React.PureComponent {
         kpi.kpi_min_value = values.kpiMinValue;
         kpi.kpi_max_value = values.kpiMaxValue;
         kpi.used_info = values.kpiUsedProduct + "," + values.kpiUsedModule + "," + values.kpiUsedTitle + ";"
+        kpi.kpi_exp = values.kpiExp.trim();
 
         this.restUpdateKpi(kpi).then((result) => {
             if (result.status === 200) {
@@ -2213,7 +2100,54 @@ export default class ServicePerformance extends React.PureComponent {
 
     // >>>>> 为 SCHEMA FROM.ITEM 赋值
     onFormSchemaPropertiesFill(schema) {
+        let schemaId = schema.schema_id.toString();
+        let schemaIdA1 = -99999;
+        let schemaIdA2 = -99999;
+        let schemaIdB1 = -99999;
+        let schemaIdB2 = -99999;
+        let schemaIdIndex = 0;
+
+        if (schemaId !== "") {
+            let ids = schemaId.split("260");
+
+            if ((ids[0] !== "") && (ids[0] !== "99")) {
+                schemaIdA1 = parseInt(schemaId.substr(4, 1));
+                schemaIdA2 = parseInt(schemaId.substr(5, 1));
+                schemaIdB1 = parseInt(schemaId.substr(0, 1) + schemaId.substr(6, 2));
+                if (this.ids.includes(schemaIdB1)) {
+                    schemaIdB2 = parseInt(schemaId.substr(8, 2));
+                } else {
+                    schemaIdB2 = schemaIdB1;
+                    schemaIdB1 = -99999;
+                    schemaIdIndex = parseInt(schemaId.substr(8, 2));
+                }
+            } else if (ids[0] === "") {
+                schemaIdA1 = parseInt(schemaId.substr(3, 1));
+                schemaIdA2 = parseInt(schemaId.substr(4, 1));
+                schemaIdB1 = parseInt(schemaId.substr(5, 2));
+                if (this.ids.includes(schema.schema_id)) {
+                    schemaIdB2 = parseInt(schemaId.substr(7, 2));
+                } else {
+                    schemaIdB2 = schemaIdB1;
+                    schemaIdB1 = -99999;
+                    schemaIdIndex = parseInt(schemaId.substr(7, 2));
+                }
+            }
+
+            this.gDynamic.schemaId.a1 = schema.schemaIdA1 = schemaIdA1;
+            this.gDynamic.schemaId.a2 = schema.schemaIdA2 = schemaIdA2;
+            this.gDynamic.schemaId.b1 = schema.schemaIdB1 = schemaIdB1;
+            this.gDynamic.schemaId.b2 = schema.schemaIdB2 = schemaIdB2;
+            this.gDynamic.schemaId.index = schemaIdIndex;
+        }
+
+        if (schema.vendor_id === null) schema.vendor_id = -99999;
+        if (schema.object_class === null) schema.object_class = -99999;
+        if (schema.sub_class === null) schema.sub_class = -99999;
+        if (schema.interval_flag === null) schema.interval_flag = -99999;
+
         this.gRef.formSchemaProperties.current.setFieldsValue({
+            schemaId: schema.schema_id,
             schemaIdA1: schema.schemaIdA1,
             schemaIdA2: schema.schemaIdA2,
             schemaIdB1: schema.schemaIdB1,
@@ -2286,7 +2220,9 @@ export default class ServicePerformance extends React.PureComponent {
                             <div className={this.state.styleLayout === "NN" ? "BoxButtons" : "BoxButtons BoxHidden"}>
                                 <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonSchemasAddClicked}>新增</Button>
                                 <Button size={"small"} type={"primary"} icon={<CopyOutlined/>} onClick={this.onButtonSchemasCopyPasteClicked}>复制</Button>
-                                <Button size={"small"} type={"primary"} icon={<MinusSquareOutlined/>} onClick={() => {this.showModal("删除指标组")}}>删除</Button>
+                                <Button size={"small"} type={"primary"} icon={<MinusSquareOutlined/>} onClick={() => {
+                                    this.showModal("删除指标组")
+                                }}>删除</Button>
                                 <Button size={"small"} type={"primary"} icon={<CloudDownloadOutlined/>} onClick={this.onButtonSchemasExportClicked}>导出</Button>
                             </div>
                             <div>
@@ -2305,7 +2241,7 @@ export default class ServicePerformance extends React.PureComponent {
                                 <Input.Search placeholder="Search" enterButton onSearch={this.onInputSearchSchemasSearched}/>
                             </div>
                             <div className={"BoxTreeInstance"}>
-                                <Tree ref={this.gRef.treeSchemas} treeData={this.state.treeDataKpiSchemas} onSelect={this.onTreeKpiSchemasSelected} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} switcherIcon={<CaretDownOutlined/>}/>
+                                <Tree ref={this.gRef.treeSchemas} treeData={this.state.treeDataKpiSchemas} onSelect={this.onTreeKpiSchemasSelected} defaultExpandAll={true} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} switcherIcon={<CaretDownOutlined/>}/>
                             </div>
                         </div>
                     </div>
@@ -2339,10 +2275,9 @@ export default class ServicePerformance extends React.PureComponent {
                                 <div className={"BoxButtons"}>
                                     <Button size={"small"} type={"primary"} icon={<ShoppingCartOutlined/>} onClick={this.onButtonKpisShoppingClicked}>购物车</Button>
                                     <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonKpisAddClicked}>新增</Button>
-                                    <Button size={"small"} type={"primary"} icon={<MinusSquareOutlined/>} onClick={() => {this.showModal("删除指标")}}>删除</Button>
-                                </div>
-                                <div>
-                                    <Button size={"small"} type={"ghost"} icon={<EllipsisOutlined/>}/>
+                                    <Button size={"small"} type={"primary"} icon={<MinusSquareOutlined/>} onClick={() => {
+                                        this.showModal("删除指标")
+                                    }}>删除</Button>
                                 </div>
                             </div>
                             <div className={"BoxTree"}>
@@ -2360,9 +2295,6 @@ export default class ServicePerformance extends React.PureComponent {
                                         this.showModal("删除统计数据")
                                     }}>删除</Button>
                                 </div>
-                                <div>
-                                    <Button size={"small"} type={"ghost"} icon={<EllipsisOutlined/>}/>
-                                </div>
                             </div>
                             <div className={"BoxTree"}>
                                 <div className={"BoxTreeInstance"}>
@@ -2374,28 +2306,48 @@ export default class ServicePerformance extends React.PureComponent {
                     <div className="BoxProperties">
                         <Form className="FormOne" ref={this.gRef.formSchemaProperties} name="formSchemaProperties" initialValues={this.state.formSchemaInitialValues} onFinish={this.onFormSchemaPropertiesFinish} onFinishFailed={this.onFormSchemaPropertiesFinishFailed}>
                             <div className={"BoxTitleBar"}>
-                                <div className={"BoxTitle"}>指标组属性 - {this.state.selectedSchema.schema_id}</div>
+                                <div className={"BoxTitle"}>指标组属性 -</div>
+                                <Form.Item name="schemaId" className="BoxFormItemInput">
+                                    <Input className="InputReadonly" bordered={false} readOnly="readonly"/>
+                                </Form.Item>
                                 <div className="BoxButtons">
                                     <Button size={"small"} type={"primary"} icon={<SaveOutlined/>} htmlType="submit">保存</Button>
-                                </div>
-                                <div>
-                                    <Button size={"small"} type={"ghost"} icon={<EllipsisOutlined/>}/>
                                 </div>
                             </div>
                             <div className="BoxPropertiesSchema">
                                 <div className={"BoxSchemaIds"}>
-                                    <Select defaultValue={-99999} value={this.state.selectedSchema.schemaIdA1} options={this.state.optionsSchemaIdA1} onChange={(e) => {
-                                        this.onSelectSchemaIdChanged(e, "a1")
-                                    }}/>
-                                    <Select defaultValue={-99999} value={this.state.selectedSchema.schemaIdA2} options={this.state.optionsSchemaIdA2} onChange={(e) => {
-                                        this.onSelectSchemaIdChanged(e, "a2")
-                                    }}/>
-                                    <Select defaultValue={-99999} value={this.state.selectedSchema.schemaIdB1} options={this.state.optionsSchemaIdB1} onChange={(e) => {
-                                        this.onSelectSchemaIdChanged(e, "b1")
-                                    }}/>
-                                    <Select defaultValue={-99999} value={this.state.selectedSchema.schemaIdB2} options={this.state.optionsSchemaIdB2} onChange={(e) => {
-                                        this.onSelectSchemaIdChanged(e, "b2")
-                                    }}/>
+                                    <Form.Item name="schemaIdA1" className="BoxFormItemInput">
+                                        <Select options={this.state.optionsSchemaIdA1} onChange={(e) => {
+                                            this.onSelectSchemaIdChanged(e, "a1");
+                                        }}/>
+                                    </Form.Item>
+                                    <Form.Item name="schemaIdA2" className="BoxFormItemInput">
+                                        <Select options={this.state.optionsSchemaIdA2} onChange={(e) => {
+                                            this.onSelectSchemaIdChanged(e, "a2");
+                                        }}/>
+                                    </Form.Item>
+                                    <Form.Item name="schemaIdB1" className="BoxFormItemInput">
+                                        <Select options={this.state.optionsSchemaIdB1} onChange={(e) => {
+                                            this.onSelectSchemaIdChanged(e, "b1");
+                                        }}/>
+                                    </Form.Item>
+                                    <Form.Item name="schemaIdB2" className="BoxFormItemInput">
+                                        <Select options={this.state.optionsSchemaIdB2} onChange={(e) => {
+                                            this.onSelectSchemaIdChanged(e, "b2");
+                                        }}/>
+                                    </Form.Item>
+                                    {/*<Select defaultValue={-99999} value={this.state.selectedSchema.schemaIdA1} options={this.state.optionsSchemaIdA1} onChange={(e) => {*/}
+                                    {/*    this.onSelectSchemaIdChanged(e, "a1")*/}
+                                    {/*}}/>*/}
+                                    {/*<Select defaultValue={-99999} value={this.state.selectedSchema.schemaIdA2} options={this.state.optionsSchemaIdA2} onChange={(e) => {*/}
+                                    {/*    this.onSelectSchemaIdChanged(e, "a2")*/}
+                                    {/*}}/>*/}
+                                    {/*<Select defaultValue={-99999} value={this.state.selectedSchema.schemaIdB1} options={this.state.optionsSchemaIdB1} onChange={(e) => {*/}
+                                    {/*    this.onSelectSchemaIdChanged(e, "b1")*/}
+                                    {/*}}/>*/}
+                                    {/*<Select defaultValue={-99999} value={this.state.selectedSchema.schemaIdB2} options={this.state.optionsSchemaIdB2} onChange={(e) => {*/}
+                                    {/*    this.onSelectSchemaIdChanged(e, "b2")*/}
+                                    {/*}}/>*/}
                                 </div>
                                 <div>
                                     <Form.Item className="BoxFormItemInput">
@@ -2432,12 +2384,12 @@ export default class ServicePerformance extends React.PureComponent {
                         </Form>
                         <Form className="FormTwo" ref={this.gRef.formKpiProperties} name="formKpiProperties" initialValues={this.state.formKpiInitialValues} onFinish={this.onFormKpiPropertiesFinish} onFinishFailed={this.onFormKpiPropertiesFinishFailed}>
                             <div className="BoxTitleBar">
-                                <div className={"BoxTitle"}>指标属性 - {this.state.selectedKpi.kpi_id}</div>
+                                <div className={"BoxTitle"}>指标属性 -</div>
+                                <Form.Item name="kpiId" className="BoxFormItemInput">
+                                    <Input className="InputReadonly" bordered={false} readOnly="readonly"/>
+                                </Form.Item>
                                 <div className={"BoxButtons"}>
                                     <Button size={"small"} type={"primary"} icon={<SaveOutlined/>} htmlType="submit">保存</Button>
-                                </div>
-                                <div>
-                                    <Button size={"small"} type={"ghost"} icon={<EllipsisOutlined/>}/>
                                 </div>
                             </div>
                             <div className="BoxPropertiesKpi">

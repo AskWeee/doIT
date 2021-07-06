@@ -87,7 +87,7 @@ class Header extends React.Component {
                     {this.state.jsxMenus}
                 </div>
                 <div className="BoxUser">
-                    <div className="Username">{this.context.author}</div>
+                    <div className="Username">{this.context.user.name}</div>
                 </div>
             </div>
         )

@@ -1,9 +1,15 @@
 import React from "react";
 
 const GCtx = React.createContext({
-    author: '管理员',
+    user: {id: 1, name: 'KKK', online: true, host: "10.31.3.6" },
+    users: [
+        {id: 1, name: "KKK", online: true, host: "10.31.3.6"},
+        {id: 1, name: "KKK", online: true, host: "10.31.3.3"},
+        {id: 2, name: "李杰", online: true, host: "10.31.2.1"},
+        {id: 3, name: "潘璐", online: false, host: ""},
+    ],
     message: "message from global context",
-    serviceIp: "10.31.3.3",
+    serviceIp: "10.31.3.6",
     servicePort: "8090",
     reactElementKey: 0,
     mapMenus: new Map(),

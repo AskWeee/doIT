@@ -269,7 +269,7 @@ $colorComponentToolbar: rgb(175, 225, 255);
                     //border: 1px solid rgba(55,55,55,1);
                     background: $colorComponentToolbar;
                     display: grid;
-                    grid-template-columns: 1fr auto auto;
+                    grid-template-columns: 1fr auto;
                     //justify-content: end;
                     //align-content: center;
                     padding: 3px;
@@ -285,12 +285,12 @@ $colorComponentToolbar: rgb(175, 225, 255);
                         grid-template-columns: auto auto auto;
                         grid-gap: 3px;
 
-                        Button {
-
-                            &:last-child {
-                                margin-right: 3px;
-                            }
-                        }
+                        //Button {
+                        //
+                        //    //&:last-child {
+                        //    //    margin-right: 3px;
+                        //    //}
+                        //}
                     }
                 }
 
@@ -329,7 +329,7 @@ $colorComponentToolbar: rgb(175, 225, 255);
                 .BoxTitleBar {
                     background: $colorComponentToolbar;
                     display: grid;
-                    grid-template-columns: 1fr auto auto;
+                    grid-template-columns: 1fr auto;
                     padding: 3px;
                     font-weight: bold;
 
@@ -343,12 +343,12 @@ $colorComponentToolbar: rgb(175, 225, 255);
                         grid-template-columns: auto auto;
                         grid-gap: 3px;
 
-                        Button {
-
-                            &:last-child {
-                                margin-right: 3px;
-                            }
-                        }
+                        //Button {
+                        //
+                        //    &:last-child {
+                        //        margin-right: 3px;
+                        //    }
+                        //}
                     }
                 }
 
@@ -392,6 +392,13 @@ $colorComponentToolbar: rgb(175, 225, 255);
             color: black;
             overflow: hidden;
 
+            .InputReadonly {
+                padding: 0;
+                margin: 0;
+                color: black;
+                font-weight: bold;
+            }
+
             .FormOne {
                 display: grid;
                 grid-template-rows: auto auto;
@@ -400,19 +407,20 @@ $colorComponentToolbar: rgb(175, 225, 255);
                 .BoxTitleBar {
                     background: $colorComponentToolbar;
                     display: grid;
-                    grid-template-columns: 1fr auto auto;
-                    padding: 3px;
-                    font-weight: bold;
+                    grid-template-columns: auto 1fr auto;
 
                     .BoxTitle {
-                        margin: 0 0 0 10px;
+                        display: grid;
+                        align-content: center;
+                        margin: 0 5px 0 10px;
                         color: black;
+                        font-weight: bold;
                     }
 
                     .BoxButtons {
                         display: grid;
-                        //grid-template-columns: auto auto;
-                        grid-gap: 3px;
+                        align-content: center;
+                        margin-left: 5px;
 
                         Button {
 
@@ -452,19 +460,20 @@ $colorComponentToolbar: rgb(175, 225, 255);
                 .BoxTitleBar {
                     background: $colorComponentToolbar;
                     display: grid;
-                    grid-template-columns: 1fr auto auto;
-                    padding: 3px;
-                    font-weight: bold;
+                    grid-template-columns: auto 1fr auto;
 
                     .BoxTitle {
-                        margin: 0 0 0 10px;
+                        display: grid;
+                        align-content: center;
+                        margin: 0 5px 0 10px;
                         color: black;
+                        font-weight: bold;
                     }
 
                     .BoxButtons {
                         display: grid;
-                        //grid-template-columns: auto auto;
-                        grid-gap: 3px;
+                        align-content: center;
+                        margin-left: 5px;
 
                         Button {
 

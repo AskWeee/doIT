@@ -28,10 +28,10 @@ export default class TadKpiSchema {
         this.kpis = [];
         this.counters = [];
 
-        // let t = "TadKpiSchema_" + Math.floor(Math.random()*100000);
-        // this.key = t;
-        // this.title = t;
-        // this.children = [];
+        this.schemaIdA1 = null;
+        this.schemaIdA2 = null;
+        this.schemaIdB1 = null;
+        this.schemaIdB2 = null;
     }
 
     init() {
@@ -42,21 +42,10 @@ export default class TadKpiSchema {
         this.schemaIdB1 = -99999;
         this.schemaIdB2 = -99999;
         this.schema_zhname = "指标组名称";
-        this.schema_vendor_id = -1;
-        this.schema_object_class = -1;
-        this.schema_sub_class = -1;
-        this.schema_interval_flag = -1;
-        this.schema_counter_tab_name = "COUNTER表名称";
-        // this.kpi_id = "";
-        // this.kpi_zhname = "指标中文名称";
-        // this.kpi_enname = "指标英文名称";
-        // this.kpi_exp = "指标计算表达式";
-        // this.kpi_alarm = 1; // 默认告警
-        // this.kpi_format = 1; // 默认格式R2
-        // this.kpi_min_value = "最小值";
-        // this.kpi_max_value = "最大值";
-        // this.kpi_used_product = -1;
-        // this.kpi_used_module = -1;
-        // this.kpi_used_title = "界面呈现标题";
+        this.vendor_id = -99999;
+        this.object_class = -99999;
+        this.sub_class = -99999;
+        this.interval_flag = -99999;
+        this.counter_tab_name = "COUNTER表名称";
     }
 }
