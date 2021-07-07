@@ -12,14 +12,16 @@ import TadKpi from "../entity/TadKpi";
 import TadIndicator from "../entity/TadIndicator";
 import TadIndicatorCounter from "../entity/TadIndicatorCounter";
 import TadKpiCounter from "../entity/TadKpiCounter";
+import TimePairs from "../params/TimePairs";
 import {Button, Input, Select, Tree, Modal, Form, Tooltip,} from 'antd'
-import {BranchesOutlined, CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, CloudDownloadOutlined, CloudUploadOutlined, CopyOutlined, MinusSquareOutlined, PlusOutlined, PlusSquareOutlined, SaveOutlined, QuestionCircleOutlined, EllipsisOutlined, EditOutlined, ShoppingCartOutlined,} from '@ant-design/icons'
+import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, CloudDownloadOutlined, CloudUploadOutlined, CopyOutlined, MinusSquareOutlined, PlusOutlined, PlusSquareOutlined, SaveOutlined, QuestionCircleOutlined, EllipsisOutlined, EditOutlined, ShoppingCartOutlined,} from '@ant-design/icons'
 
 const {Option} = Select;
 const {TextArea} = Input;
 
 export default class ServicePerformance extends React.PureComponent {
     static contextType = GCtx;
+
     gMap = {};
     gData = {};
     gCurrent = {
@@ -53,6 +55,7 @@ export default class ServicePerformance extends React.PureComponent {
         }
     }
     gRef = {
+        boxTreeSchemas: React.createRef(),
         textAreaKpiExp: React.createRef(),
         treeSchemas: React.createRef(),
         treeIndicators: React.createRef(),
@@ -67,9 +70,9 @@ export default class ServicePerformance extends React.PureComponent {
             this.kpis = [];
         }
     }
-
     gSchemaIdRegionCodes = [50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 99, 150, 151, 152, 153, 154, 155, 156, 157, 199];
     gSchemaIdDefault = "260959975"; // 通用-天-全国-保留
+    gTreeSchemasScrollTo = null;
 
     constructor(props) {
         super(props);
@@ -84,6 +87,8 @@ export default class ServicePerformance extends React.PureComponent {
             treeDataIndicators: [],
             treeDataKpis: [],
             treeDataKpiCounters: [],
+            treeSchemasHeight: 100,
+            treeSchemasScroll: 1,
             optionsSchemaIdA1: [{label: "业务分类", value: -99999}],
             optionsSchemaIdA2: [{label: "时间粒度", value: -99999}],
             optionsSchemaIdB1: [{label: "空间粒度", value: -99999}],
@@ -123,6 +128,7 @@ export default class ServicePerformance extends React.PureComponent {
 
             kpiExpDisplay: "",
         }
+
         //todo >>>>> bind(this)
         this.test = this.test.bind(this);
         this.doMock = this.doMock.bind(this);
@@ -227,6 +233,13 @@ export default class ServicePerformance extends React.PureComponent {
         this.doGetAll();
     }
 
+    componentDidUpdate(prevProps, prevState, snapshot) {
+        if (this.gTreeSchemasScrollTo !== null) {
+            this.gRef.treeSchemas.current.scrollTo({key: this.gTreeSchemasScrollTo});
+            this.gTreeSchemasScrollTo = null;
+        }
+    }
+
     doMock() {
         Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_product_relations", {
             code: "200-200",
@@ -245,7 +258,9 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     doInit() {
-
+        this.setState({
+            treeSchemasHeight: this.gRef.boxTreeSchemas.current.offsetHeight
+        })
     }
 
     isFoundKpis(ds, sv) {
@@ -479,7 +494,10 @@ export default class ServicePerformance extends React.PureComponent {
                 treeDataKpiSchemas: treeDataKpiSchemas
             }, () => {
                 if (what === "add") {
-                    this.gRef.treeSchemas.current.scrollTo({key: schema.id});
+                    this.gTreeSchemasScrollTo = schema.id;
+                    this.setState({
+                        treeSchemasScroll: this.state.treeSchemasScroll + 1
+                    })
                 }
             }
         )
@@ -987,8 +1005,8 @@ export default class ServicePerformance extends React.PureComponent {
     }
 
     //todo <<<<< noew >>>>> do Get My Schemas
-    doGetMySchemas(user, tb, te) {
-        console.log(user, tb, te);
+    doGetMySchemas(user, dtPairs) {
+        console.log(user, dtPairs);
 
         let myResult = this.gUi.schemas;
 
@@ -1364,8 +1382,6 @@ export default class ServicePerformance extends React.PureComponent {
 
     // >>>>> do Clone Schema
     doCloneSchema(schema) {
-        let sids = this.splitSchemaId(schema.schema_id);
-
         schema.id = null;
         schema.schema_zhname += "-副本-" + moment().format("MMDDHHmmss");
 
@@ -2069,6 +2085,78 @@ export default class ServicePerformance extends React.PureComponent {
 
     }
 
+    str2Time4ParamTimePairs(tb, te) {
+        let myResult = "无效";
+
+        if (te === undefined) {
+            let cb = tb.length;
+            if (cb <= 2) {
+                try {
+                    let ntb = parseInt(tb);
+                    if ((ntb > 0) && (ntb <= 31)) {
+                        myResult = moment().format("yyyy-MM-") + tb.padStart(2, "0");
+                    }
+                } catch (e) {
+                    myResult = "无效";
+                }
+            } else if (cb === 3) {
+                let month = tb.substr(0, 1);
+                let day = tb.substr(1, 2);
+                myResult = moment().format("yyyy-") + month.padStart(2, "0") + "-" + day;
+
+            } else if (cb === 4) {
+                let month = tb.substr(0, 2);
+                let day = tb.substr(2, 2);
+                myResult = moment().format("yyyy-") + month.padStart(2, "0") + "-" + day.padStart(2, "0");
+
+            } else if (cb === 6) {
+                let year = tb.substr(0, 2);
+                let month = tb.substr(2, 2);
+                let day = tb.substr(4, 2);
+                myResult = moment().format("yy") + year + "-" + month + "-" + day;
+
+            } else if (cb === 8) {
+                let year = tb.substr(0, 4);
+                let month = tb.substr(4, 2);
+                let day = tb.substr(6, 2);
+                myResult = year + "-" + month + "-" + day;
+
+            }
+        } else {
+            let ce = te.length;
+            if (ce <= 2) {
+                try {
+                    let nte = parseInt(te);
+                    myResult = moment(tb, "YYYY-MM-DD").add(nte, "days").format("YYYY-MM-DD");
+                } catch (e) {
+                    myResult = "无效";
+                }
+            } else if (ce === 3) {
+                let month = te.substr(0, 1);
+                let day = te.substr(1, 2);
+                myResult = moment().format("yyyy-") + month.padStart(2, "0") + "-" + day;
+
+            } else if (ce === 4) {
+                let month = te.substr(0, 2);
+                let day = te.substr(2, 2);
+                myResult = moment().format("yyyy-") + month.padStart(2, "0") + "-" + day.padStart(2, "0");
+            } else if (ce === 6) {
+                let year = te.substr(0, 2);
+                let month = te.substr(2, 2);
+                let day = te.substr(4, 2);
+                myResult = moment().format("yy") + year + "-" + month + "-" + day;
+
+            } else if (ce === 8) {
+                let year = te.substr(0, 4);
+                let month = te.substr(4, 2);
+                let day = te.substr(6, 2);
+                myResult = year + "-" + month + "-" + day;
+            }
+        }
+
+        return myResult;
+    }
+
     //todo <<<<< now >>>>> 搜索 SCHEMA & KPI
     onInputSearchSchemasSearched(value, event) {
         let sv = value;
@@ -2077,11 +2165,41 @@ export default class ServicePerformance extends React.PureComponent {
             let mySchemas;
 
             if (sv.trim().startsWith("变更：") || sv.trim().startsWith("变更:")) {
-                sv = sv.trim().toLowerCase();
+                let svs = sv.trim().toLowerCase().replace(/\s+/g, " " ).replace(/[：|:]+\s*/g, "： " ).split(" ");
                 let user = "KKK";
-                let timeBegin = "2021-01-01";
-                let timeEnd = "2021-12-31";
-                mySchemas = this.doGetMySchemas(user, timeBegin, timeEnd);
+                let timeBegin = "";
+                let timeEnd = "";
+                if (svs.length === 3) {
+                    timeBegin = this.str2Time4ParamTimePairs(svs[1]);
+                    timeEnd = this.str2Time4ParamTimePairs(timeBegin, svs[2]);
+                } else if (svs.length === 2) {
+                    timeBegin = moment().format("yyyy-MM-DD");
+                    timeEnd = this.str2Time4ParamTimePairs(timeBegin, svs[1]);
+                } else {
+                    this.context.showMessage("error");
+
+                    return
+                }
+
+                if ((timeBegin !== "无效") && (timeEnd !== "无效")) {
+                    let dtPairs = new TimePairs();
+                    if (timeBegin < timeEnd) {
+                        dtPairs.tb = timeBegin;
+                        dtPairs.te = timeEnd;
+                    } else {
+                        dtPairs.tb = timeEnd;
+                        dtPairs.te = timeBegin;
+                    }
+
+                    mySchemas = this.doGetMySchemas(user, dtPairs);
+
+                    this.doGetMySchemas("KKK", dtPairs);
+                } else {
+                    this.context.showMessage("error");
+
+                    return
+                }
+
             } else {
                 sv = sv.trim().toLowerCase();
                 mySchemas = this.dataSchemas2DsMapUiTree(this.gData.schemas, sv);
@@ -2135,14 +2253,18 @@ export default class ServicePerformance extends React.PureComponent {
         // kpi.sid = this.gCurrent.schema.id;
         // kpi.kpi_id = this.gCurrent.kpi.kpi_id;
         // kpi.kpi_field = this.gCurrent.kpi.kpi_field;
-        kpi.kpi_zhname = values.kpiZhName;
-        kpi.kpi_enname = values.kpiEnName;
+        if (values.kpiZhName !== null) kpi.kpi_zhname = values.kpiZhName.trim();
+        if (values.kpiEnName !== null) kpi.kpi_enname = values.kpiEnName.trim();
         kpi.kpi_alarm = values.kpiAlarm;
         kpi.kpi_format = values.kpiFormat;
-        kpi.kpi_min_value = values.kpiMinValue;
-        kpi.kpi_max_value = values.kpiMaxValue;
-        kpi.used_info = values.kpiUsedProduct + "," + values.kpiUsedModule + "," + values.kpiUsedTitle + ";"
-        kpi.kpi_exp = values.kpiExp.trim();
+        if (values.kpiMinValue !== null) kpi.kpi_min_value = values.kpiMinValue.trim();
+        if (values.kpiMaxValue !== null) kpi.kpi_max_value = values.kpiMaxValue.trim();
+        if ((values.kpiUsedProduct !== -99999) && (values.kpiUsedModule !== -99999)) {
+            let kpiUsedTitle = values.kpiUsedTitle ? values.kpiUsedTitle.trim() : "";
+            kpi.used_info = values.kpiUsedProduct + "," + values.kpiUsedModule + "," + kpiUsedTitle + ";"
+        }
+
+        if (values.kpiExp !== null) kpi.kpi_exp = values.kpiExp.trim();
 
         this.restUpdateKpi(kpi).then((result) => {
             if (result.status === 200) {
@@ -2281,18 +2403,11 @@ export default class ServicePerformance extends React.PureComponent {
                             </div>
                         </div>
                         <div className={this.state.styleLayout === "NN" ? "BoxTree" : "BoxTree BoxHidden"}>
-                            {/*<div className={"BoxCommit"}>*/}
-                            {/*    <Select defaultValue="-1">*/}
-                            {/*        <Option value="-1">变更：全集</Option>*/}
-                            {/*        <Option value="1">变更：K - 新增话务指标 - 2021-07-01</Option>*/}
-                            {/*    </Select>*/}
-                            {/*    <Button type={"primary"} icon={<BranchesOutlined/>} onClick={this.onButtonSchemasCommitClicked}>提交变更</Button>*/}
-                            {/*</div>*/}
                             <div className={"BoxSearch"}>
                                 <Input.Search placeholder="Search" enterButton onSearch={this.onInputSearchSchemasSearched}/>
                             </div>
-                            <div className={"BoxTreeInstance"}>
-                                <Tree ref={this.gRef.treeSchemas} treeData={this.state.treeDataKpiSchemas} onSelect={this.onTreeKpiSchemasSelected} defaultExpandAll={true} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} switcherIcon={<CaretDownOutlined/>}/>
+                            <div ref={this.gRef.boxTreeSchemas} className={"BoxTreeInstance"}>
+                                <Tree ref={this.gRef.treeSchemas} treeData={this.state.treeDataKpiSchemas} onSelect={this.onTreeKpiSchemasSelected} height={this.state.treeSchemasHeight} defaultExpandAll={true} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} switcherIcon={<CaretDownOutlined/>}/>
                             </div>
                         </div>
                     </div>

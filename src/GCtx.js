@@ -9,7 +9,7 @@ const GCtx = React.createContext({
         {id: 3, name: "潘璐", online: false, host: ""},
     ],
     message: "message from global context",
-    serviceIp: "10.31.3.6",
+    serviceIp: "10.31.3.2",
     servicePort: "8090",
     reactElementKey: 0,
     mapMenus: new Map(),
