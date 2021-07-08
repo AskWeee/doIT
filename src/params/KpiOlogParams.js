@@ -1,4 +1,4 @@
-export default class TimePairs {
+export default class KpiOlogParams {
 
   constructor() {
     this.tb = null;

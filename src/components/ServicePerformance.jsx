@@ -5,14 +5,13 @@ import Mock from 'mockjs'
 import axios from "axios";
 import lodash from "lodash";
 import moment from 'moment';
-import './github.css';
 import XLSX from 'xlsx';
 import TadKpiSchema from "../entity/TadKpiSchema";
 import TadKpi from "../entity/TadKpi";
 import TadIndicator from "../entity/TadIndicator";
 import TadIndicatorCounter from "../entity/TadIndicatorCounter";
 import TadKpiCounter from "../entity/TadKpiCounter";
-import TimePairs from "../params/TimePairs";
+import KpiOlogParams from "../params/KpiOlogParams";
 import {Button, Input, Select, Tree, Modal, Form, Tooltip,} from 'antd'
 import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, CloudDownloadOutlined, CloudUploadOutlined, CopyOutlined, MinusSquareOutlined, PlusOutlined, PlusSquareOutlined, SaveOutlined, QuestionCircleOutlined, EllipsisOutlined, EditOutlined, ShoppingCartOutlined,} from '@ant-design/icons'
 
@@ -136,6 +135,7 @@ export default class ServicePerformance extends React.PureComponent {
         this.doPrepare = this.doPrepare.bind(this);
         this.doInit = this.doInit.bind(this);
 
+        this.searchKpis = this.searchKpis.bind(this);
         this.dataSchemas2DsMapUiTree = this.dataSchemas2DsMapUiTree.bind(this);
         this.isFoundKpis = this.isFoundKpis.bind(this);
         this.isFoundIndicatorCounters = this.isFoundIndicatorCounters.bind(this);
@@ -170,6 +170,7 @@ export default class ServicePerformance extends React.PureComponent {
         this.restAddCounter = this.restAddCounter.bind(this);
         this.restDeleteCounter = this.restDeleteCounter.bind(this);
         this.restFixKpiCounter = this.restFixKpiCounter.bind(this);
+        this.restGetKpiOlogs = this.restGetKpiOlogs.bind(this);
 
         this.doAddSchema = this.doAddSchema.bind(this);
         this.doDeleteSchema = this.doDeleteSchema.bind(this);
@@ -192,7 +193,6 @@ export default class ServicePerformance extends React.PureComponent {
         this.onButtonSchemasCopyPasteClicked = this.onButtonSchemasCopyPasteClicked.bind(this);
         this.onButtonSchemasExportClicked = this.onButtonSchemasExportClicked.bind(this);
         this.onButtonSchemasResetClicked = this.onButtonSchemasResetClicked.bind(this);
-        this.onButtonSchemasCommitClicked = this.onButtonSchemasCommitClicked.bind(this);
         this.onButtonKpisAddClicked = this.onButtonKpisAddClicked.bind(this);
         this.onButtonKpisCopyPasteClicked = this.onButtonKpisCopyPasteClicked.bind(this);
         this.onButtonKpisDeleteClicked = this.onButtonKpisDeleteClicked.bind(this);
@@ -372,9 +372,58 @@ export default class ServicePerformance extends React.PureComponent {
         return myResult;
     }
 
-    //todo <<<<< now >>>>> dataSchemas to DsMap and UiTree
+    // >>>>> search Kpis in mapSchemas and mapKpis
+    searchKpis(sv) {
+        let treeDataSchemas = [];
+        let arrTitleIds = [];
+
+        this.gMap.schemas.forEach((value, key) => {
+            arrTitleIds.push({schema_zhname: value.schema_zhname, id: key, schema_id: value.schema_id});
+        })
+
+        arrTitleIds.sort((a, b) => {
+            if (a.schema_zhname === b.schema_zhname) {
+                if (a.schema_id === b.schema_id) {
+                    return a.id >= b.id
+                } else {
+                    return a.schema_id >= b.schema_id
+                }
+            } else {
+                return a.schema_zhname >= b.schema_zhname
+            }
+        })
+
+        for (let i = 0; i < arrTitleIds.length; i++) {
+            let item = arrTitleIds[i];
+            let sid = item.id;
+            // 新增指标组，默认schema_id为空
+            let schemaId = item.schema_id === null ? this.gSchemaIdDefault : item.schema_id;
+            let schemaName = item.schema_zhname === null ? "" : item.schema_zhname;
+
+            if (schemaName === "") continue
+
+            if ((sv !== undefined) || (sv !== "")) {
+                if (schemaName.toLowerCase().indexOf(sv) < 0 && schemaId.toString().indexOf(sv) < 0) {
+                    if (!this.isFoundKpis(this.gMap.schemas.get(sid).kpis, sv)) continue
+                }
+            }
+
+            let uiSchema = {
+                key: item.id,
+                title: <div className={"BoxSchemaTitle"}>{item.schema_id + " - " + item.schema_zhname}</div>,
+                children: []
+            }
+
+            treeDataSchemas.push(uiSchema);
+        }
+
+        return treeDataSchemas;
+    }
+
+    // >>>>> dataSchemas to DsMap and UiTree
     dataSchemas2DsMapUiTree(ds, sv) {
-        let myResult = {mapDs: new Map(), uiDs: []}; //, mapRelation: new Map()}
+
+        let myResult = {mapDs: new Map(), uiDs: []};
 
         for (let i = 0; i < ds.length; i++) {
             let item = ds[i];
@@ -406,11 +455,6 @@ export default class ServicePerformance extends React.PureComponent {
                 }
                 myResult.uiDs.push(uiSchema);
             }
-
-            // if (!myResult.mapRelation.has(schemaId)) {
-            //     myResult.mapRelation.set(schemaId, id);
-            // }
-            //}
         }
 
         return myResult;
@@ -464,6 +508,7 @@ export default class ServicePerformance extends React.PureComponent {
                 break
             case "delete":
                 let index = -1;
+
                 for (let i = 0; i < treeDataKpiSchemas.length; i++) {
                     let item = treeDataKpiSchemas[i];
                     if (item.key === this.gCurrent.schema.id) {
@@ -538,8 +583,6 @@ export default class ServicePerformance extends React.PureComponent {
                 break
             case "delete":
                 this.gMap.schemas.delete(schema.id);
-                //todo delete kpis
-                //todo delete counters
                 break
             default:
                 break;
@@ -766,308 +809,6 @@ export default class ServicePerformance extends React.PureComponent {
         return myResult;
     }
 
-    showModal(what) {
-        this.setState({
-            isModalVisible: true,
-            modalWhat: what
-        })
-    };
-
-    //todo >>>>> do Get All
-    doGetAll() {
-        axios.all([
-            this.doGetKpiDict(),
-            this.doGetObjectDefs(),
-            this.doGetVendors(),
-            this.restGetProducts(),
-            this.restGetModules(),
-            this.doGetKpis(),
-            this.doGetKpiSchemas(),
-            this.restGetKpiCounters(),
-            this.doGetIndicators(),
-            this.doGetIndicatorCounters(),
-        ]).then(axios.spread((
-            kpiDict,
-            objectDefs,
-            vendors,
-            products,
-            modules,
-            kpis,
-            schemas,
-            counters,
-            indicators,
-            indicatorCounters
-        ) => {
-            let mapKpiDict = new Map();
-            let mapObjectDefs = new Map();
-            let mapProducts = new Map();
-            let mapKpis = new Map();
-            // let mapIndicators = new Map();
-
-            this.gData.kpiDict = kpiDict.data.data;
-            this.gData.objectDefs = objectDefs.data.data;
-            this.gData.vendors = vendors.data.data;
-            this.gData.products = products.data.data;
-            this.gData.modules = modules.data.data;
-            this.gData.kpis = kpis.data.data;
-            this.gData.schemas = schemas.data.data;
-            this.gData.counters = counters.data.data;
-            this.gData.indicators = indicators.data.data;
-            this.gData.indicatorCounters = indicatorCounters.data.data;
-
-            // kpi dict ...
-            this.gData.kpiDict.forEach((item) => {
-                if (!mapKpiDict.has(item.type)) {
-                    mapKpiDict.set(item.type, [item]);
-                } else {
-                    mapKpiDict.get(item.type).push(item);
-                }
-            });
-            this.gMap.kpiDict = mapKpiDict;
-            if (this.gMap.kpiDict.has(1021)) {
-                let options = [{label: "业务分类", value: -99999}];
-                this.gMap.kpiDict.get(1021).forEach((value, key) => {
-                    options.push({label: value.txt, value: value.id});
-                });
-                this.setState({
-                    optionsSchemaIdA1: options
-                })
-            }
-            if (this.gMap.kpiDict.has(1022)) {
-                let options = [{label: "时间粒度", value: -99999}];
-                this.gMap.kpiDict.get(1022).forEach((value, key) => {
-                    options.push({label: value.txt, value: value.id});
-                });
-                this.setState({
-                    optionsSchemaIdA2: options
-                })
-            }
-            if (this.gMap.kpiDict.has(1023)) {
-                let options = [{label: "空间粒度", value: -99999}];
-                this.gMap.kpiDict.get(1023).forEach((value, key) => {
-                    if (this.gSchemaIdRegionCodes.includes(value.id)) {
-                        options.push({label: value.txt + "-" + value.id, value: value.id});
-                    }
-                });
-                this.setState({
-                    optionsSchemaIdB1: options
-                })
-            }
-            if (this.gMap.kpiDict.has(1023)) {
-                let options = [{label: "网元类型", value: -99999}];
-                this.gMap.kpiDict.get(1023).forEach((value, key) => {
-                    if (!this.gSchemaIdRegionCodes.includes(value.id)) {
-                        options.push({label: value.txt, value: value.id});
-                    }
-                });
-                this.setState({
-                    optionsSchemaIdB2: options
-                })
-            }
-
-            // 厂家控件
-            let optionsVendor = [{label: "厂家", value: -99999}, {label: "不区分厂家", value: -1}];
-            for (let i = 0; i < this.gData.vendors.length; i++) {
-                if (this.gData.vendors[i].type >= 0 && this.gData.vendors[i].type <= 99) {
-                    optionsVendor.push({label: this.gData.vendors[i].zh_name, value: this.gData.vendors[i].type});
-                }
-            }
-
-            // 网元类型，网元细分类型控件
-            let optionsObjectClass = [{label: "网元类型", value: -99999}];
-            for (let i = 0; i < this.gData.objectDefs.length; i++) {
-                let item = this.gData.objectDefs[i];
-                if (!mapObjectDefs.has(item.network_type)) {
-                    mapObjectDefs.set(item.network_type, {
-                        className: item.network_type_name,
-                        subClasses: [{
-                            objectClass: item.object_class,
-                            className: item.object_name,
-                        }]
-                    });
-                    optionsObjectClass.push({label: item.network_type_name, value: item.network_type});
-                } else {
-                    mapObjectDefs.get(item.network_type).subClasses.push({
-                        objectClass: item.object_class,
-                        className: item.object_name,
-                    });
-                }
-            }
-            this.gMap.objectDefs = mapObjectDefs;
-
-            let optionsObjectSubClass = [{label: "网元细分类型", value: -99999}];
-
-            // 采集粒度控件
-            let optionsIntervalFlag = [{label: "采集粒度", value: -99999}];
-
-            // 使用该指标的产品控件
-            let optionsProduct = [{label: "使用该指标的产品", value: -99999}];
-            for (let i = 0; i < this.gData.products.length; i++) {
-                let item = this.gData.products[i];
-                if (!mapProducts.has(item.product_id)) {
-                    mapProducts.set(item.product_id, {
-                        product_name: item.product_name,
-                        modules: []
-                    });
-                    optionsProduct.push({label: item.product_name, value: item.product_id});
-                }
-            }
-
-            // 使用该指标的模块控件
-            let optionsModule = [{label: "使用该指标的模块", value: -99999}];
-            for (let i = 0; i < this.gData.modules.length; i++) {
-                let item = this.gData.modules[i];
-                if (mapProducts.has(item.product_id)) {
-                    mapProducts.get(item.product_id).modules.push({
-                        module_name: item.module_name,
-                        module_id: item.module_id
-                    });
-                }
-            }
-            this.gMap.products = mapProducts;
-
-            // 规范指标集
-            let myIndicators = this.dataIndicators2DsMapUiTree(this.gData.indicators, this.gData.indicatorCounters);
-            this.gMap.indicators = myIndicators.mapIndicators;
-            this.gMap.indicatorCounters = myIndicators.mapCounters;
-            this.gUi.indicators = myIndicators.uiTree;
-
-            // schemas to gMap.schemas
-            let mySchemas = this.dataSchemas2DsMapUiTree(this.gData.schemas);
-
-            // kpis to gMap.kpis and gMap.schemas.kpis
-            for (let iKpi = 0; iKpi < this.gData.kpis.length; iKpi++) {
-                let item = this.gData.kpis[iKpi];
-                let kid = item.id;
-                let kpiName = item.kpi_zhname === null ? "" : item.kpi_zhname;
-
-                if (kpiName !== "" &&
-                    kpiName.length > 0 &&
-                    kpiName[0] !== "?" &&
-                    kpiName[kpiName.length - 1] !== "?") {
-
-                    let myKpi = item;
-
-                    if (!mapKpis.has(kid)) {
-                        mapKpis.set(kid, myKpi);
-                    }
-
-                    if (mySchemas.mapDs.has(item.sid)) {
-                        // mySchemas.mapDs.get(item.sid).kpis.push(myKpi)
-                        mySchemas.mapDs.get(item.sid).kpis.push(myKpi.id);
-                    }
-                }
-
-            }
-
-            let mapCounters = new Map();
-            this.gData.counters.forEach((item) => {
-                mapCounters.set(item.id, item);
-
-                if (mySchemas.mapDs.has(item.sid)) {
-                    mySchemas.mapDs.get(item.sid).counters.push(item.id);
-                }
-            });
-
-            this.gMap.schemas = mySchemas.mapDs;
-            this.gMap.kpis = mapKpis;
-            this.gMap.counters = mapCounters;
-            this.gUi.schemas = mySchemas.uiDs;
-
-            // 尝试垃圾回收
-            this.gData.kpiDict = null;
-            this.gData.objectDefs = null;
-            // this.gData.vendors = vendors;
-            this.gData.products = null;
-            this.gData.modules = null;
-            // this.gData.kpis = null;
-            // this.gData.schemas = null;
-            this.gData.counters = null;
-            // this.gData.indicators = null;
-            // this.gData.indicatorCounters = null;
-
-            this.setState({
-                optionsVendor: optionsVendor,
-                optionsObjectClass: optionsObjectClass,
-                optionsObjectSubClass: optionsObjectSubClass,
-                optionsIntervalFlag: optionsIntervalFlag,
-                optionsProduct: optionsProduct,
-                optionsModule: optionsModule,
-            });
-
-            this.setState({
-                treeDataKpiSchemas: mySchemas.uiDs,
-                treeDataIndicators: myIndicators.uiTree,
-            });
-        })).then(() => {
-            this.doInit();
-        });
-    }
-
-    //todo <<<<< noew >>>>> do Get My Schemas
-    doGetMySchemas(user, dtPairs) {
-        console.log(user, dtPairs);
-
-        let myResult = this.gUi.schemas;
-
-        return myResult;
-    }
-
-    doGetObjectDefs() {
-        let params = {};
-
-        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_object_defs", params,
-            {headers: {'Content-Type': 'application/json'}})
-    }
-
-    doGetVendors() {
-        let params = {};
-
-        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_vendors", params,
-            {headers: {'Content-Type': 'application/json'}})
-    }
-
-    doGetKpis() {
-        let params = new TadKpi();
-
-        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpis", params,
-            {headers: {'Content-Type': 'application/json'}})
-    }
-
-    doGetKpiSchemas() {
-        let params = new TadKpiSchema();
-
-        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpi_schemas", params,
-            {headers: {'Content-Type': 'application/json'}})
-    }
-
-    restGetKpiCounters() {
-        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpi_counters",
-            {},
-            {headers: {'Content-Type': 'application/json'}})
-    }
-
-    doGetIndicators() {
-        let params = {};
-
-        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_indicators", params,
-            {headers: {'Content-Type': 'application/json'}})
-    }
-
-    doGetIndicatorCounters() {
-        let params = {};
-
-        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_indicator_counters", params,
-            {headers: {'Content-Type': 'application/json'}})
-    }
-
-    doGetKpiDict() {
-        let params = {};
-
-        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpi_dict", params,
-            {headers: {'Content-Type': 'application/json'}})
-    }
-
     doGetExcel() {
         axios.get('data/counter_001.xlsx', {responseType: 'arraybuffer'}).then(res => {
             let wb = XLSX.read(res.data, {type: 'array'});
@@ -1230,15 +971,347 @@ export default class ServicePerformance extends React.PureComponent {
         return new Promise((resolve) => setTimeout(resolve, time));
     }
 
-    restAddSchema(schema) {
-        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/add_kpi_schema",
+    // >>>>> split schema id
+    splitSchemaId(sid) {
+        let ids = {
+            id: sid,
+            a1: "",
+            a2: "",
+            b1: "",
+            b2: "",
+            index: "",
+            hasRegion: false
+        }
+
+        let idFixed = "260";
+        let sids = sid.split(idFixed);
+        let idObjectClassFirst = sids[0];
+        let idType = sids[1][0];
+        let idTime = sids[1][1];
+        let regionCode = "";
+        let idObjectClassSecond = sids[1].substr(2, 2);
+        let idIndex = sids[1].substr(sids[1].length - 2, 2);
+        let objectClass = parseInt(idObjectClassFirst + idObjectClassSecond);
+        if (this.gSchemaIdRegionCodes.includes(objectClass)) {
+            ids.hasRegion = true;
+            regionCode = objectClass;
+            objectClass = sids[1].substr(4, sids[1].length - 4);
+            idIndex = "";
+        }
+        let schemaIdNew = "";
+        if (regionCode === "") {
+            schemaIdNew = idObjectClassFirst + idFixed + idType + idTime + idObjectClassSecond + idIndex;
+        } else {
+            schemaIdNew = idObjectClassFirst + idFixed + idType + idTime + idObjectClassSecond + objectClass;
+        }
+
+        ids.id = schemaIdNew;
+        ids.a1 = parseInt(idType);
+        ids.a2 = parseInt(idTime);
+        if (ids.hasRegion) {
+            ids.b1 = parseInt(regionCode);
+            ids.b2 = parseInt(objectClass);
+        } else {
+            ids.b1 = parseInt(objectClass);
+            ids.b2 = parseInt(idIndex);
+        }
+
+        return ids;
+    }
+
+    showModal(what) {
+        this.setState({
+            isModalVisible: true,
+            modalWhat: what
+        })
+    };
+
+    //todo >>>>> do Get All
+    doGetAll() {
+        axios.all([
+            this.doGetKpiDict(),
+            this.doGetObjectDefs(),
+            this.doGetVendors(),
+            this.restGetProducts(),
+            this.restGetModules(),
+            this.doGetKpis(),
+            this.doGetKpiSchemas(),
+            this.restGetKpiCounters(),
+            this.doGetIndicators(),
+            this.doGetIndicatorCounters(),
+        ]).then(axios.spread((
+            kpiDict,
+            objectDefs,
+            vendors,
+            products,
+            modules,
+            kpis,
+            schemas,
+            counters,
+            indicators,
+            indicatorCounters
+        ) => {
+            let mapKpiDict = new Map();
+            let mapObjectDefs = new Map();
+            let mapProducts = new Map();
+            let mapKpis = new Map();
+            // let mapIndicators = new Map();
+
+            let dsKpiDict = kpiDict.data.data;
+            let dsObjectDefs = objectDefs.data.data;
+            let dsVendors = vendors.data.data;
+            let dsProducts = products.data.data;
+            let dsModules = modules.data.data;
+            let dsKpis = kpis.data.data;
+            let dsSchemas = schemas.data.data;
+            let dsCounters = counters.data.data;
+            let dsIndicators = this.gData.indicators = indicators.data.data;
+            let dsIndicatorCounters = this.gData.indicatorCounters = indicatorCounters.data.data;
+
+            // kpi dict ...
+            dsKpiDict.forEach((item) => {
+                if (!mapKpiDict.has(item.type)) {
+                    mapKpiDict.set(item.type, [item]);
+                } else {
+                    mapKpiDict.get(item.type).push(item);
+                }
+            });
+            this.gMap.kpiDict = mapKpiDict;
+            if (this.gMap.kpiDict.has(1021)) {
+                let options = [{label: "业务分类", value: -99999}];
+                this.gMap.kpiDict.get(1021).forEach((value, key) => {
+                    options.push({label: value.txt, value: value.id});
+                });
+                this.setState({
+                    optionsSchemaIdA1: options
+                })
+            }
+            if (this.gMap.kpiDict.has(1022)) {
+                let options = [{label: "时间粒度", value: -99999}];
+                this.gMap.kpiDict.get(1022).forEach((value, key) => {
+                    options.push({label: value.txt, value: value.id});
+                });
+                this.setState({
+                    optionsSchemaIdA2: options
+                })
+            }
+            if (this.gMap.kpiDict.has(1023)) {
+                let options = [{label: "空间粒度", value: -99999}];
+                this.gMap.kpiDict.get(1023).forEach((value, key) => {
+                    if (this.gSchemaIdRegionCodes.includes(value.id)) {
+                        options.push({label: value.txt + "-" + value.id, value: value.id});
+                    }
+                });
+                this.setState({
+                    optionsSchemaIdB1: options
+                })
+            }
+            if (this.gMap.kpiDict.has(1023)) {
+                let options = [{label: "网元类型", value: -99999}];
+                this.gMap.kpiDict.get(1023).forEach((value, key) => {
+                    if (!this.gSchemaIdRegionCodes.includes(value.id)) {
+                        options.push({label: value.txt, value: value.id});
+                    }
+                });
+                this.setState({
+                    optionsSchemaIdB2: options
+                })
+            }
+
+            // 厂家控件
+            let optionsVendor = [{label: "厂家", value: -99999}, {label: "不区分厂家", value: -1}];
+            for (let i = 0; i < dsVendors.length; i++) {
+                if (dsVendors[i].type >= 0 && dsVendors[i].type <= 99) {
+                    optionsVendor.push({label: dsVendors[i].zh_name, value: dsVendors[i].type});
+                }
+            }
+
+            // 网元类型，网元细分类型控件
+            let optionsObjectClass = [{label: "网元类型", value: -99999}];
+            for (let i = 0; i < dsObjectDefs.length; i++) {
+                let item = dsObjectDefs[i];
+                if (!mapObjectDefs.has(item.network_type)) {
+                    mapObjectDefs.set(item.network_type, {
+                        className: item.network_type_name,
+                        subClasses: [{
+                            objectClass: item.object_class,
+                            className: item.object_name,
+                        }]
+                    });
+                    optionsObjectClass.push({label: item.network_type_name, value: item.network_type});
+                } else {
+                    mapObjectDefs.get(item.network_type).subClasses.push({
+                        objectClass: item.object_class,
+                        className: item.object_name,
+                    });
+                }
+            }
+            this.gMap.objectDefs = mapObjectDefs;
+
+            let optionsObjectSubClass = [{label: "网元细分类型", value: -99999}];
+
+            // 采集粒度控件
+            let optionsIntervalFlag = [{label: "采集粒度", value: -99999}];
+
+            // 使用该指标的产品控件
+            let optionsProduct = [{label: "使用该指标的产品", value: -99999}];
+            for (let i = 0; i < dsProducts.length; i++) {
+                let item = dsProducts[i];
+                if (!mapProducts.has(item.product_id)) {
+                    mapProducts.set(item.product_id, {
+                        product_name: item.product_name,
+                        modules: []
+                    });
+                    optionsProduct.push({label: item.product_name, value: item.product_id});
+                }
+            }
+
+            // 使用该指标的模块控件
+            let optionsModule = [{label: "使用该指标的模块", value: -99999}];
+            for (let i = 0; i < dsModules.length; i++) {
+                let item = dsModules[i];
+                if (mapProducts.has(item.product_id)) {
+                    mapProducts.get(item.product_id).modules.push({
+                        module_name: item.module_name,
+                        module_id: item.module_id
+                    });
+                }
+            }
+            this.gMap.products = mapProducts;
+
+            // 规范指标集
+            let myIndicators = this.dataIndicators2DsMapUiTree(dsIndicators, dsIndicatorCounters);
+            this.gMap.indicators = myIndicators.mapIndicators;
+            this.gMap.indicatorCounters = myIndicators.mapCounters;
+            this.gUi.indicators = myIndicators.uiTree;
+
+            // schemas to gMap.schemas
+            let mySchemas = this.dataSchemas2DsMapUiTree(dsSchemas);
+
+            // kpis to gMap.kpis and gMap.schemas.kpis
+            for (let iKpi = 0; iKpi < dsKpis.length; iKpi++) {
+                let item = dsKpis[iKpi];
+                let kid = item.id;
+                let kpiName = item.kpi_zhname === null ? "" : item.kpi_zhname;
+
+                if (kpiName !== "" &&
+                    kpiName.length > 0 &&
+                    kpiName[0] !== "?" &&
+                    kpiName[kpiName.length - 1] !== "?") {
+
+                    let myKpi = item;
+
+                    if (!mapKpis.has(kid)) {
+                        mapKpis.set(kid, myKpi);
+                    }
+
+                    if (mySchemas.mapDs.has(item.sid)) {
+                        // mySchemas.mapDs.get(item.sid).kpis.push(myKpi)
+                        mySchemas.mapDs.get(item.sid).kpis.push(myKpi.id);
+                    }
+                }
+
+            }
+
+            let mapCounters = new Map();
+            dsCounters.forEach((item) => {
+                mapCounters.set(item.id, item);
+
+                if (mySchemas.mapDs.has(item.sid)) {
+                    mySchemas.mapDs.get(item.sid).counters.push(item.id);
+                }
+            });
+
+            this.gMap.schemas = mySchemas.mapDs;
+            this.gMap.kpis = mapKpis;
+            this.gMap.counters = mapCounters;
+
+            // 尝试垃圾回收
+            dsKpiDict = null;
+            dsObjectDefs = null;
+            dsVendors = vendors;
+            dsProducts = null;
+            dsModules = null;
+            dsKpis = null;
+            dsSchemas = null;
+            dsCounters = null;
+
+            this.setState({
+                optionsVendor: optionsVendor,
+                optionsObjectClass: optionsObjectClass,
+                optionsObjectSubClass: optionsObjectSubClass,
+                optionsIntervalFlag: optionsIntervalFlag,
+                optionsProduct: optionsProduct,
+                optionsModule: optionsModule,
+            });
+
+            this.setState({
+                treeDataKpiSchemas: mySchemas.uiDs,
+                treeDataIndicators: myIndicators.uiTree,
+            });
+        })).then(() => {
+            this.doInit();
+        });
+    }
+
+    doGetObjectDefs() {
+        let params = {};
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_object_defs", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetVendors() {
+        let params = {};
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_vendors", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetKpis() {
+        let params = new TadKpi();
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpis", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetKpiSchemas() {
+        let params = new TadKpiSchema();
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpi_schemas", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetIndicators() {
+        let params = {};
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_indicators", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetIndicatorCounters() {
+        let params = {};
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_indicator_counters", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetKpiDict() {
+        let params = {};
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpi_dict", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doUpdateSchema(schema) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/update_kpi_schema",
             schema,
             {headers: {'Content-Type': 'application/json'}}
         );
     }
 
-    doUpdateSchema(schema) {
-        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/update_kpi_schema",
+    restAddSchema(schema) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/add_kpi_schema",
             schema,
             {headers: {'Content-Type': 'application/json'}}
         );
@@ -1298,6 +1371,97 @@ export default class ServicePerformance extends React.PureComponent {
             {headers: {'Content-Type': 'application/json'}});
     }
 
+    restGetKpiCounters() {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpi_counters",
+            {},
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restGetKpiOlogs(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpi_ologs",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    // >>>>> do Get My Schemas
+    doGetMySchemas(user, params) {
+        this.restGetKpiOlogs(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    let ologs = result.data.data;
+                    let arrSchemas = [];
+                    let arrSchemasDeleted = [];
+                    let mapSchemas = new Map();
+                    ologs.forEach((item) => {
+                        switch (item.object_type) {
+                            case "schema":
+                                if (item.operation !== "delete") {
+                                    if (!mapSchemas.has(item.object_id)) {
+                                        mapSchemas.set(item.object_id, {});
+                                        arrSchemas.push({id: item.object_id, un: item.user_name, op: item.operation, et: item.event_time})
+                                    }
+                                } else {
+                                    arrSchemasDeleted.push({id: item.object_id, un: item.user_name, op: item.operation, et: item.event_time})
+                                }
+                                break
+                            case "kpi":
+                                if (this.gMap.kpis.has(item.object_id)) {
+                                    let sid = this.gMap.kpis.get(item.object_id).sid;
+                                    if (!mapSchemas.has(sid)) {
+                                        mapSchemas.set(sid, {});
+                                        arrSchemas.push({id: sid, un: item.user_name, op: "kpi_update", et: item.event_time})
+                                    }
+                                }
+                                break
+                            case "counter":
+                                if (this.gMap.counters.has(item.object_id)) {
+                                    let sid = this.gMap.counters.get(item.object_id).sid;
+                                    if (!mapSchemas.has(sid)) {
+                                        mapSchemas.set(sid, {});
+                                        arrSchemas.push({id: sid, un: item.user_name, op: "counter_update", et: item.event_time})
+                                    }
+                                }
+                                break
+                            default:
+                                break
+                        }
+                    });
+
+                    let mySchemas = [];
+
+                    arrSchemasDeleted.forEach((schemaDeleted) => {
+                        for (let i = 0; i < arrSchemas.length; i++) {
+                            let schema = arrSchemas[i];
+                            if (schema.id === schemaDeleted.id) {
+                                arrSchemas.splice(i, 1);
+                                break
+                            }
+                        }
+                    });
+
+                    arrSchemas.forEach((item) => {
+                        let schema = this.gMap.schemas.get(item.id);
+                        let uiSchema = {
+                            key: item.id,
+                            title: schema.schema_id + " - " + schema.schema_zhname,
+                            children: []
+                        }
+                        mySchemas.push(uiSchema);
+                    })
+
+                    this.setState({
+                        treeDataKpiSchemas: mySchemas
+                    })
+                    this.context.showMessage("保存成功，指标组ID为：" + result.data.schema_id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
     // >>>>> do Add Schema
     doAddSchema(schema, what) {
         this.restAddSchema(schema).then((result) => {
@@ -1330,54 +1494,6 @@ export default class ServicePerformance extends React.PureComponent {
                 this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
             }
         });
-    }
-
-    // >>>>> split schema id
-    splitSchemaId(sid) {
-        let ids = {
-            id: sid,
-            a1: "",
-            a2: "",
-            b1: "",
-            b2: "",
-            index: "",
-            hasRegion: false
-        }
-
-        let idFixed = "260";
-        let sids = sid.split(idFixed);
-        let idObjectClassFirst = sids[0];
-        let idType = sids[1][0];
-        let idTime = sids[1][1];
-        let regionCode = "";
-        let idObjectClassSecond = sids[1].substr(2, 2);
-        let idIndex = sids[1].substr(sids[1].length - 2, 2);
-        let objectClass = parseInt(idObjectClassFirst + idObjectClassSecond);
-        if (this.gSchemaIdRegionCodes.includes(objectClass)) {
-            ids.hasRegion = true;
-            regionCode = objectClass;
-            objectClass = sids[1].substr(4, sids[1].length - 4);
-            idIndex = "";
-        }
-        let schemaIdNew = "";
-        if (regionCode === "") {
-            schemaIdNew = idObjectClassFirst + idFixed + idType + idTime + idObjectClassSecond + idIndex;
-        } else {
-            schemaIdNew = idObjectClassFirst + idFixed + idType + idTime + idObjectClassSecond + objectClass;
-        }
-
-        ids.id = schemaIdNew;
-        ids.a1 = parseInt(idType);
-        ids.a2 = parseInt(idTime);
-        if (ids.hasRegion) {
-            ids.b1 = parseInt(regionCode);
-            ids.b2 = parseInt(objectClass);
-        } else {
-            ids.b1 = parseInt(objectClass);
-            ids.b2 = parseInt(idIndex);
-        }
-
-        return ids;
     }
 
     // >>>>> do Clone Schema
@@ -1545,7 +1661,7 @@ export default class ServicePerformance extends React.PureComponent {
 
     }
 
-    //todo >>>>> click schema
+    // >>>>> click schema
     onTreeKpiSchemasSelected(selectedKeys, info) {
         this.gCurrent.counterNames = [];
 
@@ -1800,10 +1916,6 @@ export default class ServicePerformance extends React.PureComponent {
 
     onButtonSchemasResetClicked(e) {
         this.context.showMessage("重置指标组属性，开发中... 2021-06-18");
-    }
-
-    onButtonSchemasCommitClicked(e) {
-        this.context.showMessage("提交近期指标组变更，开发中...");
     }
 
     //>>>>> 点击按钮，新增KPI
@@ -2157,23 +2269,22 @@ export default class ServicePerformance extends React.PureComponent {
         return myResult;
     }
 
-    //todo <<<<< now >>>>> 搜索 SCHEMA & KPI
+    // >>>>> 搜索 SCHEMA & KPI
     onInputSearchSchemasSearched(value, event) {
         let sv = value;
 
         if (sv !== null && sv !== undefined && sv.trim() !== "") {
-            let mySchemas;
-
             if (sv.trim().startsWith("变更：") || sv.trim().startsWith("变更:")) {
-                let svs = sv.trim().toLowerCase().replace(/\s+/g, " " ).replace(/[：|:]+\s*/g, "： " ).split(" ");
-                let user = "KKK";
+                let svs = sv.trim().toLowerCase().replace(/\s+/g, " ").replace(/[：|:]+\s*/g, "： ").split(" ");
                 let timeBegin = "";
                 let timeEnd = "";
+
                 if (svs.length === 3) {
                     timeBegin = this.str2Time4ParamTimePairs(svs[1]);
                     timeEnd = this.str2Time4ParamTimePairs(timeBegin, svs[2]);
                 } else if (svs.length === 2) {
                     timeBegin = moment().format("yyyy-MM-DD");
+                    if (svs[1] === "") svs[1] = "0";
                     timeEnd = this.str2Time4ParamTimePairs(timeBegin, svs[1]);
                 } else {
                     this.context.showMessage("error");
@@ -2182,35 +2293,34 @@ export default class ServicePerformance extends React.PureComponent {
                 }
 
                 if ((timeBegin !== "无效") && (timeEnd !== "无效")) {
-                    let dtPairs = new TimePairs();
+                    let paramsKpiOlog = new KpiOlogParams();
                     if (timeBegin < timeEnd) {
-                        dtPairs.tb = timeBegin;
-                        dtPairs.te = timeEnd;
+                        paramsKpiOlog.tb = timeBegin;
+                        paramsKpiOlog.te = timeEnd;
                     } else {
-                        dtPairs.tb = timeEnd;
-                        dtPairs.te = timeBegin;
+                        paramsKpiOlog.tb = timeEnd;
+                        paramsKpiOlog.te = timeBegin;
                     }
 
-                    mySchemas = this.doGetMySchemas(user, dtPairs);
-
-                    this.doGetMySchemas("KKK", dtPairs);
+                    paramsKpiOlog.te = moment(paramsKpiOlog.te, "YYYY-MM-DD").add(1, "days").format("YYYY-MM-DD");
+                    this.doGetMySchemas(this.context.user.name, paramsKpiOlog);
                 } else {
                     this.context.showMessage("error");
 
                     return
                 }
-
             } else {
                 sv = sv.trim().toLowerCase();
-                mySchemas = this.dataSchemas2DsMapUiTree(this.gData.schemas, sv);
+                let mySchemas = this.searchKpis(sv);
+
+                this.setState({
+                    treeDataKpiSchemas: mySchemas
+                })
             }
 
-            this.setState({
-                treeDataKpiSchemas: mySchemas.uiDs
-            })
         } else {
             this.setState({
-                treeDataKpiSchemas: this.gUi.schemas
+                treeDataKpiSchemas: this.searchKpis("")
             })
         }
     }
