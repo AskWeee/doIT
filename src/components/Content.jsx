@@ -9,6 +9,7 @@ import DatabaseConfig from "./DatabaseConfig";
 import LowcodeSingleTable from "./LowcodeSingleTable";
 import ServicePerformance from "./ServicePerformance";
 import {CloseOutlined} from '@ant-design/icons';
+import ServiceProject from "./ServiceProject";
 
 class Content extends React.Component {
     static contextType = GCtx;
@@ -104,6 +105,10 @@ class Content extends React.Component {
         //   children: children
         // })
         this.showComponent("性能指标服务管理", <ServicePerformance key="menu_service_performance"/>)
+    }
+
+    showComponentServiceProject() {
+        this.showComponent("指标项目应用管理", <ServiceProject key="menu_service_project"/>)
     }
 
     showComponent(title, jsxCom) {

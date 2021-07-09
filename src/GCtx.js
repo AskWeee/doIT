@@ -32,6 +32,7 @@ const GCtx = React.createContext({
         },
         {
             key: 'menu_service', id: 'menu_service', label: '服务管理', desc: '', ref: null, children: [
+                {key: 'menu_service_project',id: 'menu_service_project', label: '指标项目应用管理', desc: '', ref: null},
                 {key: 'menu_service_performance',id: 'menu_service_performance', label: '性能指标服务管理', desc: '', ref: null},
                 {key: 'menu_service_fault',id: 'menu_service_fault', label: '故障指标服务管理', desc: '', ref: null},
                 {key: 'menu_service_resource',id: 'menu_service_resource', label: '资源指标服务管理', desc: '', ref: null},
