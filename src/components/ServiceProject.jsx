@@ -20,6 +20,8 @@ import {
     PlusSquareOutlined,
 } from '@ant-design/icons'
 import KColumnTitle from "./KColumnTitle";
+import TadProjectKpi from "../entity/TadProjectKpi";
+import TadCommTree from "../entity/TadCommTree";
 
 export default class ServiceProject extends React.PureComponent {
     static contextType = GCtx;
@@ -27,6 +29,7 @@ export default class ServiceProject extends React.PureComponent {
     gMap = {};
     gData = {};
     gCurrent = {
+        project: null,
         schema: null,
         kpi: null,
         kpisChecked: [],
@@ -48,6 +51,7 @@ export default class ServiceProject extends React.PureComponent {
     }
     gRef = {
         boxTreeSchemas: React.createRef(),
+        boxTreeProjects: React.createRef(),
         textAreaKpiExp: React.createRef(),
         treeProjects: React.createRef(),
         treeSchemas: React.createRef(),
@@ -90,10 +94,10 @@ export default class ServiceProject extends React.PureComponent {
             kpi: {
                 kpi_id: "",
             },
-            dsProjectKpis: [],
             tableProjectKpisScrollX: "auto",
             tableProjectKpisScrollY: "auto",
             pageSizeProjectKpis: 50,
+            isProjectEditing: false,
         }
 
         //todo >>>>> bind(this)
@@ -111,6 +115,10 @@ export default class ServiceProject extends React.PureComponent {
         this.uiUpdateKpi = this.uiUpdateKpi.bind(this);
         this.dsUpdateKpi = this.dsUpdateKpi.bind(this);
         this.doDisplayExpression = this.doDisplayExpression.bind(this);
+        this.commTrees2antdTree = this.commTrees2antdTree.bind(this);
+        this.uiUpdateProject = this.uiUpdateProject.bind(this);
+        this.uiUpdateProjectKpi = this.uiUpdateProjectKpi.bind(this);
+        this.dsUpdateProjectKpi = this.dsUpdateProjectKpi.bind(this);
 
         this.doGetAll = this.doGetAll.bind(this);
         this.doGetKpiDict = this.doGetKpiDict.bind(this);
@@ -129,6 +137,12 @@ export default class ServiceProject extends React.PureComponent {
         this.restDeleteKpi = this.restDeleteKpi.bind(this);
         this.restUpdateKpi = this.restUpdateKpi.bind(this);
         this.restGetKpiOlogs = this.restGetKpiOlogs.bind(this);
+        this.restGetCommTrees = this.restGetCommTrees.bind(this);
+        this.restAddCommTree = this.restAddCommTree.bind(this);
+        this.restUpdateCommTree = this.restUpdateCommTree.bind(this);
+        this.restGetProjectKpis = this.restGetProjectKpis.bind(this);
+        this.restAddProjectKpi = this.restAddProjectKpi.bind(this);
+        this.restDeleteCommTree = this.restDeleteCommTree.bind(this);
 
         this.doAddSchema = this.doAddSchema.bind(this);
         this.doDeleteSchema = this.doDeleteSchema.bind(this);
@@ -136,11 +150,16 @@ export default class ServiceProject extends React.PureComponent {
         this.doAddKpi = this.doAddKpi.bind(this);
         this.doDeleteKpi = this.doDeleteKpi.bind(this);
         this.doUpdateKpi = this.doUpdateKpi.bind(this);
+        this.doAddProjectKpi = this.doAddProjectKpi.bind(this);
+        this.doAddProject = this.doAddProject.bind(this);
+        this.doUpdateProject = this.doUpdateProject.bind(this);
+        this.doDeleteProject = this.doDeleteProject.bind(this);
 
         this.onTreeProjectsSelected = this.onTreeProjectsSelected.bind(this);
         this.onTreeKpiSchemasSelected = this.onTreeKpiSchemasSelected.bind(this);
         this.onTreeKpisSelected = this.onTreeKpisSelected.bind(this);
         this.onTreeKpisDrop = this.onTreeKpisDrop.bind(this);
+        this.onTreeKpisChecked = this.onTreeKpisChecked.bind(this);
 
         this.onButtonChangeStyleLayoutClicked = this.onButtonChangeStyleLayoutClicked.bind(this);
         this.onButtonSchemasAddClicked = this.onButtonSchemasAddClicked.bind(this);
@@ -151,9 +170,16 @@ export default class ServiceProject extends React.PureComponent {
         this.onButtonKpisCopyPasteClicked = this.onButtonKpisCopyPasteClicked.bind(this);
         this.onButtonKpisDeleteClicked = this.onButtonKpisDeleteClicked.bind(this);
         this.onButtonKpisShoppingClicked = this.onButtonKpisShoppingClicked.bind(this);
+        this.onButtonInsertIntoProjectClicked = this.onButtonInsertIntoProjectClicked.bind(this);
+        this.onButtonAddProjectClicked = this.onButtonAddProjectClicked.bind(this);
+        this.onButtonRenameProjectClicked = this.onButtonRenameProjectClicked.bind(this);
+        this.onButtonProjectNameEditingConfirmClicked = this.onButtonProjectNameEditingConfirmClicked.bind(this);
+        this.onButtonProjectNameEditingCancelClicked = this.onButtonProjectNameEditingCancelClicked.bind(this);
+        this.onButtonDeleteProjectClicked = this.onButtonDeleteProjectClicked.bind(this);
 
         this.onInputSchemaZhNameChanged = this.onInputSchemaZhNameChanged.bind(this);
         this.onInputSearchSchemasSearched = this.onInputSearchSchemasSearched.bind(this);
+        this.onInputProjectNameChanged = this.onInputProjectNameChanged.bind(this);
 
         this.onSelectSchemaIdChanged = this.onSelectSchemaIdChanged.bind(this);
         this.onSelectSchemaObjectClassChanged = this.onSelectSchemaObjectClassChanged.bind(this);
@@ -195,49 +221,13 @@ export default class ServiceProject extends React.PureComponent {
     }
 
     doPrepare() {
-        let treeDataProjects = [{
-            key: 1,
-            title: "北京移动综合网管",
-            children: [{
-                key: 1 - 1,
-                title: "故障分析系统",
-                children: []
-            }]
-        }];
 
-        let dsProjectKpis = [
-            {
-                key: 1,
-                kpi_id: "260999901",
-                kpi_zhname: "掉话率",
-                kpi_ui_title: "5G掉话率（%）"
-            },
-            {
-                key: 2,
-                kpi_id: "260999901",
-                kpi_zhname: "掉话率",
-                kpi_ui_title: "5G掉话率（%）"
-            }, {
-                key: 3,
-                kpi_id: "260999901",
-                kpi_zhname: "掉话率",
-                kpi_ui_title: "5G掉话率（%）"
-            }, {
-                key: 4,
-                kpi_id: "260999901",
-                kpi_zhname: "掉话率",
-                kpi_ui_title: "5G掉话率（%）"
-            }]
-
-        this.setState({
-            treeDataProjects: treeDataProjects,
-            dsProjectKpis: dsProjectKpis
-        })
     }
 
     doInit() {
         this.setState({
-            treeSchemasHeight: this.gRef.boxTreeSchemas.current.offsetHeight
+            treeSchemasHeight: this.gRef.boxTreeSchemas.current.offsetHeight,
+            treeProjectsHeight: this.gRef.boxTreeProjects.current.offsetHeight,
         })
     }
 
@@ -606,6 +596,127 @@ export default class ServiceProject extends React.PureComponent {
         }
     }
 
+    uiUpdateProject(commTree, what) {
+        let treeDataProjects;
+
+        switch (what) {
+            case "add":
+                treeDataProjects = lodash.cloneDeep(this.state.treeDataProjects);
+
+                let uiTree = {
+                    key: commTree.id,
+                    title: commTree.node_zhname,
+                    children: []
+                }
+
+                if (commTree.node_parent_id === -1) {
+                    treeDataProjects.push(uiTree);
+                } else {
+                    this.getCommTreeNode(treeDataProjects, this.gCurrent.project.id, uiTree);
+                }
+
+                this.setState({
+                    treeDataProjects: treeDataProjects
+                })
+                break
+            case "update":
+                treeDataProjects = lodash.cloneDeep(this.state.treeDataProjects);
+
+                this.setProjectTitle(treeDataProjects, commTree.id, commTree.node_zhname);
+
+                this.setState({
+                    isProjectEditing: false,
+                    treeDataProjects: treeDataProjects
+                })
+                break
+            case "delete":
+                treeDataProjects = lodash.cloneDeep(this.state.treeDataProjects);
+
+                console.log(commTree.id);
+                this.deleteProject(treeDataProjects, this.gCurrent.project.id);
+                this.gCurrent.project = null;
+
+                this.setState({
+                    treeDataProjects: treeDataProjects
+                })
+                break
+            default:
+                break;
+        }
+    }
+
+    uiUpdateProjectKpi(kpi, what) {
+        let treeDataProjectKpis;
+
+        switch (what) {
+            case "add":
+                treeDataProjectKpis = lodash.cloneDeep(this.state.treeDataProjectKpis);
+                let dataKpi = {
+                    key: kpi.kid,
+                    kpi_id: this.gMap.kpis.has(kpi.kid) ? this.gMap.kpis.get(kpi.kid).kpi_id : "",
+                    kpi_zhname: this.gMap.kpis.has(kpi.kid) ? this.gMap.kpis.get(kpi.kid).kpi_zhname : "",
+                    kpi_ui_title: this.gMap.kpis.has(kpi.kid) ? this.gMap.kpis.get(kpi.kid).kpi_enname : "",
+                }
+                treeDataProjectKpis.push(dataKpi);
+
+                this.setState({
+                    treeDataProjectKpis: treeDataProjectKpis
+                })
+                break
+            case "update":
+                treeDataProjectKpis = lodash.cloneDeep(this.state.treeDataProjectKpis);
+
+                for (let i = 0; i < treeDataProjectKpis.length; i++) {
+                    let item = treeDataProjectKpis[i];
+                    if (item.key === kpi.id) {
+                        item.ui_title = kpi.ui_title;
+                        break
+                    }
+                }
+                this.setState({
+                    treeDataProjects: treeDataProjectKpis
+                })
+                break
+            case "delete":
+                treeDataProjectKpis = lodash.cloneDeep(this.state.treeDataProjectKpis);
+                let index = -1;
+                for (let i = 0; i < treeDataProjectKpis.length; i++) {
+                    let item = treeDataProjectKpis[i];
+                    if (item.key === kpi.id) {
+                        index = i;
+                        break
+                    }
+                }
+                treeDataProjectKpis.splice(index, 1);
+
+                this.setState({
+                    treeDataProjectKpis: treeDataProjectKpis
+                })
+                break
+            default:
+                break;
+        }
+    }
+
+    dsUpdateProjectKpi(kpi, what) {
+        switch (what) {
+            case "add":
+                if (this.gMap.projectKpis.has(this.gCurrent.project.id)) {
+                    this.gMap.projectKpis.get(this.gCurrent.project.id).push(kpi.kid);
+                } else {
+                    this.gMap.projectKpis.set(this.gCurrent.project.id, [kpi.kid]);
+                }
+                break
+            case "update":
+                break
+            case "delete":
+                // this.gMap.projects.delete(commTree.id);
+                break
+            default:
+                break;
+        }
+    }
+
     toCellValue(cell) {
         let myValue = null;
 
@@ -680,6 +791,93 @@ export default class ServiceProject extends React.PureComponent {
         return ids;
     }
 
+    commTrees2antdTree(treeNodes, pId, uiTrees) {
+        for (let i = 0; i < treeNodes.length; i++) {
+            if (treeNodes[i].node_parent_id === pId) {
+                let uiTree = {
+                    key: treeNodes[i].id,
+                    title: treeNodes[i].node_zhname,
+                    children: []
+                }
+                uiTrees.children.push(uiTree);
+                this.commTrees2antdTree(treeNodes, treeNodes[i].id, uiTree);
+            }
+        }
+
+        return uiTrees;
+    }
+
+    getCommTreeNode(treeNodes, id, uiTree) {
+        for (let i = 0; i < treeNodes.length; i++) {
+            if (treeNodes[i].key === id) {
+                treeNodes[i].children.push(uiTree);
+                return
+            } else {
+                this.getCommTreeNode(treeNodes[i].children, id, uiTree);
+            }
+        }
+    }
+
+    onButtonProjectNameEditingConfirmClicked(e) {
+        let commTree = new TadCommTree();
+        commTree.id = this.gCurrent.project.id;
+        commTree.node_zhname = this.gCurrent.project.name;
+
+        this.doUpdateProject(commTree);
+    }
+
+    onButtonProjectNameEditingCancelClicked(e) {
+        let treeDataProjects = lodash.cloneDeep(this.state.treeDataProjects);
+        this.setProjectTitle(treeDataProjects, this.gCurrent.project.id, this.gCurrent.project.oldName);
+
+        this.setState({
+            isProjectEditing: false,
+            treeDataProjects: treeDataProjects
+        })
+    }
+
+    deleteProject(treeNodes, id) {
+        for (let i = 0; i < treeNodes.length; i++) {
+            if (treeNodes[i].key === id) {
+                console.log("return = ", id);
+                treeNodes.splice(i, 1);
+                return
+            } else {
+                this.deleteProject(treeNodes[i].children, id);
+            }
+        }
+    }
+    setProjectTitle(treeNodes, id, title) {
+        for (let i = 0; i < treeNodes.length; i++) {
+            if (treeNodes[i].key === id) {
+                treeNodes[i].title = title;
+                return
+            } else {
+                this.setProjectTitle(treeNodes[i].children, id, title);
+            }
+        }
+    }
+
+    onInputProjectNameChanged(e) {
+        this.gCurrent.project.name = e.target.value;
+    }
+
+    setProjectEditable(treeNodes, id) {
+        for (let i = 0; i < treeNodes.length; i++) {
+            if (treeNodes[i].key === id) {
+                this.gCurrent.project.oldName = treeNodes[i].title;
+
+                treeNodes[i].title = <div className="projectNameEditing">
+                    <Input defaultValue={treeNodes[i].title} onChange={this.onInputProjectNameChanged}/>
+                    <Button onClick={this.onButtonProjectNameEditingConfirmClicked}>确认</Button>
+                    <Button onClick={this.onButtonProjectNameEditingCancelClicked}>放弃</Button></div>;
+                return
+            } else {
+                this.setProjectEditable(treeNodes[i].children, id);
+            }
+        }
+    }
+
     showModal(what) {
         this.setState({
             isModalVisible: true,
@@ -698,6 +896,8 @@ export default class ServiceProject extends React.PureComponent {
             this.doGetKpis(),
             this.doGetKpiSchemas(),
             this.restGetKpiCounters(),
+            this.restGetCommTrees(),
+            this.restGetProjectKpis(),
         ]).then(axios.spread((
             kpiDict,
             objectDefs,
@@ -707,6 +907,8 @@ export default class ServiceProject extends React.PureComponent {
             kpis,
             schemas,
             counters,
+            commTrees,
+            projectKpis,
         ) => {
             let mapKpiDict = new Map();
             let mapObjectDefs = new Map();
@@ -721,6 +923,34 @@ export default class ServiceProject extends React.PureComponent {
             let dsKpis = kpis.data.data;
             let dsSchemas = schemas.data.data;
             let dsCounters = counters.data.data;
+            let dsCommTrees = commTrees.data.data;
+            let dsProjectKpis = projectKpis.data.data;
+
+            let treeDataProjects = [];
+            for (let i = 0; i < dsCommTrees.length; i++) {
+                if (dsCommTrees[i].node_parent_id === -1) {
+                    let nodeRoot = {
+                        key: dsCommTrees[i].id,
+                        title: dsCommTrees[i].node_zhname,
+                        children: []
+                    }
+                    let nodeTrees = this.commTrees2antdTree(dsCommTrees, dsCommTrees[i].id, nodeRoot);
+                    treeDataProjects.push(nodeTrees);
+                }
+            }
+            this.setState({
+                treeDataProjects: treeDataProjects
+            })
+
+            let mapProjectKpis = new Map();
+            dsProjectKpis.forEach((item) => {
+                if (!mapProjectKpis.has(item.pid)) {
+                    mapProjectKpis.set(item.pid, [item.kid]);
+                } else {
+                    mapProjectKpis.get(item.pid).push(item.kid);
+                }
+            });
+            this.gMap.projectKpis = mapProjectKpis;
 
             // kpi dict ...
             dsKpiDict.forEach((item) => {
@@ -1016,6 +1246,47 @@ export default class ServiceProject extends React.PureComponent {
             {headers: {'Content-Type': 'application/json'}})
     }
 
+    restGetCommTrees() {
+        let params = {};
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_comm_trees",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restAddCommTree(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/add_comm_tree",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restUpdateCommTree(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/update_comm_tree",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restDeleteCommTree(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/delete_comm_tree",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restGetProjectKpis() {
+        let params = {};
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_project_kpis",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restAddProjectKpi(params) {
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/add_project_kpi",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
     // >>>>> do Get My Schemas
     doGetMySchemas(user, params) {
         this.restGetKpiOlogs(params).then((result) => {
@@ -1250,9 +1521,100 @@ export default class ServiceProject extends React.PureComponent {
 
     }
 
-    onTreeProjectsSelected(selectedKeys, info) {
+    doAddProjectKpi(projectKpi) {
+        this.restAddProjectKpi(projectKpi).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    //todo <<<<< now >>>>> uiUpdateProjectKpis dsUpdateProjectKpis
+                    this.uiUpdateProjectKpi(result.data.data, "add");
+                    this.dsUpdateProjectKpi(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
 
     }
+
+    doAddProject(commTree) {
+        this.restAddCommTree(commTree).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateProject(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+
+    }
+
+    doUpdateProject(commTree) {
+        this.restUpdateCommTree(commTree).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateProject(result.data.data, "update");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+
+    }
+
+    doDeleteProject(commTree) {
+        this.restDeleteCommTree(commTree).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateProject(result.data.data, "delete");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+
+    }
+
+    // >>>>> on tree project selected
+    onTreeProjectsSelected(selectedKeys, info) {
+        let treeDataProjectKpis = [];
+
+        if (info.selected) {
+            this.gCurrent.project = {
+                id: selectedKeys[0]
+            }
+
+            if (this.gMap.projectKpis.has(this.gCurrent.project.id)) {
+                this.gMap.projectKpis.get(this.gCurrent.project.id).forEach((item) => {
+                    treeDataProjectKpis.push({
+                        key: item,
+                        kpi_id: this.gMap.kpis.has(item) ? this.gMap.kpis.get(item).kpi_id : "",
+                        kpi_zhname: this.gMap.kpis.has(item) ? this.gMap.kpis.get(item).kpi_zhname : "",
+                        kpi_ui_title: this.gMap.kpis.has(item) ? this.gMap.kpis.get(item).kpi_enname : "",
+                    })
+                })
+            }
+        } else {
+            this.gCurrent.project = null;
+        }
+
+        this.setState({
+            treeDataProjectKpis: treeDataProjectKpis
+        });
+    }
+
     // >>>>> click schema
     onTreeKpiSchemasSelected(selectedKeys, info) {
         this.gCurrent.counterNames = [];
@@ -1291,10 +1653,10 @@ export default class ServiceProject extends React.PureComponent {
         }
     };
 
-    // >>>>> check KPI
-    onTreeKpisChecked(checkedKeys, info) {
-        this.gCurrent.kpisChecked = checkedKeys;
-    }
+    // // >>>>> check KPI
+    // onTreeKpisChecked(checkedKeys, info) {
+    //     this.gCurrent.kpisChecked = checkedKeys;
+    // }
 
     // >>>>> click KPI
     onTreeKpisSelected(selectedKeys, info) {
@@ -1358,6 +1720,12 @@ export default class ServiceProject extends React.PureComponent {
             this.doUpdateKpi(kpi);
         }
     }
+
+    onTreeKpisChecked(checkedKeys, info) {
+        this.gCurrent.kpisChecked = checkedKeys;
+        console.log(checkedKeys, info);
+    }
+
 
     // >>>>> on Select SchemaId Changed
     onSelectSchemaIdChanged(e, sender) {
@@ -1489,6 +1857,54 @@ export default class ServiceProject extends React.PureComponent {
         this.context.showMessage("开发中，目标：将选中指标添加到购物车中，以备导出使用。");
     }
 
+    // >>>>> insert into project
+    onButtonInsertIntoProjectClicked(e) {
+        this.gCurrent.kpisChecked.forEach((item) => {
+            let projectKpi = new TadProjectKpi();
+            projectKpi.pid = this.gCurrent.project.id;
+            projectKpi.kid = item;
+            this.doSleep(100);
+            this.doAddProjectKpi(projectKpi);
+        })
+    }
+
+    // >>>>> on button add project cliced
+    onButtonAddProjectClicked(e) {
+        let commTree = new TadCommTree();
+
+        if (this.gCurrent.project !== null) {
+            commTree.node_parent_id = this.gCurrent.project.id;
+        } else {
+            commTree.node_parent_id = -1;
+        }
+
+        commTree.node_zhname = "新增节点";
+        commTree.node_enname = "newNode";
+
+        this.doAddProject(commTree);
+    }
+
+    //todo <<<<< now >>>>> rename project
+    onButtonRenameProjectClicked(e) {
+        if (this.gCurrent.project !== null) {
+            let treeDataProjects = lodash.cloneDeep(this.state.treeDataProjects);
+            this.setProjectEditable(treeDataProjects, this.gCurrent.project.id);
+
+            this.setState({
+                isProjectEditing: true,
+                treeDataProjects: treeDataProjects
+            })
+        }
+    }
+
+    onButtonDeleteProjectClicked(e) {
+        if (this.gCurrent.project !== null) {
+            let commTree = new TadCommTree();
+            commTree.id = this.gCurrent.project.id;
+            console.log(commTree);
+            this.doDeleteProject(commTree);
+        }
+    }
     // 判断是否为有效数值
     isNumber(strValue) {
         let regPos = /^\d+(\.\d+)?$/; //非负浮点数
@@ -1859,51 +2275,30 @@ export default class ServiceProject extends React.PureComponent {
                         <div className="BoxTitleBar">
                             <div className="BoxTitle">【项目组】</div>
                             <div className="BoxButtons">
-                                <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonInsertIntoKpiExpClicked}>新建</Button>
-                                <Button size={"small"} type={"primary"} icon={<CopyOutlined/>} onClick={this.onButtonInsertIntoKpiExpClicked}>复制</Button>
-                                <Button size={"small"} type={"primary"} icon={<MinusSquareOutlined/>} onClick={this.onButtonInsertIntoKpiExpClicked}>删除</Button>
-                                <Button size={"small"} type={"primary"} icon={<CloudDownloadOutlined/>} onClick={this.onButtonInsertIntoKpiExpClicked}>导出</Button>
+                                <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonAddProjectClicked}>新建</Button>
+                                <Button size={"small"} type={"primary"} icon={<CopyOutlined/>} onClick={this.onButtonRenameProjectClicked} disabled={this.state.isProjectEditing}>重命名</Button>
+                                <Button size={"small"} type={"primary"} icon={<MinusSquareOutlined/>} onClick={this.onButtonDeleteProjectClicked}>删除</Button>
+                                <Button size={"small"} type={"primary"} icon={<CloudDownloadOutlined/>}>导出</Button>
                             </div>
                         </div>
-                        <div ref={this.gRef.boxTreeSchemas} className={"BoxTreeInstance"}>
-                            <Tree ref={this.gRef.treeProjects} treeData={this.state.treeDataProjects}
-                                  onSelect={this.onTreeProjectsSelected} height={this.state.treeProjectsHeight}
-                                  defaultExpandAll={true} blockNode={true} showLine={{showLeafIcon: false}}
-                                  showIcon={true} switcherIcon={<CaretDownOutlined/>}/>
+                        <div ref={this.gRef.boxTreeProjects} className={"BoxTreeInstance"}>
+                            <Tree ref={this.gRef.treeProjects} treeData={this.state.treeDataProjects} onSelect={this.onTreeProjectsSelected} selectable={!this.state.isProjectEditing} height={this.state.treeProjectsHeight} defaultExpandAll={true} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} switcherIcon={<CaretDownOutlined/>}/>
                         </div>
                     </div>
                     <div className="BoxTreeKpi">
                         <div className="BoxTitleBar">
                             <div className="BoxTitle">【项目组指标】</div>
                             <div className="BoxButtons">
-                                <Button size={"small"} type={"primary"} icon={<CloseOutlined/>} onClick={this.onButtonInsertIntoKpiExpClicked}>移出</Button>
+                                <Button size={"small"} type={"primary"} icon={<CloseOutlined/>}>移出</Button>
                             </div>
                         </div>
                         <div ref={this.gRef.tableProjectKpis} className="BoxTableProjectKpis">
-                            <Table
-                                dataSource={this.state.dsProjectKpis}
-                                columns={columnsColumn}
-                                scroll={{
-                                    x: this.state.tableProjectKpisScrollX,
-                                    y: this.state.tableProjectKpisScrollY
-                                }}
-                                bordered={true}
-                                size={"small"}
-                                pagination={{
-                                    pageSize: this.state.pageSizeProjectKpis,
-                                    position: ["none", "none"]
-                                }}
-                                rowSelection={{
-                                    type: "radio",
-                                    // ...this.onTableProjectKpisRowSelected
-                                }}/>
+                            <Table dataSource={this.state.treeDataProjectKpis} columns={columnsColumn} scroll={{x: this.state.tableProjectKpisScrollX, y: this.state.tableProjectKpisScrollY}} bordered={true} size={"small"} pagination={{pageSize: this.state.pageSizeProjectKpis, position: ["none", "none"]}}
+                                   rowSelection={{
+                                       type: "radio",
+                                       // ...this.onTableProjectKpisRowSelected
+                                   }}/>
                         </div>
-                        {/*<div ref={this.gRef.boxTreeSchemas} className={"BoxTreeInstance"}>*/}
-                        {/*    <Tree ref={this.gRef.treeKpis} treeData={this.state.treeDataKpis}*/}
-                        {/*          onSelect={this.onTreeKpisSelected} onDrop={this.onTreeKpisDrop} checkable blockNode*/}
-                        {/*          draggable showIcon showLine={{showLeafIcon: false}}*/}
-                        {/*          switcherIcon={<CaretDownOutlined/>}/>*/}
-                        {/*</div>*/}
                     </div>
                 </div>
                 <div className="BoxSourceKpis">
@@ -1940,12 +2335,11 @@ export default class ServiceProject extends React.PureComponent {
                                 <div className={"BoxSearch"}>
                                     <Input.Search placeholder="Search" size="small" enterButton onSearch={this.onInputSearchSchemasSearched}/>
                                 </div>
-                                <Button size={"small"} type={"primary"} icon={<CheckOutlined/>} onClick={this.onButtonInsertIntoKpiExpClicked}>移入</Button>
+                                <Button size={"small"} type={"primary"} icon={<CheckOutlined/>} onClick={this.onButtonInsertIntoProjectClicked}>移入</Button>
                             </div>
                         </div>
                         <div ref={this.gRef.boxTreeSchemas} className={"BoxTreeInstance"}>
-                            <Tree ref={this.gRef.treeKpis} treeData={this.state.treeDataKpis}
-                                  onSelect={this.onTreeKpisSelected} onDrop={this.onTreeKpisDrop} checkable blockNode
+                            <Tree ref={this.gRef.treeKpis} treeData={this.state.treeDataKpis} onCheck={this.onTreeKpisChecked} checkable blockNode
                                   draggable showIcon showLine={{showLeafIcon: false}}
                                   switcherIcon={<CaretDownOutlined/>}/>
                         </div>

@@ -35,6 +35,13 @@ $colorComponentToolbar: rgb(175, 225, 255);
     grid-template-rows: 1fr 1fr;
     overflow: hidden;
 
+    .projectNameEditing{
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        grid-gap: 3px;
+        margin: 3px 0 3px 0;
+    }
+
     .BoxProject {
         overflow: hidden;
         display: grid;
