@@ -77,27 +77,46 @@ export default class ServiceProject extends React.PureComponent {
             treeProjectsHeight: 100,
             treeSchemasHeight: 100,
             treeSchemasScroll: 1,
-            optionsSchemaIdA1: [{label: "业务分类", value: -99999}],
-            optionsSchemaIdA2: [{label: "时间粒度", value: -99999}],
-            optionsSchemaIdB1: [{label: "空间粒度", value: -99999}],
-            optionsSchemaIdB2: [{label: "网元类型", value: -99999}],
-            optionsVendor: [{label: "厂家", value: -99999}],
-            optionsObjectClass: [{label: "网元类型", value: -99999}],
-            optionsObjectSubClass: [{label: "网元细分类型", value: -99999}],
-            optionsIntervalFlag: [{label: "采集粒度", value: -99999}],
-            optionsProduct: [{label: "使用该指标的产品", value: -99999}],
-            optionsModule: [{label: "使用该指标的模块", value: -99999}],
-            kpiExpDisplay: "",
+            // optionsSchemaIdA1: [{label: "业务分类", value: -99999}],
+            // optionsSchemaIdA2: [{label: "时间粒度", value: -99999}],
+            // optionsSchemaIdB1: [{label: "空间粒度", value: -99999}],
+            // optionsSchemaIdB2: [{label: "网元类型", value: -99999}],
+            // optionsVendor: [{label: "厂家", value: -99999}],
+            // optionsObjectClass: [{label: "网元类型", value: -99999}],
+            // optionsObjectSubClass: [{label: "网元细分类型", value: -99999}],
+            // optionsIntervalFlag: [{label: "采集粒度", value: -99999}],
+            // optionsProduct: [{label: "使用该指标的产品", value: -99999}],
+            // optionsModule: [{label: "使用该指标的模块", value: -99999}],
             schema: {
                 schema_id: "",
+                schema_business: "",
+                schema_time: "",
+                schema_region: "",
+                schema_object: "",
+                schema_enname: "",
+                vendor_id: "",
+                object_class: "",
+                sub_class: "",
+                interval_flag: "",
+                counter_tab_name: "",
+                tab_name: "",
             },
             kpi: {
                 kpi_id: "",
+                kpi_enname: "",
+                kpi_alarm: "",
+                kpi_format: "",
+                kpi_value_min: "",
+                kpi_value_max: "",
+                kpi_exp: ""
             },
+            optionsProjectKpis: [],
+            kpiExpDisplay: "",
             tableProjectKpisScrollX: "auto",
             tableProjectKpisScrollY: "auto",
             pageSizeProjectKpis: 50,
             isProjectEditing: false,
+            projectKpiEditingKey: null,
         }
 
         //todo >>>>> bind(this)
@@ -140,9 +159,11 @@ export default class ServiceProject extends React.PureComponent {
         this.restGetCommTrees = this.restGetCommTrees.bind(this);
         this.restAddCommTree = this.restAddCommTree.bind(this);
         this.restUpdateCommTree = this.restUpdateCommTree.bind(this);
+        this.restDeleteCommTree = this.restDeleteCommTree.bind(this);
         this.restGetProjectKpis = this.restGetProjectKpis.bind(this);
         this.restAddProjectKpi = this.restAddProjectKpi.bind(this);
-        this.restDeleteCommTree = this.restDeleteCommTree.bind(this);
+        this.restUpdateProjectKpi = this.restUpdateProjectKpi.bind(this);
+        this.restDeleteProjectKpi = this.restDeleteProjectKpi.bind(this);
 
         this.doAddSchema = this.doAddSchema.bind(this);
         this.doDeleteSchema = this.doDeleteSchema.bind(this);
@@ -154,11 +175,12 @@ export default class ServiceProject extends React.PureComponent {
         this.doAddProject = this.doAddProject.bind(this);
         this.doUpdateProject = this.doUpdateProject.bind(this);
         this.doDeleteProject = this.doDeleteProject.bind(this);
+        this.doUpdateProjectKpi = this.doUpdateProjectKpi.bind(this);
+        this.doDeleteProjectKpi = this.doDeleteProjectKpi.bind(this);
 
         this.onTreeProjectsSelected = this.onTreeProjectsSelected.bind(this);
         this.onTreeKpiSchemasSelected = this.onTreeKpiSchemasSelected.bind(this);
         this.onTreeKpisSelected = this.onTreeKpisSelected.bind(this);
-        this.onTreeKpisDrop = this.onTreeKpisDrop.bind(this);
         this.onTreeKpisChecked = this.onTreeKpisChecked.bind(this);
 
         this.onButtonChangeStyleLayoutClicked = this.onButtonChangeStyleLayoutClicked.bind(this);
@@ -176,14 +198,22 @@ export default class ServiceProject extends React.PureComponent {
         this.onButtonProjectNameEditingConfirmClicked = this.onButtonProjectNameEditingConfirmClicked.bind(this);
         this.onButtonProjectNameEditingCancelClicked = this.onButtonProjectNameEditingCancelClicked.bind(this);
         this.onButtonDeleteProjectClicked = this.onButtonDeleteProjectClicked.bind(this);
+        this.onButtonDeleteProjectKpisClicked = this.onButtonDeleteProjectKpisClicked.bind(this);
+        this.onButtonModifyProjectKpisClicked = this.onButtonModifyProjectKpisClicked.bind(this);
+        this.onButtonProjectKpiEditConfirmClicked = this.onButtonProjectKpiEditConfirmClicked.bind(this);
+        this.onButtonProjectKpiEditCancelClicked = this.onButtonProjectKpiEditCancelClicked.bind(this);
 
         this.onInputSchemaZhNameChanged = this.onInputSchemaZhNameChanged.bind(this);
         this.onInputSearchSchemasSearched = this.onInputSearchSchemasSearched.bind(this);
         this.onInputProjectNameChanged = this.onInputProjectNameChanged.bind(this);
+        this.onInputProjectKpiUiTitleChanged = this.onInputProjectKpiUiTitleChanged.bind(this);
 
-        this.onSelectSchemaIdChanged = this.onSelectSchemaIdChanged.bind(this);
         this.onSelectSchemaObjectClassChanged = this.onSelectSchemaObjectClassChanged.bind(this);
         this.onSelectKpiUsedProductChanged = this.onSelectKpiUsedProductChanged.bind(this);
+        this.onSelectFilterBusinessChanged = this.onSelectFilterBusinessChanged.bind(this);
+        this.onSelectFilterTimeChanged = this.onSelectFilterTimeChanged.bind(this);
+        this.onSelectFilterRegionChanged = this.onSelectFilterRegionChanged.bind(this);
+        this.onSelectFilterObjectChanged = this.onSelectFilterObjectChanged.bind(this);
 
         this.showModal = this.showModal.bind(this);
         this.onModalButtonOkClicked = this.onModalButtonOkClicked.bind(this);
@@ -231,47 +261,17 @@ export default class ServiceProject extends React.PureComponent {
         })
     }
 
+    //todo <<<<< now >>>>> on table 项目指标 row selected
     onTableProjectKpisRowSelected = {
         onChange: (selectedRowKeys, selectedRows) => {
-            /*
-            let isShownButtonAlterIndexConfirm = this.state.isShownButtonAlterIndexConfirm;
-            if (isShownButtonAlterIndexConfirm === "block") return false;
-
-            let arrPropertyName = Object.keys(selectedRows[0]);
-            let mapValues = new Map();
-            for (let item of arrPropertyName) {
-                mapValues.set(item, selectedRows[0][item])
+            this.gCurrent.projectKpi = {
+                id: selectedRows[0].key,
+                pid: this.gCurrent.project.id,
+                kid: selectedRows[0].kid,
+                kpi_ui_title: selectedRows[0].kpi_ui_title,
+                kpiUiTitleOld: selectedRows[0].kpi_ui_title,
             }
-
-            this.gCurrent.selectedRowsTablePropertyIndex = selectedRows[0];
-
-            let editingIndex = JSON.parse(JSON.stringify(this.state.editingIndex));
-
-            editingIndex.key = selectedRows[0].key;
-            editingIndex.id = selectedRows[0].id;
-            editingIndex.table_id = selectedRows[0].table_id;
-            editingIndex.name = selectedRows[0].index_name;
-            editingIndex.type = selectedRows[0].index_type;
-            editingIndex.columns = selectedRows[0].index_columns;
-            editingIndex.attributes = selectedRows[0].index_attributes;
-            editingIndex.desc = selectedRows[0].index_desc;
-
-            this.setState({
-                editingIndex: editingIndex,
-                isEditingKeyIndex: selectedRows[0].key
-            })
-             */
         },
-        renderCell: (checked, record, index, originNode) => {
-            /*
-            return (
-                <Fragment>
-                    {this.state.isShownButtonAlterColumnConfirm === "none" && (originNode)}
-                </Fragment>
-            )
-
-             */
-        }
     }
 
     isFoundKpis(ds, sv) {
@@ -632,7 +632,6 @@ export default class ServiceProject extends React.PureComponent {
             case "delete":
                 treeDataProjects = lodash.cloneDeep(this.state.treeDataProjects);
 
-                console.log(commTree.id);
                 this.deleteProject(treeDataProjects, this.gCurrent.project.id);
                 this.gCurrent.project = null;
 
@@ -645,17 +644,18 @@ export default class ServiceProject extends React.PureComponent {
         }
     }
 
-    uiUpdateProjectKpi(kpi, what) {
+    uiUpdateProjectKpi(projectKpi, what) {
         let treeDataProjectKpis;
 
         switch (what) {
             case "add":
                 treeDataProjectKpis = lodash.cloneDeep(this.state.treeDataProjectKpis);
                 let dataKpi = {
-                    key: kpi.kid,
-                    kpi_id: this.gMap.kpis.has(kpi.kid) ? this.gMap.kpis.get(kpi.kid).kpi_id : "",
-                    kpi_zhname: this.gMap.kpis.has(kpi.kid) ? this.gMap.kpis.get(kpi.kid).kpi_zhname : "",
-                    kpi_ui_title: this.gMap.kpis.has(kpi.kid) ? this.gMap.kpis.get(kpi.kid).kpi_enname : "",
+                    key: projectKpi.id,
+                    kid: projectKpi.kid,
+                    kpi_id: this.gMap.kpis.has(projectKpi.kid) ? this.gMap.kpis.get(projectKpi.kid).kpi_id : "不存在该指标",
+                    kpi_zhname: this.gMap.kpis.has(projectKpi.kid) ? this.gMap.kpis.get(projectKpi.kid).kpi_zhname : "不存在该指标",
+                    kpi_ui_title: projectKpi.kpi_ui_title ? projectKpi.kpi_ui_title : (this.gMap.kpis.has(projectKpi.kid) ? this.gMap.kpis.get(projectKpi.kid).kpi_zhname : "不存在该指标"),
                 }
                 treeDataProjectKpis.push(dataKpi);
 
@@ -668,26 +668,25 @@ export default class ServiceProject extends React.PureComponent {
 
                 for (let i = 0; i < treeDataProjectKpis.length; i++) {
                     let item = treeDataProjectKpis[i];
-                    if (item.key === kpi.id) {
-                        item.ui_title = kpi.ui_title;
+                    if (item.key === projectKpi.id) {
+                        item.kpi_ui_title = projectKpi.kpi_ui_title;
                         break
                     }
                 }
                 this.setState({
-                    treeDataProjects: treeDataProjectKpis
+                    treeDataProjectKpis: treeDataProjectKpis
                 })
                 break
             case "delete":
                 treeDataProjectKpis = lodash.cloneDeep(this.state.treeDataProjectKpis);
-                let index = -1;
+
                 for (let i = 0; i < treeDataProjectKpis.length; i++) {
                     let item = treeDataProjectKpis[i];
-                    if (item.key === kpi.id) {
-                        index = i;
+                    if (item.key === this.gCurrent.projectKpi.id) {
+                        treeDataProjectKpis.splice(i, 1);
                         break
                     }
                 }
-                treeDataProjectKpis.splice(index, 1);
 
                 this.setState({
                     treeDataProjectKpis: treeDataProjectKpis
@@ -698,19 +697,20 @@ export default class ServiceProject extends React.PureComponent {
         }
     }
 
-    dsUpdateProjectKpi(kpi, what) {
+    dsUpdateProjectKpi(projectKpi, what) {
         switch (what) {
             case "add":
                 if (this.gMap.projectKpis.has(this.gCurrent.project.id)) {
-                    this.gMap.projectKpis.get(this.gCurrent.project.id).push(kpi.kid);
+                    this.gMap.projectKpis.get(this.gCurrent.project.id).push({id: projectKpi.id, kid: projectKpi.kid});
                 } else {
-                    this.gMap.projectKpis.set(this.gCurrent.project.id, [kpi.kid]);
+                    this.gMap.projectKpis.set(this.gCurrent.project.id, [{id: projectKpi.id, kid: projectKpi.kid}]);
                 }
                 break
             case "update":
+                this.setProjectKpiUiTitle(this.gMap.kpis, projectKpi.kid, projectKpi.id, projectKpi.kpi_ui_title);
                 break
             case "delete":
-                // this.gMap.projects.delete(commTree.id);
+                this.deleteProjectKpiUiTitle(this.gMap.projectKpis, this.gMap.kpis, this.gCurrent.projectKpi.pid, this.gCurrent.projectKpi.kid, this.gCurrent.projectKpi.id);
                 break
             default:
                 break;
@@ -818,28 +818,9 @@ export default class ServiceProject extends React.PureComponent {
         }
     }
 
-    onButtonProjectNameEditingConfirmClicked(e) {
-        let commTree = new TadCommTree();
-        commTree.id = this.gCurrent.project.id;
-        commTree.node_zhname = this.gCurrent.project.name;
-
-        this.doUpdateProject(commTree);
-    }
-
-    onButtonProjectNameEditingCancelClicked(e) {
-        let treeDataProjects = lodash.cloneDeep(this.state.treeDataProjects);
-        this.setProjectTitle(treeDataProjects, this.gCurrent.project.id, this.gCurrent.project.oldName);
-
-        this.setState({
-            isProjectEditing: false,
-            treeDataProjects: treeDataProjects
-        })
-    }
-
     deleteProject(treeNodes, id) {
         for (let i = 0; i < treeNodes.length; i++) {
             if (treeNodes[i].key === id) {
-                console.log("return = ", id);
                 treeNodes.splice(i, 1);
                 return
             } else {
@@ -847,6 +828,7 @@ export default class ServiceProject extends React.PureComponent {
             }
         }
     }
+
     setProjectTitle(treeNodes, id, title) {
         for (let i = 0; i < treeNodes.length; i++) {
             if (treeNodes[i].key === id) {
@@ -858,8 +840,27 @@ export default class ServiceProject extends React.PureComponent {
         }
     }
 
+    getProjectTitle(treeNodes, id) {
+        let myResult = "";
+
+        for (let i = 0; i < treeNodes.length; i++) {
+            if (treeNodes[i].key === id) {
+                myResult = treeNodes[i].title;
+                return myResult;
+            } else {
+                this.setProjectTitle(treeNodes[i].children, id);
+            }
+        }
+
+        return myResult;
+    }
+
     onInputProjectNameChanged(e) {
         this.gCurrent.project.name = e.target.value;
+    }
+
+    onInputProjectKpiUiTitleChanged(e) {
+        this.gCurrent.projectKpi.kpi_ui_title = e.target.value;
     }
 
     setProjectEditable(treeNodes, id) {
@@ -878,12 +879,281 @@ export default class ServiceProject extends React.PureComponent {
         }
     }
 
+    // 判断是否为有效数值
+    isNumber(strValue) {
+        let regPos = /^\d+(\.\d+)?$/; //非负浮点数
+        let regNeg = /^(-(([0-9]+\.[0-9]*[1-9][0-9]*)|([0-9]*[1-9][0-9]*\.[0-9]+)|([0-9]*[1-9][0-9]*)))$/;//负浮点数
+
+        return regPos.test(strValue) || regNeg.test(strValue);
+    }
+
+    // 表达式格式化及算法验证
+    doDisplayExpression(exp) {
+        if (exp === null) return;
+        if (exp.trim() === "" || exp === "指标计算表达式") return;
+
+        // 自动将中文符号，转为英文符号：( ) . + - * /
+        // 自动将连写符号，转为单个符号：. + - * /
+        // 限定有效字符，可用：( ) . + - * / a-z 0-9 _
+        let hasError = false;
+        let expVarNames = [];
+        let expTestNew = "";
+        exp = exp.replace(/^\s+|\s+$/g, "");                // 去除前后端空格
+        exp = exp.replace(/[\w.*]*\w[.]*/g, "__KV__$&");    // 标识counter名称，范例：((nmosdb....table_name.field01+nmosdb.test.field + a01 +abce_test 0.0.5) ..100. 100..200))
+        exp = exp.replace(/[.]/g, "__KD__");                // 标识符号：“.”
+        exp = exp.replace(/\s+/g, "");                      // 清除内部空格
+        let arrExp = exp.match(/(\W?\w*)/g);                // 分解出代码段
+        arrExp.pop();
+        let kIndex = 0;
+        let kpiExpDisplay = <div className="Expression">
+            {arrExp.map((item, index) => {
+                let ov = item.split("__KV__");
+                let operator = ov[0];
+                let className = "";
+                switch (operator) {
+                    case "(":
+                        kIndex++;
+                        className = "expKb_" + kIndex.toString().padStart(2, "0");
+                        break
+                    case ")":
+                        if (kIndex > 0) {
+                            className = "expKb_" + kIndex.toString().padStart(2, "0");
+                            kIndex--;
+                        } else {
+                            kIndex = 0;
+                            className = "expKb_error";
+                            hasError = true;
+                        }
+                        break
+                    default:
+                        className = "expOperator";
+                        break
+                }
+                if (ov.length === 1) {
+                    expTestNew += operator;
+                    return <Fragment>
+                        <div key={index} className={className}>{operator}</div>
+                    </Fragment>
+                } else if (ov.length === 2) {
+                    let varName = ov[1].replace(/__KD__/g, ".");
+                    let classNameV = "expVar";
+                    if ((index + 1) < arrExp.length) {
+                        if (!(arrExp[index + 1].startsWith("+") ||
+                            arrExp[index + 1].startsWith("-") ||
+                            arrExp[index + 1].startsWith("*") ||
+                            arrExp[index + 1].startsWith("/") ||
+                            arrExp[index + 1].startsWith(")"))) {
+                            classNameV = "expVarError";
+                            hasError = true;
+                        }
+                    }
+
+                    if (this.isNumber(varName)) {
+                        varName = varName.replace(/\./g, "__KDN__");
+                    } else {
+                        if (!this.gCurrent.counterNames.includes(varName)) {
+                            classNameV = "expVarError";
+                            hasError = true;
+                        } else {
+                            expVarNames.push(varName);
+                        }
+                    }
+
+                    expTestNew += operator + varName;
+                    varName = varName.replace(/__KDN__/g, ".");
+                    return <Fragment>
+                        <div key={"operator_" + index} className={className}>{operator}</div>
+                        <div key={"value_" + index} className={classNameV}>{varName}</div>
+                    </Fragment>
+                } else {
+                    hasError = true;
+                    let v = "";
+                    for (let i = 1; i < ov.length; i++) {
+                        v += ov[i] + " ";
+                    }
+                    v = v.replace(/\s+$/, "");
+                    v = v.replace(/__KD__/g, ".");
+
+                    expTestNew += operator + v;
+                    return <Fragment>
+                        <div key={"operator_" + index} className={className}>{operator}</div>
+                        <div key={"value_" + index} className="expVarError">{v}</div>
+                    </Fragment>
+                }
+            })}
+        </div>;
+        this.setState({
+            kpiExpDisplay: kpiExpDisplay
+        }, () => {
+            if (!hasError) {
+                try {
+                    let _dynamicTest;
+                    let strLets = "() => {\n";
+
+                    expTestNew = expTestNew.replace(/\./g, "_");
+
+                    expVarNames.forEach((item) => {
+                        if (!this.isNumber(item)) {
+                            strLets += "let " + item.replace(/\./g, "_") + " = 1;\n";
+                        }
+                    });
+                    expTestNew = strLets + "let test = " + expTestNew + ";\nreturn test;\n}";
+                    expTestNew = expTestNew.replace(/__KDN__/g, ".");
+
+                    _dynamicTest = eval(expTestNew);
+                    let r = _dynamicTest();
+                    this.context.showMessage("模拟运算结果 = " + r + "（所有变量赋值为 1）");
+                } catch (err) {
+                    this.context.showMessage(err.toString());
+                }
+            }
+        });
+    }
+
+    // >>>>> 复制到剪贴板
+    doCopyToClipboard(text) {
+        let input = document.getElementById("shadowInputForClipboard");
+        input.value = text;
+        input.select();
+        document.execCommand("copy");
+    }
+
+    str2Time4ParamTimePairs(tb, te) {
+        let myResult = "无效";
+
+        if (te === undefined) {
+            let cb = tb.length;
+            if (cb <= 2) {
+                try {
+                    let ntb = parseInt(tb);
+                    if ((ntb > 0) && (ntb <= 31)) {
+                        myResult = moment().format("yyyy-MM-") + tb.padStart(2, "0");
+                    }
+                } catch (e) {
+                    myResult = "无效";
+                }
+            } else if (cb === 3) {
+                let month = tb.substr(0, 1);
+                let day = tb.substr(1, 2);
+                myResult = moment().format("yyyy-") + month.padStart(2, "0") + "-" + day;
+
+            } else if (cb === 4) {
+                let month = tb.substr(0, 2);
+                let day = tb.substr(2, 2);
+                myResult = moment().format("yyyy-") + month.padStart(2, "0") + "-" + day.padStart(2, "0");
+
+            } else if (cb === 6) {
+                let year = tb.substr(0, 2);
+                let month = tb.substr(2, 2);
+                let day = tb.substr(4, 2);
+                myResult = moment().format("yy") + year + "-" + month + "-" + day;
+
+            } else if (cb === 8) {
+                let year = tb.substr(0, 4);
+                let month = tb.substr(4, 2);
+                let day = tb.substr(6, 2);
+                myResult = year + "-" + month + "-" + day;
+
+            }
+        } else {
+            let ce = te.length;
+            if (ce <= 2) {
+                try {
+                    let nte = parseInt(te);
+                    myResult = moment(tb, "YYYY-MM-DD").add(nte, "days").format("YYYY-MM-DD");
+                } catch (e) {
+                    myResult = "无效";
+                }
+            } else if (ce === 3) {
+                let month = te.substr(0, 1);
+                let day = te.substr(1, 2);
+                myResult = moment().format("yyyy-") + month.padStart(2, "0") + "-" + day;
+
+            } else if (ce === 4) {
+                let month = te.substr(0, 2);
+                let day = te.substr(2, 2);
+                myResult = moment().format("yyyy-") + month.padStart(2, "0") + "-" + day.padStart(2, "0");
+            } else if (ce === 6) {
+                let year = te.substr(0, 2);
+                let month = te.substr(2, 2);
+                let day = te.substr(4, 2);
+                myResult = moment().format("yy") + year + "-" + month + "-" + day;
+
+            } else if (ce === 8) {
+                let year = te.substr(0, 4);
+                let month = te.substr(4, 2);
+                let day = te.substr(6, 2);
+                myResult = year + "-" + month + "-" + day;
+            }
+        }
+
+        return myResult;
+    }
+
+    getProjectKpiUiTitle(mapKpis, kid, projectKpiId) {
+        let myResult = null;
+
+        if (mapKpis.has(kid)) {
+            let kpi = mapKpis.get(kid);
+
+            for (let i = 0; i < kpi.kpiUiTitles.length; i++) {
+                if (kpi.kpiUiTitles[i].id === projectKpiId) {
+                    myResult = kpi.kpiUiTitles[i].kpi_ui_title;
+                }
+            }
+
+            if (myResult === null) {
+                myResult = kpi.kpi_zhname;
+            }
+        } else {
+            myResult = "该指标不存在";
+        }
+
+        return myResult;
+    }
+
+    setProjectKpiUiTitle(mapKpis, kid, projectKpiId, kpiUiTitle) {
+        if (mapKpis.has(kid)) {
+            let kpi = mapKpis.get(kid);
+
+            for (let i = 0; i < kpi.kpiUiTitles.length; i++) {
+                if (kpi.kpiUiTitles[i].id === projectKpiId) {
+                    kpi.kpiUiTitles[i].kpi_ui_title = kpiUiTitle;
+                }
+            }
+        }
+    }
+
+    deleteProjectKpiUiTitle(mapProjectKpis, mapKpis, pid, kid, projectKpiId) {
+        if (mapProjectKpis.has(pid)) {
+            let projectKpi = mapProjectKpis.get(pid);
+
+            for (let i = 0; i < projectKpi.length; i++) {
+                if (projectKpi[i].id === projectKpiId) {
+                    projectKpi.splice(i, 1);
+                    break
+                }
+            }
+        }
+
+        if (mapKpis.has(kid)) {
+            let kpi = mapKpis.get(kid);
+
+            for (let i = 0; i < kpi.kpiUiTitles.length; i++) {
+                if (kpi.kpiUiTitles[i].id === projectKpiId) {
+                    kpi.kpiUiTitles.splice(i, 1);
+                    break
+                }
+            }
+        }
+    }
+
     showModal(what) {
         this.setState({
             isModalVisible: true,
             modalWhat: what
         })
-    };
+    }
 
     //todo >>>>> do Get All
     doGetAll() {
@@ -914,6 +1184,7 @@ export default class ServiceProject extends React.PureComponent {
             let mapObjectDefs = new Map();
             let mapProducts = new Map();
             let mapKpis = new Map();
+            let mapProjectKpis = new Map();
 
             let dsKpiDict = kpiDict.data.data;
             let dsObjectDefs = objectDefs.data.data;
@@ -941,16 +1212,6 @@ export default class ServiceProject extends React.PureComponent {
             this.setState({
                 treeDataProjects: treeDataProjects
             })
-
-            let mapProjectKpis = new Map();
-            dsProjectKpis.forEach((item) => {
-                if (!mapProjectKpis.has(item.pid)) {
-                    mapProjectKpis.set(item.pid, [item.kid]);
-                } else {
-                    mapProjectKpis.get(item.pid).push(item.kid);
-                }
-            });
-            this.gMap.projectKpis = mapProjectKpis;
 
             // kpi dict ...
             dsKpiDict.forEach((item) => {
@@ -1078,6 +1339,7 @@ export default class ServiceProject extends React.PureComponent {
                     kpiName[kpiName.length - 1] !== "?") {
 
                     let myKpi = item;
+                    myKpi.kpiUiTitles = [];
 
                     if (!mapKpis.has(kid)) {
                         mapKpis.set(kid, myKpi);
@@ -1103,6 +1365,25 @@ export default class ServiceProject extends React.PureComponent {
             this.gMap.schemas = mySchemas.mapDs;
             this.gMap.kpis = mapKpis;
             this.gMap.counters = mapCounters;
+
+            // project kpis
+            dsProjectKpis.forEach((item) => {
+                if (!mapProjectKpis.has(item.pid)) {
+                    mapProjectKpis.set(item.pid, [{id: item.id, kid: item.kid}]);
+                } else {
+                    mapProjectKpis.get(item.pid).push({id: item.id, kid: item.kid});
+                }
+
+                if (this.gMap.kpis.has(item.kid)) {
+                    this.gMap.kpis.get(item.kid).kpiUiTitles.push({
+                        id: item.id,
+                        pid: item.pid,
+                        kpi_ui_title: item.kpi_ui_title
+                    })
+                }
+            });
+
+            this.gMap.projectKpis = mapProjectKpis;
 
             // 尝试垃圾回收
             dsKpiDict = null;
@@ -1283,6 +1564,18 @@ export default class ServiceProject extends React.PureComponent {
     restAddProjectKpi(params) {
 
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/add_project_kpi",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restUpdateProjectKpi(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/update_project_kpi",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restDeleteProjectKpi(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/delete_project_kpi",
             params,
             {headers: {'Content-Type': 'application/json'}})
     }
@@ -1525,9 +1818,44 @@ export default class ServiceProject extends React.PureComponent {
         this.restAddProjectKpi(projectKpi).then((result) => {
             if (result.status === 200) {
                 if (result.data.success) {
-                    //todo <<<<< now >>>>> uiUpdateProjectKpis dsUpdateProjectKpis
                     this.uiUpdateProjectKpi(result.data.data, "add");
                     this.dsUpdateProjectKpi(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+
+    }
+
+    doUpdateProjectKpi(projectKpi) {
+        this.restUpdateProjectKpi(projectKpi).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateProjectKpi(result.data.data, "update");
+                    this.dsUpdateProjectKpi(result.data.data, "update");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+
+    }
+
+    doDeleteProjectKpi(projectKpi) {
+        this.restDeleteProjectKpi(projectKpi).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateProjectKpi(result.data.data, "delete");
+                    this.dsUpdateProjectKpi(result.data.data, "delete");
+
+                    this.gCurrent.projectKpi = null;
                     this.context.showMessage("成功，内部ID为：" + result.data.data.id);
                 } else {
                     this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
@@ -1587,7 +1915,7 @@ export default class ServiceProject extends React.PureComponent {
 
     }
 
-    // >>>>> on tree project selected
+    //todo <<<<< now >>>>> on tree project selected
     onTreeProjectsSelected(selectedKeys, info) {
         let treeDataProjectKpis = [];
 
@@ -1599,10 +1927,11 @@ export default class ServiceProject extends React.PureComponent {
             if (this.gMap.projectKpis.has(this.gCurrent.project.id)) {
                 this.gMap.projectKpis.get(this.gCurrent.project.id).forEach((item) => {
                     treeDataProjectKpis.push({
-                        key: item,
-                        kpi_id: this.gMap.kpis.has(item) ? this.gMap.kpis.get(item).kpi_id : "",
-                        kpi_zhname: this.gMap.kpis.has(item) ? this.gMap.kpis.get(item).kpi_zhname : "",
-                        kpi_ui_title: this.gMap.kpis.has(item) ? this.gMap.kpis.get(item).kpi_enname : "",
+                        key: item.id,
+                        kid: item.kid,
+                        kpi_id: this.gMap.kpis.has(item.kid) ? this.gMap.kpis.get(item.kid).kpi_id : "",
+                        kpi_zhname: this.gMap.kpis.has(item.kid) ? this.gMap.kpis.get(item.kid).kpi_zhname : "",
+                        kpi_ui_title: this.getProjectKpiUiTitle(this.gMap.kpis, item.kid, item.id),
                     })
                 })
             }
@@ -1615,7 +1944,7 @@ export default class ServiceProject extends React.PureComponent {
         });
     }
 
-    // >>>>> click schema
+    //todo <<<<< now >>>>> on tree 源指标组 selected
     onTreeKpiSchemasSelected(selectedKeys, info) {
         this.gCurrent.counterNames = [];
 
@@ -1643,154 +1972,119 @@ export default class ServiceProject extends React.PureComponent {
                 }
             });
 
+            console.log(schema);
+            let sids = this.splitSchemaId(schema.schema_id);
+
+            this.gCurrent.kpi = null;
             this.setState({
                 treeDataKpis: uiKpis,
+                schema: {
+                    schema_id: schema.schema_id,
+                    schema_business: sids.a1,
+                    schema_time: sids.a2,
+                    schema_region: sids.hasRegion ? sids.b1 : "",
+                    schema_object: sids.hasRegion ? sids.b2 : sids.b1,
+                    schema_enname: schema.schema_enname,
+                    vendor_id: schema.vendor_id,
+                    object_class: schema.object_class,
+                    sub_class: schema.sub_class,
+                    interval_flag: schema.interval_flag,
+                    counter_tab_name: schema.counter_tab_name,
+                    tab_name: schema.tab_name
+                },
+                kpi: {
+                    kpi_id: "",
+                    kpi_enname: "",
+                    kpi_alarm: "",
+                    kpi_format: "",
+                    kpi_value_min: "",
+                    kpi_value_max: "",
+                    kpi_exp: ""
+                },
+                optionsProjectKpis: [],
             });
+            this.doDisplayExpression("");
         } else {
+            this.gCurrent.kpi = null;
             this.setState({
                 treeDataKpis: [],
+                schema: {
+                    schema_id: "",
+                    schema_business: "",
+                    schema_time: "",
+                    schema_region: "",
+                    schema_object: "",
+                    schema_enname: "",
+                    vendor_id: "",
+                    object_class: "",
+                    sub_class: "",
+                    interval_flag: "",
+                    counter_tab_name: "",
+                    tab_name: "",
+                },
+                kpi: {
+                    kpi_id: "",
+                    kpi_enname: "",
+                    kpi_alarm: "",
+                    kpi_format: "",
+                    kpi_value_min: "",
+                    kpi_value_max: "",
+                    kpi_exp: ""
+                },
+                optionsProjectKpis: [],
             });
+            this.doDisplayExpression("");
         }
     };
 
-    // // >>>>> check KPI
-    // onTreeKpisChecked(checkedKeys, info) {
-    //     this.gCurrent.kpisChecked = checkedKeys;
-    // }
-
-    // >>>>> click KPI
+    //todo <<<<< now >>>>> on tree 源指标组指标 selected
     onTreeKpisSelected(selectedKeys, info) {
         if (info.selected) {
             let kid = selectedKeys[0];
 
             let kpi = this.gMap.kpis.get(kid);
             this.gCurrent.kpi = kpi;
+
+            let optionsProjectKpis = [];
+            kpi.kpiUiTitles.forEach((item) => {
+                let projectName = this.getProjectTitle(this.state.treeDataProjects, item.pid);
+                if ((projectName !== "") && (item.kpi_ui_title !== null)) {
+                    optionsProjectKpis.push({key: item.id, label: projectName + " - " + item.kpi_ui_title, value: item.id});
+                }
+            });
+            this.setState({
+                kpi: {
+                    kpi_id: kpi.kpi_id,
+                    kpi_enname: kpi.kpi_enname,
+                    kpi_alarm: kpi.kpi_alarm,
+                    kpi_format: kpi.kpi_format,
+                    kpi_value_min: kpi.kpi_value_min,
+                    kpi_value_max: kpi.kpi_value_max,
+                    kpi_exp: kpi.kpi_exp
+                },
+                optionsProjectKpis: optionsProjectKpis,
+            });
+            this.doDisplayExpression(kpi.kpi_exp);
         } else {
             this.gCurrent.kpi = null;
-        }
-    }
-
-    // >>>>> 拖拽KPI，改变顺序
-    onTreeKpisDrop(info) {
-        let dragKey = info.dragNode.key;
-        let dropKey = info.node.key;
-        let dragNodeClone = lodash.cloneDeep(this.gMap.kpis.get(dragKey));
-
-        // 0 - 拖拽逻辑
-        if (info.dropPosition === -1) {
-            this.gCurrent.schema.kpis.unshift(dragNodeClone);
-        } else {
-            for (let i = 0; i < this.gCurrent.schema.kpis.length; i++) {
-                if (this.gCurrent.schema.kpis[i].id === dropKey) {
-                    this.gCurrent.schema.kpis.splice(i + 1, 0, dragNodeClone);
-                    break
-                }
-            }
-        }
-        for (let i = 0; i < this.gCurrent.schema.kpis.length; i++) {
-            if (this.gCurrent.schema.kpis[i].id === dragKey) {
-                this.gCurrent.schema.kpis.splice(i, 1);
-                break
-            }
-        }
-
-        let treeDataKpis = [];
-        for (let i = 0; i < this.gCurrent.schema.kpis.length; i++) {
-            let kpi = this.gMap.kpis.get(this.gCurrent.schema.kpis[i].id);
-            treeDataKpis.push({
-                key: this.gCurrent.schema.kpis[i].id,
-                title: kpi.kpi_id + " - " + kpi.kpi_zhname,
+            this.setState({
+                kpi: {
+                    kpi_id: "",
+                    kpi_enname: "",
+                    kpi_alarm: "",
+                    kpi_format: "",
+                    kpi_value_min: "",
+                    kpi_value_max: "",
+                    kpi_exp: ""
+                },
+                optionsProjectKpis: [],
             })
-        }
-
-        this.setState({
-            treeDataKpis: treeDataKpis
-        })
-
-        // db update
-        let sid = this.gCurrent.schema.id;
-        let schema_id = this.gMap.schemas.get(sid).schema_id;
-        for (let i = 0; i < this.gCurrent.schema.kpis.length; i++) {
-            let kid = this.gCurrent.schema.kpis[i].id;
-            let kpi = lodash.cloneDeep(this.gMap.kpis.get(kid));
-
-            kpi.kpi_id = schema_id + (i + 1).toString().padStart(2, "0");
-            kpi.kpi_field = "field" + (i + 1).toString().padStart(2, "0");
-
-            this.doUpdateKpi(kpi);
+            this.doDisplayExpression("");
         }
     }
 
     onTreeKpisChecked(checkedKeys, info) {
         this.gCurrent.kpisChecked = checkedKeys;
-        console.log(checkedKeys, info);
-    }
-
-
-    // >>>>> on Select SchemaId Changed
-    onSelectSchemaIdChanged(e, sender) {
-        let schemaId = "";
-
-        switch (sender) {
-            case "a1":
-                this.gDynamic.schemaId.a1 = e;
-                break
-            case "a2":
-                this.gDynamic.schemaId.a2 = e;
-                break
-            case "b1":
-                this.gDynamic.schemaId.b1 = e;
-                break
-            case "b2":
-                this.gDynamic.schemaId.b2 = e;
-                break
-            default:
-                break
-        }
-        let strA1 = "", strA2 = "", strBb = "", strB = "", strC = "";
-
-        strA1 = (this.gDynamic.schemaId.a1 === -99999) ? "9" : this.gDynamic.schemaId.a1.toString();
-        strA2 = (this.gDynamic.schemaId.a2 === -99999) ? "5" : this.gDynamic.schemaId.a2.toString();
-        if (this.gDynamic.schemaId.b1 !== -99999) {  // 空间 + 网元
-            if (this.gDynamic.schemaId.b1 > 99) {
-                strBb = this.gDynamic.schemaId.b1.toString()[0];
-                strB = this.gDynamic.schemaId.b1.toString().substr(1, 2);
-            } else {
-                strB = this.gDynamic.schemaId.b1.toString();
-            }
-            if (this.gDynamic.schemaId.b2 !== -99999) {
-                strC = this.gDynamic.schemaId.b2.toString()
-            } else {
-                strC = "75";
-            }
-        } else if (this.gDynamic.schemaId.b2 !== -99999) { // 网元 + 序号
-            if (this.gDynamic.schemaId.b2 > 99) {
-                strBb = this.gDynamic.schemaId.b2.toString()[0];
-                strB = this.gDynamic.schemaId.b2.toString().substr(1, 2);
-            } else {
-                strB = this.gDynamic.schemaId.b2.toString();
-            }
-            let sidHead = strBb + "260" + strA1 + strA2 + strB;
-            let sidIndexes = [];
-            for (let item of this.gMap.schemas.values()) {
-                let sidTemp = item.schema_id;
-                if (sidTemp.startsWith(sidHead)) {
-                    let i = sidTemp.substr(sidHead.length, sidTemp.length - sidHead.length);
-                    sidIndexes.push(parseInt(i));
-                }
-            }
-            let sidIndex = 1;
-            for (let i = 0; i < sidIndexes.length; i++) {
-                if (sidIndexes.includes(sidIndex)) {
-                    sidIndex++;
-                    continue
-                }
-            }
-            strC = sidIndex.toString().padStart(2, "0");
-        } else {
-            strC = "75";
-        }
-        // schemaId = strBb + "260" + strA1 + strA2 + strB + strC;
     }
 
     onButtonChangeStyleLayoutClicked(e) {
@@ -1884,7 +2178,7 @@ export default class ServiceProject extends React.PureComponent {
         this.doAddProject(commTree);
     }
 
-    //todo <<<<< now >>>>> rename project
+    // >>>>> rename project
     onButtonRenameProjectClicked(e) {
         if (this.gCurrent.project !== null) {
             let treeDataProjects = lodash.cloneDeep(this.state.treeDataProjects);
@@ -1901,152 +2195,66 @@ export default class ServiceProject extends React.PureComponent {
         if (this.gCurrent.project !== null) {
             let commTree = new TadCommTree();
             commTree.id = this.gCurrent.project.id;
-            console.log(commTree);
             this.doDeleteProject(commTree);
         }
     }
-    // 判断是否为有效数值
-    isNumber(strValue) {
-        let regPos = /^\d+(\.\d+)?$/; //非负浮点数
-        let regNeg = /^(-(([0-9]+\.[0-9]*[1-9][0-9]*)|([0-9]*[1-9][0-9]*\.[0-9]+)|([0-9]*[1-9][0-9]*)))$/;//负浮点数
 
-        return regPos.test(strValue) || regNeg.test(strValue);
+    onButtonProjectNameEditingConfirmClicked(e) {
+        let commTree = new TadCommTree();
+        commTree.id = this.gCurrent.project.id;
+        commTree.node_zhname = this.gCurrent.project.name;
+
+        this.doUpdateProject(commTree);
     }
 
-    // 表达式格式化及算法验证
-    doDisplayExpression(exp) {
-        if (exp === null) return;
-        if (exp.trim() === "" || exp === "指标计算表达式") return;
+    onButtonProjectNameEditingCancelClicked(e) {
+        let treeDataProjects = lodash.cloneDeep(this.state.treeDataProjects);
+        this.setProjectTitle(treeDataProjects, this.gCurrent.project.id, this.gCurrent.project.oldName);
 
-        // 自动将中文符号，转为英文符号：( ) . + - * /
-        // 自动将连写符号，转为单个符号：. + - * /
-        // 限定有效字符，可用：( ) . + - * / a-z 0-9 _
-        let hasError = false;
-        let expVarNames = [];
-        let expTestNew = "";
-        exp = exp.replace(/^\s+|\s+$/g, "");                // 去除前后端空格
-        exp = exp.replace(/[\w.*]*\w[.]*/g, "__KV__$&");    // 标识counter名称，范例：((nmosdb....table_name.field01+nmosdb.test.field + a01 +abce_test 0.0.5) ..100. 100..200))
-        exp = exp.replace(/[.]/g, "__KD__");                // 标识符号：“.”
-        exp = exp.replace(/\s+/g, "");                      // 清除内部空格
-        let arrExp = exp.match(/(\W?\w*)/g);                // 分解出代码段
-        arrExp.pop();
-        let kIndex = 0;
-        let kpiExpDisplay = <div className="Expression">
-            {arrExp.map((item, index) => {
-                let ov = item.split("__KV__");
-                let operator = ov[0];
-                let className = "";
-                switch (operator) {
-                    case "(":
-                        kIndex++;
-                        className = "expKb_" + kIndex.toString().padStart(2, "0");
-                        break
-                    case ")":
-                        if (kIndex > 0) {
-                            className = "expKb_" + kIndex.toString().padStart(2, "0");
-                            kIndex--;
-                        } else {
-                            kIndex = 0;
-                            className = "expKb_error";
-                            hasError = true;
-                        }
-                        break
-                    default:
-                        className = "expOperator";
-                        break
-                }
-                if (ov.length === 1) {
-                    expTestNew += operator;
-                    return <Fragment>
-                        <div key={index} className={className}>{operator}</div>
-                    </Fragment>
-                } else if (ov.length === 2) {
-                    let varName = ov[1].replace(/__KD__/g, ".");
-                    let classNameV = "expVar";
-                    if ((index + 1) < arrExp.length) {
-                        if (!(arrExp[index + 1].startsWith("+") ||
-                            arrExp[index + 1].startsWith("-") ||
-                            arrExp[index + 1].startsWith("*") ||
-                            arrExp[index + 1].startsWith("/") ||
-                            arrExp[index + 1].startsWith(")"))) {
-                            classNameV = "expVarError";
-                            hasError = true;
-                        }
-                    }
-
-                    if (this.isNumber(varName)) {
-                        varName = varName.replace(/\./g, "__KDN__");
-                    } else {
-                        if (!this.gCurrent.counterNames.includes(varName)) {
-                            classNameV = "expVarError";
-                            hasError = true;
-                        } else {
-                            expVarNames.push(varName);
-                        }
-                    }
-
-                    expTestNew += operator + varName;
-                    varName = varName.replace(/__KDN__/g, ".");
-                    return <Fragment>
-                        <div key={"operator_" + index} className={className}>{operator}</div>
-                        <div key={"value_" + index} className={classNameV}>{varName}</div>
-                    </Fragment>
-                } else {
-                    hasError = true;
-                    let v = "";
-                    for (let i = 1; i < ov.length; i++) {
-                        v += ov[i] + " ";
-                    }
-                    v = v.replace(/\s+$/, "");
-                    v = v.replace(/__KD__/g, ".");
-
-                    expTestNew += operator + v;
-                    return <Fragment>
-                        <div key={"operator_" + index} className={className}>{operator}</div>
-                        <div key={"value_" + index} className="expVarError">{v}</div>
-                    </Fragment>
-                }
-            })}
-        </div>;
         this.setState({
-            kpiExpDisplay: kpiExpDisplay
-        }, () => {
-            if (!hasError) {
-                try {
-                    let _dynamicTest;
-                    let strLets = "() => {\n";
+            isProjectEditing: false,
+            treeDataProjects: treeDataProjects
+        })
+    }
 
-                    expTestNew = expTestNew.replace(/\./g, "_");
+    // >>>>> on button 移出-项目指标 clicked
+    onButtonDeleteProjectKpisClicked(e) {
+        let projectKpi = new TadProjectKpi();
 
-                    expVarNames.forEach((item) => {
-                        if (!this.isNumber(item)) {
-                            strLets += "let " + item.replace(/\./g, "_") + " = 1;\n";
-                        }
-                    });
-                    expTestNew = strLets + "let test = " + expTestNew + ";\nreturn test;\n}";
-                    expTestNew = expTestNew.replace(/__KDN__/g, ".");
+        projectKpi.id = this.gCurrent.projectKpi.id;
+        this.doDeleteProjectKpi(projectKpi);
+    }
 
-                    _dynamicTest = eval(expTestNew);
-                    let r = _dynamicTest();
-                    this.context.showMessage("模拟运算结果 = " + r + "（所有变量赋值为 1）");
-                } catch (err) {
-                    this.context.showMessage(err.toString());
-                }
-            }
+    // >>>>> on button 修改-项目指标 clicked
+    onButtonModifyProjectKpisClicked(e) {
+        if (this.gCurrent.projectKpi !== null && this.gCurrent.projectKpi !== undefined) {
+            this.setState({
+                projectKpiEditingKey: this.gCurrent.projectKpi.id
+            });
+        }
+    }
+
+    onButtonProjectKpiEditConfirmClicked(e) {
+        let projectKpi = new TadProjectKpi();
+
+        projectKpi.id = this.gCurrent.projectKpi.id;
+        projectKpi.kpi_ui_title = this.gCurrent.projectKpi.kpi_ui_title;
+        this.doUpdateProjectKpi(projectKpi);
+
+        this.gCurrent.projectKpi = null;
+        this.setState({
+            projectKpiEditingKey: null
         });
+
     }
 
-    // >>>>> 复制到剪贴板
-    doCopyToClipboard(text) {
-        let input = document.getElementById("shadowInputForClipboard");
-        input.value = text;
-        input.select();
-        document.execCommand("copy");
-    }
+    onButtonProjectKpiEditCancelClicked(e) {
+        this.gCurrent.projectKpi = null;
 
-    onInputKpiExpChanged = lodash.debounce((e) => {
-        this.doDisplayExpression(e.target.value);
-    }, 500);
+        this.setState({
+            projectKpiEditingKey: null
+        })
+    }
 
     // >>>>> 确认对话框
     onModalButtonOkClicked() {
@@ -2077,82 +2285,12 @@ export default class ServiceProject extends React.PureComponent {
         })
     }
 
-    // >>> INPUT <<<
+    onInputKpiExpChanged = lodash.debounce((e) => {
+        this.doDisplayExpression(e.target.value);
+    }, 500);
 
     onInputSchemaZhNameChanged(e) {
 
-    }
-
-    str2Time4ParamTimePairs(tb, te) {
-        let myResult = "无效";
-
-        if (te === undefined) {
-            let cb = tb.length;
-            if (cb <= 2) {
-                try {
-                    let ntb = parseInt(tb);
-                    if ((ntb > 0) && (ntb <= 31)) {
-                        myResult = moment().format("yyyy-MM-") + tb.padStart(2, "0");
-                    }
-                } catch (e) {
-                    myResult = "无效";
-                }
-            } else if (cb === 3) {
-                let month = tb.substr(0, 1);
-                let day = tb.substr(1, 2);
-                myResult = moment().format("yyyy-") + month.padStart(2, "0") + "-" + day;
-
-            } else if (cb === 4) {
-                let month = tb.substr(0, 2);
-                let day = tb.substr(2, 2);
-                myResult = moment().format("yyyy-") + month.padStart(2, "0") + "-" + day.padStart(2, "0");
-
-            } else if (cb === 6) {
-                let year = tb.substr(0, 2);
-                let month = tb.substr(2, 2);
-                let day = tb.substr(4, 2);
-                myResult = moment().format("yy") + year + "-" + month + "-" + day;
-
-            } else if (cb === 8) {
-                let year = tb.substr(0, 4);
-                let month = tb.substr(4, 2);
-                let day = tb.substr(6, 2);
-                myResult = year + "-" + month + "-" + day;
-
-            }
-        } else {
-            let ce = te.length;
-            if (ce <= 2) {
-                try {
-                    let nte = parseInt(te);
-                    myResult = moment(tb, "YYYY-MM-DD").add(nte, "days").format("YYYY-MM-DD");
-                } catch (e) {
-                    myResult = "无效";
-                }
-            } else if (ce === 3) {
-                let month = te.substr(0, 1);
-                let day = te.substr(1, 2);
-                myResult = moment().format("yyyy-") + month.padStart(2, "0") + "-" + day;
-
-            } else if (ce === 4) {
-                let month = te.substr(0, 2);
-                let day = te.substr(2, 2);
-                myResult = moment().format("yyyy-") + month.padStart(2, "0") + "-" + day.padStart(2, "0");
-            } else if (ce === 6) {
-                let year = te.substr(0, 2);
-                let month = te.substr(2, 2);
-                let day = te.substr(4, 2);
-                myResult = moment().format("yy") + year + "-" + month + "-" + day;
-
-            } else if (ce === 8) {
-                let year = te.substr(0, 4);
-                let month = te.substr(4, 2);
-                let day = te.substr(6, 2);
-                myResult = year + "-" + month + "-" + day;
-            }
-        }
-
-        return myResult;
     }
 
     // >>>>> 搜索 SCHEMA & KPI
@@ -2200,12 +2338,14 @@ export default class ServiceProject extends React.PureComponent {
                 let mySchemas = this.searchKpis(sv);
 
                 this.setState({
+                    treeDataKpis: [],
                     treeDataKpiSchemas: mySchemas
                 })
             }
 
         } else {
             this.setState({
+                treeDataKpis: [],
                 treeDataKpiSchemas: this.searchKpis("")
             })
         }
@@ -2242,6 +2382,26 @@ export default class ServiceProject extends React.PureComponent {
         })
     }
 
+    //todo <<<<< now 4 >>>>> on select 筛选：业务分类 changed
+    onSelectFilterBusinessChanged(v) {
+        console.log(v);
+    }
+
+    //todo <<<<< now 5 >>>>> on select 筛选：时间粒度 changed
+    onSelectFilterTimeChanged(v) {
+        console.log(v);
+    }
+
+    //todo <<<<< now 6 >>>>> on select 筛选：空间粒度 changed
+    onSelectFilterRegionChanged(v) {
+        console.log(v);
+    }
+
+    //todo <<<<< now 7 >>>>> on select 筛选：网元类型 changed
+    onSelectFilterObjectChanged(v) {
+        console.log(v);
+    }
+
     //todo >>>>> render
     render() {
         const columnsColumn = [
@@ -2263,8 +2423,22 @@ export default class ServiceProject extends React.PureComponent {
                 title: <KColumnTitle content='界面显示标题' className={'clsColumnTitle'}/>,
                 dataIndex: 'kpi_ui_title',
                 key: 'kpi_ui_title',
-                width: 200,
                 align: 'center',
+                render: (text, record, index) => {
+                    return (
+                        (this.state.projectKpiEditingKey === record.key) ? (
+                            <div className="clsProjectKpiUiTitleEditor">
+                                <Input defaultValue={record.kpi_ui_title} onChange={this.onInputProjectKpiUiTitleChanged}/>
+                                <Button onClick={this.onButtonProjectKpiEditConfirmClicked}>确认</Button>
+                                <Button onClick={this.onButtonProjectKpiEditCancelClicked}>放弃</Button>
+                            </div>
+                        ) : (
+                            <div className="clsProjectKpiUiTitle">
+                                {record.kpi_ui_title}
+                            </div>
+                        )
+                    )
+                }
             },
         ];
 
@@ -2289,15 +2463,12 @@ export default class ServiceProject extends React.PureComponent {
                         <div className="BoxTitleBar">
                             <div className="BoxTitle">【项目组指标】</div>
                             <div className="BoxButtons">
-                                <Button size={"small"} type={"primary"} icon={<CloseOutlined/>}>移出</Button>
+                                <Button size={"small"} type={"primary"} icon={<CloseOutlined/>} onClick={this.onButtonModifyProjectKpisClicked} disabled={this.state.projectKpiEditingKey !== null}>修改</Button>
+                                <Button size={"small"} type={"primary"} icon={<CloseOutlined/>} onClick={this.onButtonDeleteProjectKpisClicked} disabled={this.state.projectKpiEditingKey !== null}>移出</Button>
                             </div>
                         </div>
                         <div ref={this.gRef.tableProjectKpis} className="BoxTableProjectKpis">
-                            <Table dataSource={this.state.treeDataProjectKpis} columns={columnsColumn} scroll={{x: this.state.tableProjectKpisScrollX, y: this.state.tableProjectKpisScrollY}} bordered={true} size={"small"} pagination={{pageSize: this.state.pageSizeProjectKpis, position: ["none", "none"]}}
-                                   rowSelection={{
-                                       type: "radio",
-                                       // ...this.onTableProjectKpisRowSelected
-                                   }}/>
+                            <Table dataSource={this.state.treeDataProjectKpis} columns={columnsColumn} scroll={{x: this.state.tableProjectKpisScrollX, y: this.state.tableProjectKpisScrollY}} bordered={true} size={"small"} pagination={{pageSize: this.state.pageSizeProjectKpis, position: ["none", "none"]}} rowSelection={(this.state.projectKpiEditingKey === null) && {type: "radio", ...this.onTableProjectKpisRowSelected}}/>
                         </div>
                     </div>
                 </div>
@@ -2307,25 +2478,14 @@ export default class ServiceProject extends React.PureComponent {
                             <div className="BoxTitle">【指标组】</div>
                             <div className={"BoxButtons"}>
                                 <div className="BoxTitle">筛选：</div>
-                                <Select className="clsSelect" size="small" options={this.state.optionsSchemaIdA1} defaultValue={-99999} onChange={(e) => {
-                                    this.onSelectSchemaIdChanged(e, "a1");
-                                }}/>
-                                <Select className="clsSelect" size="small" options={this.state.optionsSchemaIdA2} defaultValue={-99999} onChange={(e) => {
-                                    this.onSelectSchemaIdChanged(e, "a2");
-                                }}/>
-                                <Select className="clsSelect" size="small" options={this.state.optionsSchemaIdB1} defaultValue={-99999} onChange={(e) => {
-                                    this.onSelectSchemaIdChanged(e, "b1");
-                                }}/>
-                                <Select className="clsSelect" size="small" options={this.state.optionsSchemaIdB2} defaultValue={-99999} onChange={(e) => {
-                                    this.onSelectSchemaIdChanged(e, "b2");
-                                }}/>
+                                <Select className="clsSelect" size="small" options={this.state.optionsSchemaIdA1} defaultValue={-99999} onChange={this.onSelectFilterBusinessChanged}/>
+                                <Select className="clsSelect" size="small" options={this.state.optionsSchemaIdA2} defaultValue={-99999} onChange={this.onSelectFilterTimeChanged}/>
+                                <Select className="clsSelect" size="small" options={this.state.optionsSchemaIdB1} defaultValue={-99999} onChange={this.onSelectFilterRegionChanged}/>
+                                <Select className="clsSelect" size="small" options={this.state.optionsSchemaIdB2} defaultValue={-99999} onChange={this.onSelectFilterObjectChanged}/>
                             </div>
                         </div>
                         <div ref={this.gRef.boxTreeSchemas} className={"BoxTreeInstance"}>
-                            <Tree ref={this.gRef.treeSchemas} treeData={this.state.treeDataKpiSchemas}
-                                  onSelect={this.onTreeKpiSchemasSelected} height={this.state.treeSchemasHeight}
-                                  defaultExpandAll={true} blockNode={true} showLine={{showLeafIcon: false}}
-                                  showIcon={true} switcherIcon={<CaretDownOutlined/>}/>
+                            <Tree ref={this.gRef.treeSchemas} treeData={this.state.treeDataKpiSchemas} onSelect={this.onTreeKpiSchemasSelected} height={this.state.treeSchemasHeight} defaultExpandAll={true} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} switcherIcon={<CaretDownOutlined/>}/>
                         </div>
                     </div>
                     <div className="BoxTreeKpi">
@@ -2339,45 +2499,43 @@ export default class ServiceProject extends React.PureComponent {
                             </div>
                         </div>
                         <div ref={this.gRef.boxTreeSchemas} className={"BoxTreeInstance"}>
-                            <Tree ref={this.gRef.treeKpis} treeData={this.state.treeDataKpis} onCheck={this.onTreeKpisChecked} checkable blockNode
-                                  draggable showIcon showLine={{showLeafIcon: false}}
-                                  switcherIcon={<CaretDownOutlined/>}/>
+                            <Tree ref={this.gRef.treeKpis} treeData={this.state.treeDataKpis} onSelect={this.onTreeKpisSelected} onCheck={this.onTreeKpisChecked} checkable blockNode showIcon showLine={{showLeafIcon: false}} switcherIcon={<CaretDownOutlined/>}/>
                         </div>
                     </div>
                     <div className="BoxProperties">
                         <div className="BoxTitleBarSchema">
-                            <div className="BoxTitle">【指标组属性】 - {this.state.schema.schema_id} - {this.state.schema.schema_enname}</div>
+                            <div className="BoxTitle">【指标组属性】 - {this.state.schema.schema_id}</div>
                         </div>
                         <div className="BoxPropertiesSchema">
                             <div className="BoxSchemaIds">
-                                <Input className="InputReadonly" readOnly="readonly"/>
-                                <Input className="InputReadonly" readOnly="readonly"/>
-                                <Input className="InputReadonly" readOnly="readonly"/>
-                                <Input className="InputReadonly" readOnly="readonly"/>
+                                <Input className="InputReadonly" readOnly="readonly" value={this.state.schema.schema_business}/>
+                                <Input className="InputReadonly" readOnly="readonly" value={this.state.schema.schema_time}/>
+                                <Input className="InputReadonly" readOnly="readonly" value={this.state.schema.schema_region}/>
+                                <Input className="InputReadonly" readOnly="readonly" value={this.state.schema.schema_object}/>
                             </div>
                             <div className="BoxVendorObjectClass">
-                                <Input className="InputReadonly" readOnly="readonly"/>
-                                <Input className="InputReadonly" readOnly="readonly"/>
-                                <Input className="InputReadonly" readOnly="readonly"/>
-                                <Input className="InputReadonly" readOnly="readonly"/>
+                                <Input className="InputReadonly" readOnly="readonly" value={this.state.schema.vendor_id}/>
+                                <Input className="InputReadonly" readOnly="readonly" value={this.state.schema.object_class}/>
+                                <Input className="InputReadonly" readOnly="readonly" value={this.state.schema.sub_class}/>
+                                <Input className="InputReadonly" readOnly="readonly" value={this.state.schema.interval_flag}/>
                             </div>
                             <div>
-                                <Input className="InputReadonly" readOnly="readonly"/>
+                                <Input className="InputReadonly" readOnly="readonly" value={this.state.schema.counter_tab_name}/>
                             </div>
                         </div>
                         <div className="BoxTitleBarKpi">
-                            <div className="BoxTitle">【指标属性】 - {this.state.kpi.kpi_id} - {this.state.kpi.kpi_enname}</div>
+                            <div className="BoxTitle">【指标属性】 - {this.state.kpi.kpi_id}</div>
                         </div>
                         <div className="BoxPropertiesKpi">
                             <div className="BoxKpiValues">
-                                <Input className="InputReadonly" readOnly="readonly"/>
-                                <Input className="InputReadonly" readOnly="readonly"/>
-                                <Input className="InputReadonly" readOnly="readonly"/>
-                                <Input className="InputReadonly" readOnly="readonly"/>
+                                <Input className="InputReadonly" readOnly="readonly" value={this.state.kpi.kpi_alarm}/>
+                                <Input className="InputReadonly" readOnly="readonly" value={this.state.kpi.kpi_format}/>
+                                <Input className="InputReadonly" readOnly="readonly" value={this.state.kpi.kpi_value_min}/>
+                                <Input className="InputReadonly" readOnly="readonly" value={this.state.kpi.kpi_value_max}/>
                             </div>
                             <div className="BoxUsedInfo">
                                 <div className="BoxProductModuleName">
-                                    <Select options={this.state.optionsModule} size="small"/>
+                                    <Select options={this.state.optionsProjectKpis} size="small"/>
                                 </div>
                             </div>
                         </div>

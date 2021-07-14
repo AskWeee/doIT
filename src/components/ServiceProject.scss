@@ -21,7 +21,7 @@ $colorComponentToolbar: rgb(175, 225, 255);
     padding: 0;
     margin: 0;
     color: black;
-    font-weight: bold;
+    padding-left: 5px;
 }
 
 
@@ -126,6 +126,8 @@ $colorComponentToolbar: rgb(175, 225, 255);
 
                 .BoxButtons {
                     display: grid;
+                    grid-template-columns: auto auto;
+                    grid-gap: 3px;
                     align-content: center;
                     margin: 0 5px 0 0;
                 }
@@ -136,6 +138,16 @@ $colorComponentToolbar: rgb(175, 225, 255);
                 overflow: hidden;
                 display: grid;
                 margin: 5px;
+
+                .clsProjectKpiUiTitle {
+                    font-weight: bold;
+                }
+
+                .clsProjectKpiUiTitleEditor {
+                    display: grid;
+                    grid-template-columns: 1fr auto auto;
+                    grid-gap: 3px;
+                }
             }
         }
     }
