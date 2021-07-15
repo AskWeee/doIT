@@ -190,21 +190,22 @@ $colorComponentToolbar: rgb(175, 225, 255);
                 .BoxButtons {
                     display: grid;
                     align-content: center;
-                    margin: 0 5px 0 20px;
+                    margin: 0 2px 0 10px;
                     grid-template-columns: auto auto auto auto auto;
 
                     .clsSelect {
                         font-size: 12px;
                         margin-right: 3px;
+                        width: 85px;
                         //background: red;
                         //border: 1px solid red;
                         //padding: 0;
                         //margin: 0;
                         //height: 24px;
 
-                        &:last-child {
-                            margin-right: 20px;
-                        }
+                        //&:last-child {
+                        //    margin-right: 20px;
+                        //}
                     }
                 }
             }

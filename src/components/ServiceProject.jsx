@@ -207,6 +207,7 @@ export default class ServiceProject extends React.PureComponent {
         this.onInputSearchSchemasSearched = this.onInputSearchSchemasSearched.bind(this);
         this.onInputProjectNameChanged = this.onInputProjectNameChanged.bind(this);
         this.onInputProjectKpiUiTitleChanged = this.onInputProjectKpiUiTitleChanged.bind(this);
+        this.onInputSearchSchemasChanged = this.onInputSearchSchemasChanged.bind(this);
 
         this.onSelectSchemaObjectClassChanged = this.onSelectSchemaObjectClassChanged.bind(this);
         this.onSelectKpiUsedProductChanged = this.onSelectKpiUsedProductChanged.bind(this);
@@ -338,9 +339,56 @@ export default class ServiceProject extends React.PureComponent {
         return treeDataSchemas;
     }
 
-    // >>>>> dataSchemas to DsMap and UiTree
-    dataSchemas2DsMapUiTree(ds, sv) {
+    searchKpisNew(sv) {
+        let schemas = [];
+        let arrTitleIds = [];
 
+        this.gMap.schemas.forEach((value, key) => {
+            arrTitleIds.push({
+                id: key,
+                schema_id: value.schema_id,
+                schema_zhname: value.schema_zhname,
+                schemaIds: value.schemaIds,
+            });
+        })
+
+        arrTitleIds.sort((a, b) => {
+            if (a.schema_zhname === b.schema_zhname) {
+                if (a.schema_id === b.schema_id) {
+                    return a.id >= b.id
+                } else {
+                    return a.schema_id >= b.schema_id
+                }
+            } else {
+                return a.schema_zhname >= b.schema_zhname
+            }
+        })
+
+        for (let i = 0; i < arrTitleIds.length; i++) {
+            let item = arrTitleIds[i];
+            let sid = item.id;
+            // 新增指标组，默认schema_id为空
+            let schemaId = item.schema_id === null ? this.gSchemaIdDefault : item.schema_id;
+            let schemaName = item.schema_zhname === null ? "" : item.schema_zhname;
+
+            if (schemaName === "") continue
+
+            if ((sv !== undefined) || (sv !== "")) {
+                if (schemaName.toLowerCase().indexOf(sv) < 0 && schemaId.toString().indexOf(sv) < 0) {
+                    if (!this.isFoundKpis(this.gMap.schemas.get(sid).kpis, sv)) continue
+                }
+            }
+
+            schemas.push(item);
+        }
+
+        return schemas;
+    }
+
+    // >>>>> dataSchemas to Map and antdTree
+    // ds: rest result, original database records, type is array
+    // sv: search value
+    dataSchemas2DsMapUiTree(ds, sv) {
         let myResult = {mapDs: new Map(), uiDs: []};
 
         for (let i = 0; i < ds.length; i++) {
@@ -362,6 +410,7 @@ export default class ServiceProject extends React.PureComponent {
                 let schemaClone = lodash.cloneDeep(item);
 
                 schemaClone.schema_id = schemaId;
+                schemaClone.schemaIds = this.splitSchemaId(schemaId);
                 schemaClone.kpis = [];
                 schemaClone.counters = [];
                 myResult.mapDs.set(sid, schemaClone)
@@ -370,7 +419,8 @@ export default class ServiceProject extends React.PureComponent {
                     key: schemaClone.id,
                     title: <div
                         className={"BoxSchemaTitle"}>{schemaClone.schema_id + " - " + schemaClone.schema_zhname}</div>,
-                    children: []
+                    children: [],
+                    tags: schemaClone.schemaIds,
                 }
                 myResult.uiDs.push(uiSchema);
             }
@@ -863,6 +913,10 @@ export default class ServiceProject extends React.PureComponent {
         this.gCurrent.projectKpi.kpi_ui_title = e.target.value;
     }
 
+    onInputSearchSchemasChanged(e) {
+        this.gCurrent.schemasFilterSearchValue = e.target.value;
+    }
+
     setProjectEditable(treeNodes, id) {
         for (let i = 0; i < treeNodes.length; i++) {
             if (treeNodes[i].key === id) {
@@ -1148,6 +1202,191 @@ export default class ServiceProject extends React.PureComponent {
         }
     }
 
+    async mapSchemas2AntdTreeData(schemas, conditions) {
+        let myResult = [];
+        let schemasFound = [];
+        let isFirst = true;
+
+        this.gRef.treeKpis.current.state.selectedKeys = [];
+        this.setState({
+            treeDataKpis: []
+        })
+
+        if (conditions === undefined) {
+            schemas.forEach((item) => {
+                let uiSchema = {
+                    key: item.id,
+                    title: item.schema_id + " - " + item.schema_zhname,
+                    children: []
+                };
+
+                myResult.push(uiSchema);
+            });
+        } else {
+            if (conditions.searchValue !== undefined) {
+                let sv = conditions.searchValue.trim().toLowerCase();
+                if (sv !== "") {
+                    if (sv.startsWith("变更：") || sv.startsWith("变更:")) {
+                        let svs = sv.replace(/\s+/g, " ").replace(/[：|:]+\s*/g, "： ").split(" ");
+                        let timeBegin = "";
+                        let timeEnd = "";
+
+                        if (svs.length === 3) {
+                            timeBegin = this.str2Time4ParamTimePairs(svs[1]);
+                            timeEnd = this.str2Time4ParamTimePairs(timeBegin, svs[2]);
+                        } else if (svs.length === 2) {
+                            timeBegin = moment().format("yyyy-MM-DD");
+                            if (svs[1] === "") svs[1] = "0";
+                            timeEnd = this.str2Time4ParamTimePairs(timeBegin, svs[1]);
+                        } else {
+                            this.context.showMessage("error");
+
+                            return
+                        }
+
+                        if ((timeBegin !== "无效") && (timeEnd !== "无效")) {
+                            let paramsKpiOlog = new KpiOlogParams();
+                            if (timeBegin < timeEnd) {
+                                paramsKpiOlog.tb = timeBegin;
+                                paramsKpiOlog.te = timeEnd;
+                            } else {
+                                paramsKpiOlog.tb = timeEnd;
+                                paramsKpiOlog.te = timeBegin;
+                            }
+
+                            paramsKpiOlog.te = moment(paramsKpiOlog.te, "YYYY-MM-DD").add(1, "days").format("YYYY-MM-DD");
+                            isFirst = false;
+                            schemasFound = await this.doGetMySchemasNew(this.context.user.name, paramsKpiOlog);
+                        } else {
+                            this.context.showMessage("error");
+                        }
+                    } else {
+                        isFirst = false;
+                        schemasFound = this.searchKpisNew(sv);
+                    }
+
+                } else {
+                    isFirst = false;
+                    schemasFound = this.searchKpisNew("");
+                }
+            }
+
+            if (conditions.schemaIds !== undefined) {
+                if (conditions.schemaIds.a1 !== undefined && conditions.schemaIds.a1 !== -99999) {
+                    if (isFirst) {
+                        isFirst = false;
+                        schemas.forEach((value) => {
+                            if (value.schemaIds.a1 === conditions.schemaIds.a1) {
+                                schemasFound.push(value);
+                            }
+                        });
+                    } else {
+                        let schemasFoundTemporary = [];
+                        schemasFound.forEach((value) => {
+                            if (value.schemaIds.a1 === conditions.schemaIds.a1) {
+                                schemasFoundTemporary.push(value);
+                            }
+                        });
+                        schemasFound = schemasFoundTemporary;
+                    }
+                }
+
+                if (conditions.schemaIds.a2 !== undefined && conditions.schemaIds.a2 !== -99999) {
+                    if (isFirst) {
+                        isFirst = false;
+                        schemas.forEach((value) => {
+                            if (value.schemaIds.a2 === conditions.schemaIds.a2) {
+                                schemasFound.push(value);
+                            }
+                        });
+                    } else {
+                        let schemasFoundTemporary = [];
+                        schemasFound.forEach((value) => {
+                            if (value.schemaIds.a2 === conditions.schemaIds.a2) {
+                                schemasFoundTemporary.push(value);
+                            }
+                        });
+                        schemasFound = schemasFoundTemporary;
+                    }
+                }
+
+                if (conditions.schemaIds.b1 !== undefined && conditions.schemaIds.b1 !== -99999) {
+                    if (isFirst) {
+                        isFirst = false;
+                        schemas.forEach((value) => {
+                            if (value.schemaIds.hasRegion && value.schemaIds.b1 === conditions.schemaIds.b1) {
+                                schemasFound.push(value);
+                            }
+                        });
+                    } else {
+                        let schemasFoundTemporary = [];
+                        schemasFound.forEach((value) => {
+                            if (value.schemaIds.hasRegion && value.schemaIds.b1 === conditions.schemaIds.b1) {
+                                schemasFoundTemporary.push(value);
+                            }
+                        });
+                        schemasFound = schemasFoundTemporary;
+                    }
+                }
+
+                if (conditions.schemaIds.b2 !== undefined && conditions.schemaIds.b2 !== -99999) {
+                    if (isFirst) {
+                        isFirst = false;
+                        schemas.forEach((value) => {
+                            if (value.schemaIds.hasRegion) {
+                                if (value.schemaIds.b2 === conditions.schemaIds.b2) {
+                                    schemasFound.push(value);
+                                }
+                            } else {
+                                if (value.schemaIds.b1 === conditions.schemaIds.b1) {
+                                    schemasFound.push(value);
+                                }
+                            }
+                        });
+                    } else {
+                        let schemasFoundTemporary = [];
+                        schemasFound.forEach((value) => {
+                            if (value.schemaIds.hasRegion) {
+                                if (value.schemaIds.b2 === conditions.schemaIds.b2) {
+                                    schemasFoundTemporary.push(value);
+                                }
+                            } else {
+                                if (value.schemaIds.b1 === conditions.schemaIds.b1) {
+                                    schemasFoundTemporary.push(value);
+                                }
+                            }
+                        });
+                        schemasFound = schemasFoundTemporary;
+                    }
+                }
+            }
+
+            if (isFirst) {
+                schemas.forEach((item) => {
+                    let uiSchema = {
+                        key: item.id,
+                        title: item.schema_id + " - " + item.schema_zhname,
+                        children: []
+                    };
+
+                    myResult.push(uiSchema);
+                });
+            } else {
+                schemasFound.forEach((item) => {
+                    let uiSchema = {
+                        key: item.id,
+                        title: item.schema_id + " - " + item.schema_zhname,
+                        children: []
+                    };
+
+                    myResult.push(uiSchema);
+                });
+            }
+        }
+
+        return myResult;
+    }
+
     showModal(what) {
         this.setState({
             isModalVisible: true,
@@ -1161,8 +1400,8 @@ export default class ServiceProject extends React.PureComponent {
             this.doGetKpiDict(),
             this.doGetObjectDefs(),
             this.doGetVendors(),
-            this.restGetProducts(),
-            this.restGetModules(),
+            // this.restGetProducts(),
+            // this.restGetModules(),
             this.doGetKpis(),
             this.doGetKpiSchemas(),
             this.restGetKpiCounters(),
@@ -1172,8 +1411,8 @@ export default class ServiceProject extends React.PureComponent {
             kpiDict,
             objectDefs,
             vendors,
-            products,
-            modules,
+            // products,
+            // modules,
             kpis,
             schemas,
             counters,
@@ -1182,21 +1421,22 @@ export default class ServiceProject extends React.PureComponent {
         ) => {
             let mapKpiDict = new Map();
             let mapObjectDefs = new Map();
-            let mapProducts = new Map();
+            // let mapProducts = new Map();
             let mapKpis = new Map();
             let mapProjectKpis = new Map();
 
             let dsKpiDict = kpiDict.data.data;
             let dsObjectDefs = objectDefs.data.data;
             let dsVendors = vendors.data.data;
-            let dsProducts = products.data.data;
-            let dsModules = modules.data.data;
+            // let dsProducts = products.data.data;
+            // let dsModules = modules.data.data;
             let dsKpis = kpis.data.data;
             let dsSchemas = schemas.data.data;
             let dsCounters = counters.data.data;
             let dsCommTrees = commTrees.data.data;
             let dsProjectKpis = projectKpis.data.data;
 
+            // 项目控件
             let treeDataProjects = [];
             for (let i = 0; i < dsCommTrees.length; i++) {
                 if (dsCommTrees[i].node_parent_id === -1) {
@@ -1213,7 +1453,7 @@ export default class ServiceProject extends React.PureComponent {
                 treeDataProjects: treeDataProjects
             })
 
-            // kpi dict ...
+            // 业务分类、时间粒度、空间粒度、网元类型控件
             dsKpiDict.forEach((item) => {
                 if (!mapKpiDict.has(item.type)) {
                     mapKpiDict.set(item.type, [item]);
@@ -1271,7 +1511,7 @@ export default class ServiceProject extends React.PureComponent {
                 }
             }
 
-            // 网元类型，网元细分类型控件
+            // 网元类型、网元细分类型控件
             let optionsObjectClass = [{label: "网元类型", value: -99999}];
             for (let i = 0; i < dsObjectDefs.length; i++) {
                 let item = dsObjectDefs[i];
@@ -1298,36 +1538,36 @@ export default class ServiceProject extends React.PureComponent {
             // 采集粒度控件
             let optionsIntervalFlag = [{label: "采集粒度", value: -99999}];
 
-            // 使用该指标的产品控件
-            let optionsProduct = [{label: "使用该指标的产品", value: -99999}];
-            for (let i = 0; i < dsProducts.length; i++) {
-                let item = dsProducts[i];
-                if (!mapProducts.has(item.product_id)) {
-                    mapProducts.set(item.product_id, {
-                        product_name: item.product_name,
-                        modules: []
-                    });
-                    optionsProduct.push({label: item.product_name, value: item.product_id});
-                }
-            }
+            // // 使用该指标的产品控件
+            // let optionsProduct = [{label: "使用该指标的产品", value: -99999}];
+            // for (let i = 0; i < dsProducts.length; i++) {
+            //     let item = dsProducts[i];
+            //     if (!mapProducts.has(item.product_id)) {
+            //         mapProducts.set(item.product_id, {
+            //             product_name: item.product_name,
+            //             modules: []
+            //         });
+            //         optionsProduct.push({label: item.product_name, value: item.product_id});
+            //     }
+            // }
+            //
+            // // 使用该指标的模块控件
+            // let optionsModule = [{label: "使用该指标的模块", value: -99999}];
+            // for (let i = 0; i < dsModules.length; i++) {
+            //     let item = dsModules[i];
+            //     if (mapProducts.has(item.product_id)) {
+            //         mapProducts.get(item.product_id).modules.push({
+            //             module_name: item.module_name,
+            //             module_id: item.module_id
+            //         });
+            //     }
+            // }
+            // this.gMap.products = mapProducts;
 
-            // 使用该指标的模块控件
-            let optionsModule = [{label: "使用该指标的模块", value: -99999}];
-            for (let i = 0; i < dsModules.length; i++) {
-                let item = dsModules[i];
-                if (mapProducts.has(item.product_id)) {
-                    mapProducts.get(item.product_id).modules.push({
-                        module_name: item.module_name,
-                        module_id: item.module_id
-                    });
-                }
-            }
-            this.gMap.products = mapProducts;
-
-            // schemas to gMap.schemas
+            // 指标组控件，指标组缓存
             let mySchemas = this.dataSchemas2DsMapUiTree(dsSchemas);
 
-            // kpis to gMap.kpis and gMap.schemas.kpis
+            // 指标控件，指标缓存
             for (let iKpi = 0; iKpi < dsKpis.length; iKpi++) {
                 let item = dsKpis[iKpi];
                 let kid = item.id;
@@ -1350,9 +1590,9 @@ export default class ServiceProject extends React.PureComponent {
                         mySchemas.mapDs.get(item.sid).kpis.push(myKpi.id);
                     }
                 }
-
             }
 
+            // 计数器缓存
             let mapCounters = new Map();
             dsCounters.forEach((item) => {
                 mapCounters.set(item.id, item);
@@ -1366,7 +1606,7 @@ export default class ServiceProject extends React.PureComponent {
             this.gMap.kpis = mapKpis;
             this.gMap.counters = mapCounters;
 
-            // project kpis
+            // 项目指标缓存
             dsProjectKpis.forEach((item) => {
                 if (!mapProjectKpis.has(item.pid)) {
                     mapProjectKpis.set(item.pid, [{id: item.id, kid: item.kid}]);
@@ -1389,8 +1629,8 @@ export default class ServiceProject extends React.PureComponent {
             dsKpiDict = null;
             dsObjectDefs = null;
             dsVendors = vendors;
-            dsProducts = null;
-            dsModules = null;
+            // dsProducts = null;
+            // dsModules = null;
             dsKpis = null;
             dsSchemas = null;
             dsCounters = null;
@@ -1400,8 +1640,8 @@ export default class ServiceProject extends React.PureComponent {
                 optionsObjectClass: optionsObjectClass,
                 optionsObjectSubClass: optionsObjectSubClass,
                 optionsIntervalFlag: optionsIntervalFlag,
-                optionsProduct: optionsProduct,
-                optionsModule: optionsModule,
+                // optionsProduct: optionsProduct,
+                // optionsModule: optionsModule,
             });
 
             this.setState({
@@ -1521,7 +1761,7 @@ export default class ServiceProject extends React.PureComponent {
             {headers: {'Content-Type': 'application/json'}})
     }
 
-    restGetKpiOlogs(params) {
+    async restGetKpiOlogs(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/get_kpi_ologs",
             params,
             {headers: {'Content-Type': 'application/json'}})
@@ -1677,6 +1917,92 @@ export default class ServiceProject extends React.PureComponent {
                 this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
             }
         });
+    }
+
+    // >>>>>> 过滤出符合条件的指标组，返回指标组对象集合
+    async doGetMySchemasNew(user, params) {
+        let myResult = [];
+        let result = await this.restGetKpiOlogs(params);
+
+        if (result.status === 200) {
+            if (result.data.success) {
+                let ologs = result.data.data;
+                let arrSchemas = [];
+                let arrSchemasDeleted = [];
+                let mapSchemas = new Map();
+                ologs.forEach((item) => {
+                    switch (item.object_type) {
+                        case "schema":
+                            if (item.operation !== "delete") {
+                                if (!mapSchemas.has(item.object_id)) {
+                                    mapSchemas.set(item.object_id, {});
+                                    arrSchemas.push({
+                                        id: item.object_id,
+                                        un: item.user_name,
+                                        op: item.operation,
+                                        et: item.event_time
+                                    })
+                                }
+                            } else {
+                                arrSchemasDeleted.push({
+                                    id: item.object_id,
+                                    un: item.user_name,
+                                    op: item.operation,
+                                    et: item.event_time
+                                })
+                            }
+                            break
+                        case "kpi":
+                            if (this.gMap.kpis.has(item.object_id)) {
+                                let sid = this.gMap.kpis.get(item.object_id).sid;
+                                if (!mapSchemas.has(sid)) {
+                                    mapSchemas.set(sid, {});
+                                    arrSchemas.push({
+                                        id: sid,
+                                        un: item.user_name,
+                                        op: "kpi_update",
+                                        et: item.event_time
+                                    })
+                                }
+                            }
+                            break
+                        case "counter":
+                            if (this.gMap.counters.has(item.object_id)) {
+                                let sid = this.gMap.counters.get(item.object_id).sid;
+                                if (!mapSchemas.has(sid)) {
+                                    mapSchemas.set(sid, {});
+                                    arrSchemas.push({
+                                        id: sid,
+                                        un: item.user_name,
+                                        op: "counter_update",
+                                        et: item.event_time
+                                    })
+                                }
+                            }
+                            break
+                        default:
+                            break
+                    }
+                });
+
+                arrSchemasDeleted.forEach((schemaDeleted) => {
+                    for (let i = 0; i < arrSchemas.length; i++) {
+                        let schema = arrSchemas[i];
+                        if (schema.id === schemaDeleted.id) {
+                            arrSchemas.splice(i, 1);
+                            break
+                        }
+                    }
+                });
+
+                arrSchemas.forEach((item) => {
+                    let schema = this.gMap.schemas.get(item.id);
+                    myResult.push(schema);
+                })
+            }
+        }
+
+        return myResult;
     }
 
     // >>>>> do Add Schema
@@ -1915,7 +2241,7 @@ export default class ServiceProject extends React.PureComponent {
 
     }
 
-    //todo <<<<< now >>>>> on tree project selected
+    //todo <<<<< now >>>>> on tree 项目 selected
     onTreeProjectsSelected(selectedKeys, info) {
         let treeDataProjectKpis = [];
 
@@ -1949,7 +2275,7 @@ export default class ServiceProject extends React.PureComponent {
         this.gCurrent.counterNames = [];
 
         if (info.selected) {
-            this.gRef.treeKpis.current.state.selectedKeys = [];     // 清除之前的选中项
+            this.gRef.treeKpis.current.state.selectedKeys = [];
 
             let sid = selectedKeys[0];
             let schema;
@@ -1972,7 +2298,6 @@ export default class ServiceProject extends React.PureComponent {
                 }
             });
 
-            console.log(schema);
             let sids = this.splitSchemaId(schema.schema_id);
 
             this.gCurrent.kpi = null;
@@ -2293,62 +2618,21 @@ export default class ServiceProject extends React.PureComponent {
 
     }
 
-    // >>>>> 搜索 SCHEMA & KPI
-    onInputSearchSchemasSearched(value, event) {
-        let sv = value;
-
-        if (sv !== null && sv !== undefined && sv.trim() !== "") {
-            if (sv.trim().startsWith("变更：") || sv.trim().startsWith("变更:")) {
-                let svs = sv.trim().toLowerCase().replace(/\s+/g, " ").replace(/[：|:]+\s*/g, "： ").split(" ");
-                let timeBegin = "";
-                let timeEnd = "";
-
-                if (svs.length === 3) {
-                    timeBegin = this.str2Time4ParamTimePairs(svs[1]);
-                    timeEnd = this.str2Time4ParamTimePairs(timeBegin, svs[2]);
-                } else if (svs.length === 2) {
-                    timeBegin = moment().format("yyyy-MM-DD");
-                    if (svs[1] === "") svs[1] = "0";
-                    timeEnd = this.str2Time4ParamTimePairs(timeBegin, svs[1]);
-                } else {
-                    this.context.showMessage("error");
-
-                    return
-                }
-
-                if ((timeBegin !== "无效") && (timeEnd !== "无效")) {
-                    let paramsKpiOlog = new KpiOlogParams();
-                    if (timeBegin < timeEnd) {
-                        paramsKpiOlog.tb = timeBegin;
-                        paramsKpiOlog.te = timeEnd;
-                    } else {
-                        paramsKpiOlog.tb = timeEnd;
-                        paramsKpiOlog.te = timeBegin;
-                    }
-
-                    paramsKpiOlog.te = moment(paramsKpiOlog.te, "YYYY-MM-DD").add(1, "days").format("YYYY-MM-DD");
-                    this.doGetMySchemas(this.context.user.name, paramsKpiOlog);
-                } else {
-                    this.context.showMessage("error");
-
-                    return
-                }
-            } else {
-                sv = sv.trim().toLowerCase();
-                let mySchemas = this.searchKpis(sv);
-
-                this.setState({
-                    treeDataKpis: [],
-                    treeDataKpiSchemas: mySchemas
-                })
+    // >>>>> on InputSearch 搜索 SCHEMA & KPI
+    async onInputSearchSchemasSearched(value, event) {
+        let treeDataKpiSchemas = await this.mapSchemas2AntdTreeData(this.gMap.schemas, {
+            searchValue: this.gCurrent.schemasFilterSearchValue,
+            schemaIds: {
+                a1: this.gCurrent.schemasFilterA1,
+                a2: this.gCurrent.schemasFilterA2,
+                b1: this.gCurrent.schemasFilterB1,
+                b2: this.gCurrent.schemasFilterB2
             }
+        });
 
-        } else {
-            this.setState({
-                treeDataKpis: [],
-                treeDataKpiSchemas: this.searchKpis("")
-            })
-        }
+        this.setState({
+            treeDataKpiSchemas: treeDataKpiSchemas
+        });
     }
 
     onSelectSchemaObjectClassChanged(v) {
@@ -2382,24 +2666,80 @@ export default class ServiceProject extends React.PureComponent {
         })
     }
 
-    //todo <<<<< now 4 >>>>> on select 筛选：业务分类 changed
-    onSelectFilterBusinessChanged(v) {
-        console.log(v);
+    // >>>>> on select 筛选：业务分类 changed
+    async onSelectFilterBusinessChanged(v) {
+        this.gCurrent.schemasFilterA1 = v;
+
+        let treeDataKpiSchemas = await this.mapSchemas2AntdTreeData(this.gMap.schemas, {
+            searchValue: this.gCurrent.schemasFilterSearchValue,
+            schemaIds: {
+                a1: this.gCurrent.schemasFilterA1,
+                a2: this.gCurrent.schemasFilterA2,
+                b1: this.gCurrent.schemasFilterB1,
+                b2: this.gCurrent.schemasFilterB2
+            }
+        });
+
+        this.setState({
+            treeDataKpiSchemas: treeDataKpiSchemas
+        });
     }
 
-    //todo <<<<< now 5 >>>>> on select 筛选：时间粒度 changed
-    onSelectFilterTimeChanged(v) {
-        console.log(v);
+    // >>>>> on select 筛选：时间粒度 changed
+    async onSelectFilterTimeChanged(v) {
+        this.gCurrent.schemasFilterA2 = v;
+
+        let treeDataKpiSchemas = await this.mapSchemas2AntdTreeData(this.gMap.schemas, {
+            searchValue: this.gCurrent.schemasFilterSearchValue,
+            schemaIds: {
+                a1: this.gCurrent.schemasFilterA1,
+                a2: this.gCurrent.schemasFilterA2,
+                b1: this.gCurrent.schemasFilterB1,
+                b2: this.gCurrent.schemasFilterB2
+            }
+        });
+
+        this.setState({
+            treeDataKpiSchemas: treeDataKpiSchemas
+        });
     }
 
-    //todo <<<<< now 6 >>>>> on select 筛选：空间粒度 changed
-    onSelectFilterRegionChanged(v) {
-        console.log(v);
+    // >>>>> on select 筛选：空间粒度 changed
+    async onSelectFilterRegionChanged(v) {
+        this.gCurrent.schemasFilterB1 = v;
+
+        let treeDataKpiSchemas = await this.mapSchemas2AntdTreeData(this.gMap.schemas, {
+            searchValue: this.gCurrent.schemasFilterSearchValue,
+            schemaIds: {
+                a1: this.gCurrent.schemasFilterA1,
+                a2: this.gCurrent.schemasFilterA2,
+                b1: this.gCurrent.schemasFilterB1,
+                b2: this.gCurrent.schemasFilterB2
+            }
+        });
+
+        this.setState({
+            treeDataKpiSchemas: treeDataKpiSchemas
+        });
     }
 
-    //todo <<<<< now 7 >>>>> on select 筛选：网元类型 changed
-    onSelectFilterObjectChanged(v) {
-        console.log(v);
+    // >>>>> on select 筛选：网元类型 changed
+    async onSelectFilterObjectChanged(v) {
+        this.gCurrent.schemasFilterB2 = v;
+
+        let treeDataKpiSchemas = await this.mapSchemas2AntdTreeData(this.gMap.schemas, {
+            searchValue: this.gCurrent.schemasFilterSearchValue,
+            schemaIds: {
+                a1: this.gCurrent.schemasFilterA1,
+                a2: this.gCurrent.schemasFilterA2,
+                b1: this.gCurrent.schemasFilterB1,
+                b2: this.gCurrent.schemasFilterB2
+            }
+        });
+
+        this.setState({
+            treeDataKpiSchemas: treeDataKpiSchemas
+        });
     }
 
     //todo >>>>> render
@@ -2493,7 +2833,7 @@ export default class ServiceProject extends React.PureComponent {
                             <div className="BoxTitle">【指标组指标】</div>
                             <div className="BoxButtons">
                                 <div className={"BoxSearch"}>
-                                    <Input.Search placeholder="Search" size="small" enterButton onSearch={this.onInputSearchSchemasSearched}/>
+                                    <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
                                 </div>
                                 <Button size={"small"} type={"primary"} icon={<CheckOutlined/>} onClick={this.onButtonInsertIntoProjectClicked}>移入</Button>
                             </div>
