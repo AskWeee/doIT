@@ -2,7 +2,7 @@ import React from 'react'
 import './DatabaseImport.scss'
 import axios from "axios";
 import GCtx from "../GCtx";
-import {Button, Checkbox, Select, Table, Tree, Tabs} from 'antd'
+import {Button, Checkbox, Select, Table, Tree, Tabs, Input} from 'antd'
 import {
     CaretDownOutlined,
     DeleteOutlined,
@@ -165,8 +165,8 @@ export default class DatabaseImport extends React.Component {
             lettersIgnoredTreeData: [],
             tablesIgnoredTreeData: [],
 
-            dbUsersSelectOptions: [{value: -1, label: "请选择"}],
-            connectionsSelectOptions: [{value: -1, label: "请选择"}],
+            dbUsersSelectOptions: [{value: -1, label: "请选择产品线数据库用户"}],
+            connectionsSelectOptions: [{value: -1, label: "请选择来源数据库"}],
             dbUsersSelected: -1,
             connectionsSelected: -1,
 
@@ -281,7 +281,7 @@ export default class DatabaseImport extends React.Component {
 
         this.gUi.treeProductsData = dataTreeProducts;
 
-        let connectionsSelectOptions = [{value: -1, label: "请选择"}];
+        let connectionsSelectOptions = [{value: -1, label: "请选择来源数据库"}];
         this.gData.connections.forEach((item) => {
             let option = {
                 value: item.connection_id,
@@ -843,7 +843,7 @@ export default class DatabaseImport extends React.Component {
     }
 
     showProductDbUsers() {
-        let dbUsersSelectOptions = [{value: -1, label: "请选择"}];
+        let dbUsersSelectOptions = [{value: -1, label: "请选择产品线数据库用户"}];
 
         this.gData.dbUsers.forEach((item) => {
             if (item.product_line_id === this.gCurrent.productLineId) {
@@ -1835,14 +1835,15 @@ export default class DatabaseImport extends React.Component {
             </div>
             <div className={"BoxKnown"}>
                 <div className={"BoxSelect"}>
-                    <Select ref={this.refSelectDbUsers}
-                            onChange={this.onSelectDbUsersChanged}
-                            defaultValue={this.state.dbUsersSelected}
-                            options={this.state.dbUsersSelectOptions}/>
+                    <Select ref={this.refSelectDbUsers} onChange={this.onSelectDbUsersChanged} defaultValue={this.state.dbUsersSelected} options={this.state.dbUsersSelectOptions}/>
                 </div>
                 <div className={"BoxToolbar"}>
-                    <Checkbox>分组显示</Checkbox>
-                    <Checkbox onChange={this.onCheckboxKnownTableDisplayChanged}>显示数据</Checkbox>
+                    <div className={"BoxSearch"}>
+                        <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
+                    </div>
+                    <Button size={"small"} type={"primary"} onClick={this.onButtonOutClicked} icon={<RightOutlined/>}>移除</Button>
+                    {/*<Checkbox>分组显示</Checkbox>*/}
+                    {/*<Checkbox onChange={this.onCheckboxKnownTableDisplayChanged}>显示数据</Checkbox>*/}
                 </div>
                 <div className={"BoxTreeAndTable"}>
                     <div className={"BoxList"}>
@@ -1877,22 +1878,27 @@ export default class DatabaseImport extends React.Component {
                     </div>
                 </div>
             </div>
-            <div className={"BoxButtons"}>
-                <Button onClick={this.onButtonInClicked} icon={<LeftOutlined/>}>导入结构</Button>
-                <Button onClick={this.onButtonImportClicked} icon={<DoubleLeftOutlined/>}>导入数据</Button>
-                <Button onClick={this.onButtonOutClicked} icon={<RightOutlined/>}>移除结构</Button>
-                <Button onClick={this.onButtonDeleteClicked} icon={<DoubleRightOutlined/>}>移除数据</Button>
-                <Button onClick={this.onButtonIsTempClicked} icon={<DeleteOutlined/>}>忽略</Button>
-                <Button onClick={this.onButtonIsNotTempClicked} icon={<CheckOutlined/>}>还原</Button>
-            </div>
+            {/*<div className={"BoxButtons"}>*/}
+            {/*    <Button onClick={this.onButtonInClicked} icon={<LeftOutlined/>}>导入结构</Button>*/}
+            {/*    <Button onClick={this.onButtonImportClicked} icon={<DoubleLeftOutlined/>}>导入数据</Button>*/}
+            {/*    <Button onClick={this.onButtonOutClicked} icon={<RightOutlined/>}>移除结构</Button>*/}
+            {/*    <Button onClick={this.onButtonDeleteClicked} icon={<DoubleRightOutlined/>}>移除数据</Button>*/}
+            {/*    <Button onClick={this.onButtonIsTempClicked} icon={<DeleteOutlined/>}>忽略</Button>*/}
+            {/*    <Button onClick={this.onButtonIsNotTempClicked} icon={<CheckOutlined/>}>还原</Button>*/}
+            {/*</div>*/}
             <div className={"BoxUnknown"}>
-                <Select
-                    onChange={this.onSelectConnectionsChanged}
-                    defaultValue={this.state.connectionsSelected}
-                    options={this.state.connectionsSelectOptions}/>
+                <div className={"BoxSelect"}>
+                    <Select onChange={this.onSelectConnectionsChanged} defaultValue={this.state.connectionsSelected} options={this.state.connectionsSelectOptions}/>
+                </div>
                 <div className={"BoxUnknownToolbar"}>
-                    <Checkbox>分组显示</Checkbox>
-                    <Checkbox onChange={this.onCheckboxUnknownTableDisplayChanged}>显示数据</Checkbox>
+                    <div className={"BoxSearch"}>
+                        <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
+                    </div>
+                    <Button size={"small"} type={"primary"} onClick={this.onButtonInClicked} icon={<LeftOutlined/>}>导入</Button>
+                    <Button size={"small"} type={"primary"} onClick={this.onButtonIsTempClicked} icon={<DeleteOutlined/>}>忽略</Button>
+                    <Button size={"small"} type={"primary"} onClick={this.onButtonIsNotTempClicked} icon={<CheckOutlined/>}>还原</Button>
+                    {/*<Checkbox>分组显示</Checkbox>*/}
+                    {/*<Checkbox onChange={this.onCheckboxUnknownTableDisplayChanged}>显示数据</Checkbox>*/}
                 </div>
                 <div className={"BoxUnknownTabs"}>
                     <Tabs
