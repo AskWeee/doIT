@@ -1,6 +1,7 @@
 import React from "react";
 
 const GCtx = React.createContext({
+    logs: [],
     user: {id: 1, name: 'KKK', online: true, host: "10.31.3.6" },
     users: [
         {id: 1, name: "KKK", online: true, host: "10.31.3.6"},
@@ -82,6 +83,8 @@ const GCtx = React.createContext({
     changeSubMenus2: () => {
     },
     showMessage: () => {
+    },
+    log: () => {
     },
 });
 

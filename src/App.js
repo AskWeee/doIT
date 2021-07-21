@@ -48,6 +48,7 @@ class App extends React.Component {
         this.onSubMenuMouseOut = this.onSubMenuMouseOut.bind(this);
         this.onBoxSubMenuMouseOut = this.onBoxSubMenuMouseOut.bind(this);
         this.onTest = this.onTest.bind(this);
+        this.log = this.log.bind(this);
     }
 
     componentDidMount() {
@@ -66,9 +67,16 @@ class App extends React.Component {
             })
         }, 100);
     }
+
+    log(info) {
+        this.context.logs.push(info);
+    }
+
     componentDidUpdate() {
         //!!!do not set state again.
+        this.context.log = this.log;
     }
+
 
     onRefContent(ref) {
         this.ComContent = ref;

@@ -12,7 +12,7 @@ import TadIndicator from "../entity/TadIndicator";
 import TadIndicatorCounter from "../entity/TadIndicatorCounter";
 import TadKpiCounter from "../entity/TadKpiCounter";
 import KpiOlogParams from "../params/KpiOlogParams";
-import {Button, Input, Select, Tree, Modal, Form, Tooltip,} from 'antd'
+import {Button, Input, Select, Tree, Modal, Form, Tooltip, Checkbox} from 'antd'
 import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, CloudDownloadOutlined, CloudUploadOutlined, CopyOutlined, MinusSquareOutlined, PlusOutlined, PlusSquareOutlined, SaveOutlined, QuestionCircleOutlined, EllipsisOutlined, EditOutlined, ShoppingCartOutlined,} from '@ant-design/icons'
 
 const {Option} = Select;
@@ -92,12 +92,11 @@ export default class ServicePerformance extends React.PureComponent {
             optionsSchemaIdA2: [{label: "时间粒度", value: -99999}],
             optionsSchemaIdB1: [{label: "空间粒度", value: -99999}],
             optionsSchemaIdB2: [{label: "网元类型", value: -99999}],
-            optionsVendor: [{label: "厂家", value: -99999}],
-            optionsObjectClass: [{label: "网元类型", value: -99999}],
-            optionsObjectSubClass: [{label: "网元细分类型", value: -99999}],
+            optionsVendor: [{label: "不区分厂家", value: -1}],
+            optionsObjectSubClass: [{label: "不区分网元细分类型", value: -1}],
             optionsIntervalFlag: [{label: "采集粒度", value: -99999}],
-            optionsProduct: [{label: "使用该指标的产品", value: -99999}],
-            optionsModule: [{label: "使用该指标的模块", value: -99999}],
+            // optionsProduct: [{label: "使用该指标的产品", value: -99999}],
+            // optionsModule: [{label: "使用该指标的模块", value: -99999}],
             formSchemaInitialValues: {
                 schemaId: "",
                 schemaIdA1: -99999,
@@ -105,23 +104,27 @@ export default class ServicePerformance extends React.PureComponent {
                 schemaIdB1: -99999,
                 schemaIdB2: -99999,
                 schemaZhName: "",
-                schemaVendor: -99999,
+                schemaVendor: -1,
                 schemaObjectClass: -99999,
-                schemaObjectSubClass: -99999,
+                schemaIsMo: 0,
+                schemaObjectSubClass: -1,
                 schemaIntervalFlag: -99999,
+                tabName: "",
                 counterTabName: "",
+                kpiTabName: "",
             },
             formKpiInitialValues: {
                 kpiId: "",
                 kpiZhName: "",
                 kpiEnName: "",
                 kpiAlarm: 1,
-                kpiFormat: 1,
+                kpiFormat: "",
                 kpiMinValue: "",
                 kpiMaxValue: "",
-                kpiUsedProduct: -99999,
-                kpiUsedModule: -99999,
-                kpiUsedTitle: "",
+                kpiUnit: "",
+                // kpiUsedProduct: -99999,
+                // kpiUsedModule: -99999,
+                // kpiUsedTitle: "",
                 kpiExp: "",
             },
 
@@ -191,6 +194,7 @@ export default class ServicePerformance extends React.PureComponent {
         this.onButtonChangeStyleLayoutClicked = this.onButtonChangeStyleLayoutClicked.bind(this);
         this.onButtonSchemasAddClicked = this.onButtonSchemasAddClicked.bind(this);
         this.onButtonSchemasCopyPasteClicked = this.onButtonSchemasCopyPasteClicked.bind(this);
+        this.onButtonSchemasImportClicked = this.onButtonSchemasImportClicked.bind(this);
         this.onButtonSchemasExportClicked = this.onButtonSchemasExportClicked.bind(this);
         this.onButtonSchemasResetClicked = this.onButtonSchemasResetClicked.bind(this);
         this.onButtonKpisAddClicked = this.onButtonKpisAddClicked.bind(this);
@@ -208,7 +212,7 @@ export default class ServicePerformance extends React.PureComponent {
         this.onInputKpiExpChanged = this.onInputKpiExpChanged.bind(this);
 
         this.onSelectSchemaIdChanged = this.onSelectSchemaIdChanged.bind(this);
-        this.onSelectSchemaObjectClassChanged = this.onSelectSchemaObjectClassChanged.bind(this);
+        //this.onSelectSchemaObjectClassChanged = this.onSelectSchemaObjectClassChanged.bind(this);
         this.onSelectKpiUsedProductChanged = this.onSelectKpiUsedProductChanged.bind(this);
 
         this.onFormSchemaPropertiesFinish = this.onFormSchemaPropertiesFinish.bind(this);
@@ -351,7 +355,7 @@ export default class ServicePerformance extends React.PureComponent {
 
                 let uiIndicator = {
                     key: myIndicator.id.toString(),
-                    title: myIndicator.indicator_zhname,
+                    title: <div className="BoxTreeNodeTitle">{myIndicator.indicator_zhname}</div>,
                     children: []
                 }
 
@@ -359,7 +363,7 @@ export default class ServicePerformance extends React.PureComponent {
                     mapCountersTemp.get(indicator.id).counters.forEach((counter) => {
                         uiIndicator.children.push({
                             key: indicator.id + "_" + counter.id,
-                            title: counter.counter_zhname,
+                            title: <div className="BoxTreeNodeTitle">{counter.counter_zhname + " - " + counter.counter_enname}</div>,
                             children: []
                         });
                     });
@@ -410,7 +414,7 @@ export default class ServicePerformance extends React.PureComponent {
 
             let uiSchema = {
                 key: item.id,
-                title: <div className={"BoxSchemaTitle"}>{item.schema_id + " - " + item.schema_zhname}</div>,
+                title: <div className={"BoxTreeNodeTitle"}>{item.schema_id + " - " + item.schema_zhname}</div>,
                 children: []
             }
 
@@ -450,7 +454,7 @@ export default class ServicePerformance extends React.PureComponent {
 
                 let uiSchema = {
                     key: schemaClone.id,
-                    title: <div className={"BoxSchemaTitle"}>{schemaClone.schema_id + " - " + schemaClone.schema_zhname}</div>,
+                    title: <div className={"BoxTreeNodeTitle"}>{schemaClone.schema_id + " - " + schemaClone.schema_zhname}</div>,
                     children: []
                 }
                 myResult.uiDs.push(uiSchema);
@@ -469,7 +473,7 @@ export default class ServicePerformance extends React.PureComponent {
             case "add":
                 treeDataKpiSchemas.push({
                     key: schema.id,
-                    title: <div className="BoxSchemaTitle">{schema.schema_id + " - " + schema.schema_zhname}</div>,
+                    title: <div className="BoxTreeNodeTitle">{schema.schema_id + " - " + schema.schema_zhname}</div>,
                 });
                 break
             case "clone":
@@ -477,7 +481,7 @@ export default class ServicePerformance extends React.PureComponent {
                     if (treeDataKpiSchemas[i].key === this.gCurrent.schema.id) {
                         treeDataKpiSchemas.splice(i + 1, 0, {
                             key: schema.id,
-                            title: schema.schema_id + " - " + schema.schema_zhname,
+                            title: <div className={"BoxTreeNodeTitle"}>{schema.schema_id + " - " + schema.schema_zhnam}</div>,
                         });
                         break
                     }
@@ -487,7 +491,7 @@ export default class ServicePerformance extends React.PureComponent {
                 for (let i = 0; i < treeDataKpiSchemas.length; i++) {
                     let item = treeDataKpiSchemas[i];
                     if (item.key === sid) {
-                        item.title = <div className="BoxSchemaTitle">{schema.schema_id + " - " + schema.schema_zhname}</div>;
+                        item.title = <div className="BoxTreeNodeTitle">{schema.schema_id + " - " + schema.schema_zhname}</div>;
                         break
                     }
                 }
@@ -499,7 +503,7 @@ export default class ServicePerformance extends React.PureComponent {
                     let kid = item.key;
                     let kpi = this.gMap.kpis.get(kid);
                     let kpi_id = schema.schema_id + kpi.kpi_id.substr(kpi.kpi_id.length - 2, 2);
-                    item.title = <div className="BoxKpiTitle">{kpi_id + " - " + kpi.kpi_zhname}</div>
+                    item.title = <div className="BoxTreeNodeTitle">{kpi_id + " - " + kpi.kpi_zhname}</div>
                 }
                 this.setState({
                     treeDataKpis: treeDataKpis
@@ -599,7 +603,7 @@ export default class ServicePerformance extends React.PureComponent {
 
                 let uiKpi = {
                     key: kpi.id,
-                    title: <div className="BoxKpiTitle">{kpi.kpi_id + " - " + kpi.kpi_zhname}</div>,
+                    title: <div className="BoxTreeNodeTitle">{kpi.kpi_id + " - " + kpi.kpi_zhname}</div>,
                     children: []
                 }
 
@@ -617,7 +621,7 @@ export default class ServicePerformance extends React.PureComponent {
                 for (let i = 0; i < treeDataKpis.length; i++) {
                     let item = treeDataKpis[i];
                     if (item.key === kpi.id) {
-                        item.title = <div className="BoxKpiTitle">{kpi.kpi_id + " - " + kpi.kpi_zhname}</div>
+                        item.title = <div className="BoxTreeNodeTitle">{kpi.kpi_id + " - " + kpi.kpi_zhname}</div>
                         break
                     }
                 }
@@ -712,7 +716,8 @@ export default class ServicePerformance extends React.PureComponent {
 
                 let uiCounter = {
                     key: counters.id,
-                    title: counters.counter_zhname + " - " + counters.counter_enname,
+                    // title: <div className={"BoxTreeNodeTitle"}>{counters.counter_zhname + " - " + counters.counter_enname}</div>,
+                    title: <div className={"BoxTreeNodeTitle"}>{counters.counter_field + " - " + counters.counter_enname}</div>,
                     children: []
                 }
 
@@ -809,6 +814,7 @@ export default class ServicePerformance extends React.PureComponent {
         return myResult;
     }
 
+    //todo <<<<< >>>>> import indicator form excel
     doGetExcel() {
         axios.get('data/counter_001.xlsx', {responseType: 'arraybuffer'}).then(res => {
             let wb = XLSX.read(res.data, {type: 'array'});
@@ -1106,11 +1112,13 @@ export default class ServicePerformance extends React.PureComponent {
                     optionsSchemaIdB1: options
                 })
             }
+            let optionsObjectSubClass = [{label: "不区分网元细分类型", value: -1}];
             if (this.gMap.kpiDict.has(1023)) {
                 let options = [{label: "网元类型", value: -99999}];
                 this.gMap.kpiDict.get(1023).forEach((value, key) => {
                     if (!this.gSchemaIdRegionCodes.includes(value.id)) {
                         options.push({label: value.txt, value: value.id});
+                        optionsObjectSubClass.push({label: value.txt, value: value.id});
                     }
                 });
                 this.setState({
@@ -1119,7 +1127,7 @@ export default class ServicePerformance extends React.PureComponent {
             }
 
             // 厂家控件
-            let optionsVendor = [{label: "厂家", value: -99999}, {label: "不区分厂家", value: -1}];
+            let optionsVendor = [{label: "不区分厂家", value: -1}];
             for (let i = 0; i < dsVendors.length; i++) {
                 if (dsVendors[i].type >= 0 && dsVendors[i].type <= 99) {
                     optionsVendor.push({label: dsVendors[i].zh_name, value: dsVendors[i].type});
@@ -1127,7 +1135,9 @@ export default class ServicePerformance extends React.PureComponent {
             }
 
             // 网元类型，网元细分类型控件
-            let optionsObjectClass = [{label: "网元类型", value: -99999}];
+            // let optionsIsMo = [{label: "MO指标组", value: -99999}];
+            // optionsIsMo.push({label: "非MO指标组", value: 0});
+            // optionsIsMo.push({label: "是MO指标组", value: 1});
             for (let i = 0; i < dsObjectDefs.length; i++) {
                 let item = dsObjectDefs[i];
                 if (!mapObjectDefs.has(item.network_type)) {
@@ -1138,7 +1148,7 @@ export default class ServicePerformance extends React.PureComponent {
                             className: item.object_name,
                         }]
                     });
-                    optionsObjectClass.push({label: item.network_type_name, value: item.network_type});
+                    //optionsIsMo.push({label: item.network_type_name, value: item.network_type});
                 } else {
                     mapObjectDefs.get(item.network_type).subClasses.push({
                         objectClass: item.object_class,
@@ -1148,36 +1158,35 @@ export default class ServicePerformance extends React.PureComponent {
             }
             this.gMap.objectDefs = mapObjectDefs;
 
-            let optionsObjectSubClass = [{label: "网元细分类型", value: -99999}];
 
             // 采集粒度控件
-            let optionsIntervalFlag = [{label: "采集粒度", value: -99999}];
+            // let optionsIntervalFlag = [{label: "采集粒度", value: -99999}];
 
             // 使用该指标的产品控件
-            let optionsProduct = [{label: "使用该指标的产品", value: -99999}];
-            for (let i = 0; i < dsProducts.length; i++) {
-                let item = dsProducts[i];
-                if (!mapProducts.has(item.product_id)) {
-                    mapProducts.set(item.product_id, {
-                        product_name: item.product_name,
-                        modules: []
-                    });
-                    optionsProduct.push({label: item.product_name, value: item.product_id});
-                }
-            }
+            // let optionsProduct = [{label: "使用该指标的产品", value: -99999}];
+            // for (let i = 0; i < dsProducts.length; i++) {
+            //     let item = dsProducts[i];
+            //     if (!mapProducts.has(item.product_id)) {
+            //         mapProducts.set(item.product_id, {
+            //             product_name: item.product_name,
+            //             modules: []
+            //         });
+            //         optionsProduct.push({label: item.product_name, value: item.product_id});
+            //     }
+            // }
 
             // 使用该指标的模块控件
-            let optionsModule = [{label: "使用该指标的模块", value: -99999}];
-            for (let i = 0; i < dsModules.length; i++) {
-                let item = dsModules[i];
-                if (mapProducts.has(item.product_id)) {
-                    mapProducts.get(item.product_id).modules.push({
-                        module_name: item.module_name,
-                        module_id: item.module_id
-                    });
-                }
-            }
-            this.gMap.products = mapProducts;
+            // let optionsModule = [{label: "使用该指标的模块", value: -99999}];
+            // for (let i = 0; i < dsModules.length; i++) {
+            //     let item = dsModules[i];
+            //     if (mapProducts.has(item.product_id)) {
+            //         mapProducts.get(item.product_id).modules.push({
+            //             module_name: item.module_name,
+            //             module_id: item.module_id
+            //         });
+            //     }
+            // }
+            // this.gMap.products = mapProducts;
 
             // 规范指标集
             let myIndicators = this.dataIndicators2DsMapUiTree(dsIndicators, dsIndicatorCounters);
@@ -1238,11 +1247,11 @@ export default class ServicePerformance extends React.PureComponent {
 
             this.setState({
                 optionsVendor: optionsVendor,
-                optionsObjectClass: optionsObjectClass,
+                // optionsIsMo: optionsIsMo,
                 optionsObjectSubClass: optionsObjectSubClass,
-                optionsIntervalFlag: optionsIntervalFlag,
-                optionsProduct: optionsProduct,
-                optionsModule: optionsModule,
+                // optionsIntervalFlag: optionsIntervalFlag,
+                // optionsProduct: optionsProduct,
+                // optionsModule: optionsModule,
             });
 
             this.setState({
@@ -1443,7 +1452,7 @@ export default class ServicePerformance extends React.PureComponent {
                         let schema = this.gMap.schemas.get(item.id);
                         let uiSchema = {
                             key: item.id,
-                            title: schema.schema_id + " - " + schema.schema_zhname,
+                            title: <div className={"BoxTreeNodeTitle"}>{schema.schema_id + " - " + schema.schema_zhname}</div>,
                             children: []
                         }
                         mySchemas.push(uiSchema);
@@ -1683,7 +1692,7 @@ export default class ServicePerformance extends React.PureComponent {
                     let kpi = this.gMap.kpis.get(kid);
                     let uiKpi = {
                         key: kpi.id,
-                        title: <div className={"BoxKpiTitle"}>{kpi.kpi_id + " - " + kpi.kpi_zhname}</div>,
+                        title: <div className={"BoxTreeNodeTitle"}>{kpi.kpi_id + " - " + kpi.kpi_zhname}</div>,
                         children: []
                     }
                     let index = parseInt(kpi.kpi_id?.substr(kpi.kpi_id.length - 2, 2)) - 1;
@@ -1696,7 +1705,8 @@ export default class ServicePerformance extends React.PureComponent {
                     let counter = this.gMap.counters.get(cid);
                     uiKpiCounters.push({
                         key: counter.id,
-                        title: <div className={"BoxCounterTitle"}>{counter.counter_zhname + " - " + counter.counter_enname}</div>,
+                        // title: <div className={"BoxTreeNodeTitle"}>{counter.counter_zhname + " - " + counter.counter_enname}</div>,
+                        title: <div className={"BoxTreeNodeTitle"}>{counter.counter_field + " - " + counter.counter_enname}</div>,
                         children: []
                     })
                     this.gCurrent.counterNames.push(counter.counter_enname);
@@ -1791,7 +1801,7 @@ export default class ServicePerformance extends React.PureComponent {
             let kpi = this.gMap.kpis.get(this.gCurrent.schema.kpis[i].id);
             treeDataKpis.push({
                 key: this.gCurrent.schema.kpis[i].id,
-                title: kpi.kpi_id + " - " + kpi.kpi_zhname,
+                title: <div className={"BoxTreeNodeTitle"}>{kpi.kpi_id + " - " + kpi.kpi_zhname}</div>,
             })
         }
 
@@ -1908,6 +1918,10 @@ export default class ServicePerformance extends React.PureComponent {
         let sid = this.gCurrent.schema.id;
         let schema = lodash.cloneDeep(this.gMap.schemas.get(sid));
         this.doCloneSchema(schema);
+    }
+
+    onButtonSchemasImportClicked(e) {
+        this.context.showMessage("导入指标组，开发中...");
     }
 
     onButtonSchemasExportClicked(e) {
@@ -2331,8 +2345,8 @@ export default class ServicePerformance extends React.PureComponent {
         schema.id = this.gCurrent.schema.id;
         schema.schema_id = values.schemaId;
         schema.schema_zhname = values.schemaZhName;
-        schema.vendor_id = values.schemaVendor === -99999 ? null : values.schemaVendor;
-        schema.object_class = values.schemaObjectClass === -99999 ? null : values.schemaObjectClass;
+        schema.vendor_id = values.schemaVendor;
+        //schema.object_class = values.schemaObjectClass === -99999 ? null : values.schemaObjectClass;
         schema.sub_class = values.schemaObjectSubClass === -99999 ? null : values.schemaObjectSubClass;
         schema.interval_flag = values.schemaIntervalFlag === -99999 ? null : values.schemaIntervalFlag;
         schema.counter_tab_name = values.counterTabName;
@@ -2437,7 +2451,7 @@ export default class ServicePerformance extends React.PureComponent {
             schemaIdB2: schema.schemaIdB2,
             schemaZhName: schema.schema_zhname,
             schemaVendor: schema.vendor_id,
-            schemaObjectClass: schema.object_class,
+            //schemaObjectClass: schema.object_class,
             schemaObjectSubClass: schema.sub_class,
             schemaIntervalFlag: schema.interval_flag,
             counterTabName: schema.counter_tab_name,
@@ -2461,20 +2475,20 @@ export default class ServicePerformance extends React.PureComponent {
         this.doDisplayExpression(kpi.kpi_exp);
     }
 
-    onSelectSchemaObjectClassChanged(v) {
-        let optionsObjectSubClass = [{label: "网元细分类型", value: -99999}];
-        if (this.gMap.objectDefs.has(v)) {
-            this.gMap.objectDefs.get(v).subClasses.forEach((item) => {
-                optionsObjectSubClass.push({
-                    label: item.className,
-                    value: item.objectClass
-                })
-            });
-        }
-        this.setState({
-            optionsObjectSubClass: optionsObjectSubClass
-        })
-    }
+    // onSelectSchemaObjectClassChanged(v) {
+    //     let optionsObjectSubClass = [{label: "网元细分类型", value: -99999}];
+    //     if (this.gMap.objectDefs.has(v)) {
+    //         this.gMap.objectDefs.get(v).subClasses.forEach((item) => {
+    //             optionsObjectSubClass.push({
+    //                 label: item.className,
+    //                 value: item.objectClass
+    //             })
+    //         });
+    //     }
+    //     this.setState({
+    //         optionsObjectSubClass: optionsObjectSubClass
+    //     })
+    // }
 
     onSelectKpiUsedProductChanged(v) {
         let optionsModule = [{label: "使用该指标的模块", value: -99999}];
@@ -2499,13 +2513,14 @@ export default class ServicePerformance extends React.PureComponent {
                 <div className={"BoxSchemasAndIndicators"}>
                     <div className={"BoxSchemas"}>
                         <div className={"BoxTitleBar"}>
-                            <div className={this.state.styleLayout === "NN" ? "BoxTitle" : "BoxTitle BoxHidden"}>指标组</div>
+                            <div className={this.state.styleLayout === "NN" ? "BoxTitle" : "BoxTitle BoxHidden"}><Checkbox>指标组</Checkbox></div>
                             <div className={this.state.styleLayout === "NN" ? "BoxButtons" : "BoxButtons BoxHidden"}>
                                 <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonSchemasAddClicked}>新增</Button>
                                 <Button size={"small"} type={"primary"} icon={<CopyOutlined/>} onClick={this.onButtonSchemasCopyPasteClicked}>复制</Button>
                                 <Button size={"small"} type={"primary"} icon={<MinusSquareOutlined/>} onClick={() => {
                                     this.showModal("删除指标组")
                                 }}>删除</Button>
+                                <Button size={"small"} type={"primary"} icon={<CloudUploadOutlined/>} onClick={this.onButtonSchemasImportClicked}>导入</Button>
                                 <Button size={"small"} type={"primary"} icon={<CloudDownloadOutlined/>} onClick={this.onButtonSchemasExportClicked}>导出</Button>
                             </div>
                             <div>
@@ -2516,22 +2531,31 @@ export default class ServicePerformance extends React.PureComponent {
                             <div className={"BoxSearch"}>
                                 <Input.Search placeholder="Search" enterButton onSearch={this.onInputSearchSchemasSearched}/>
                             </div>
+                            <div className={"BoxButtons"}>
+                                {/*<div className="BoxTitle">筛选：</div>*/}
+                                <Select className="clsSelect" size="small" options={this.state.optionsSchemaIdA1} defaultValue={-99999} onChange={this.onSelectFilterBusinessChanged}/>
+                                <Select className="clsSelect" size="small" options={this.state.optionsSchemaIdA2} defaultValue={-99999} onChange={this.onSelectFilterTimeChanged}/>
+                                <Select className="clsSelect" size="small" options={this.state.optionsSchemaIdB1} defaultValue={-99999} onChange={this.onSelectFilterRegionChanged}/>
+                                <Select className="clsSelect" size="small" options={this.state.optionsSchemaIdB2} defaultValue={-99999} onChange={this.onSelectFilterObjectChanged}/>
+                            </div>
+
                             <div ref={this.gRef.boxTreeSchemas} className={"BoxTreeInstance"}>
-                                <Tree ref={this.gRef.treeSchemas} treeData={this.state.treeDataKpiSchemas} onSelect={this.onTreeKpiSchemasSelected} height={this.state.treeSchemasHeight} defaultExpandAll={true} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} switcherIcon={<CaretDownOutlined/>}/>
+                                <Tree ref={this.gRef.treeSchemas} treeData={this.state.treeDataKpiSchemas} onSelect={this.onTreeKpiSchemasSelected} height={this.state.treeSchemasHeight} checkable={true} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} switcherIcon={<CaretDownOutlined/>}/>
                             </div>
                         </div>
                     </div>
                     <div className="BoxIndicators">
                         <div className="BoxTitleBar">
-                            <div className={this.state.styleLayout === "NN" ? "BoxTitle" : "BoxTitle BoxHidden"}>规范指标集</div>
+                            {this.state.styleLayout !== "NN" && <div className="clsHSpace">&nbsp;</div>}
+                            <div className={this.state.styleLayout === "NN" ? "BoxTitle" : "BoxTitle BoxHidden"}><Checkbox>规范指标集</Checkbox></div>
                             <div className={this.state.styleLayout === "NN" ? "BoxButtons" : "BoxButtons BoxHidden"}>
                                 <Button size="small" type={"primary"} icon={<CloudUploadOutlined/>} onClick={this.onButtonIndicatorsCopy2CountersClicked}>移入指标组</Button>
                                 <Button size="small" type={"primary"} icon={<CloudUploadOutlined/>} onClick={this.onButtonIndicatorsImportClicked}>导入</Button>
                                 <Button size="small" type={"primary"} icon={<CloudDownloadOutlined/>} onClick={this.onButtonIndicatorsExportClicked}>导出</Button>
                             </div>
-                            <div>
-                                <Button size="small" type={"ghost"} icon={<EllipsisOutlined/>}/>
-                            </div>
+                            {/*<div>*/}
+                            {/*    <Button size="small" type={"ghost"} icon={<EllipsisOutlined/>}/>*/}
+                            {/*</div>*/}
                         </div>
                         <div className={this.state.styleLayout === "NN" ? "BoxTree" : "BoxTree BoxHidden"}>
                             <div className={"BoxSearch"}>
@@ -2547,9 +2571,9 @@ export default class ServicePerformance extends React.PureComponent {
                     <div className="BoxKpisAndCounters">
                         <div className={"BoxKpis"}>
                             <div className={"BoxTitleBar"}>
-                                <div className={"BoxTitle"}>指标</div>
+                                <div className={"BoxTitle"}><Checkbox>指标</Checkbox></div>
                                 <div className={"BoxButtons"}>
-                                    <Button size={"small"} type={"primary"} icon={<ShoppingCartOutlined/>} onClick={this.onButtonKpisShoppingClicked}>购物车</Button>
+                                    {/*<Button size={"small"} type={"primary"} icon={<ShoppingCartOutlined/>} onClick={this.onButtonKpisShoppingClicked}>加入导出</Button>*/}
                                     <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonKpisAddClicked}>新增</Button>
                                     <Button size={"small"} type={"primary"} icon={<MinusSquareOutlined/>} onClick={() => {
                                         this.showModal("删除指标")
@@ -2558,13 +2582,13 @@ export default class ServicePerformance extends React.PureComponent {
                             </div>
                             <div className={"BoxTree"}>
                                 <div className={"BoxTreeInstance"}>
-                                    <Tree ref={this.gRef.treeKpis} treeData={this.state.treeDataKpis} onSelect={this.onTreeKpisSelected} onDrop={this.onTreeKpisDrop} checkable blockNode draggable showIcon showLine={{showLeafIcon: false}} switcherIcon={<CaretDownOutlined/>}/>
+                                    <Tree ref={this.gRef.treeKpis} treeData={this.state.treeDataKpis} onSelect={this.onTreeKpisSelected} onDrop={this.onTreeKpisDrop} checkable={true} blockNode={true} showIcon={true} showLine={{showLeafIcon: false}} switcherIcon={<CaretDownOutlined/>}/>
                                 </div>
                             </div>
                         </div>
                         <div className={"BoxCounters"}>
                             <div className={"BoxTitleBar"}>
-                                <div className={"BoxTitle"}>原始指标</div>
+                                <div className={"BoxTitle"}><Checkbox>原始统计项</Checkbox></div>
                                 <div className={"BoxButtons"}>
                                     <Button size={"small"} type={"primary"} icon={<EditOutlined/>} onClick={this.onButtonInsertIntoKpiExpClicked}>复制到剪贴板</Button>
                                     <Button size={"small"} type={"primary"} icon={<MinusSquareOutlined/>} onClick={() => {
@@ -2574,7 +2598,7 @@ export default class ServicePerformance extends React.PureComponent {
                             </div>
                             <div className={"BoxTree"}>
                                 <div className={"BoxTreeInstance"}>
-                                    <Tree ref={this.gRef.treeCounters} treeData={this.state.treeDataKpiCounters} onSelect={this.onTreeKpiCountersSelected} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} switcherIcon={<CaretDownOutlined/>}/>
+                                    <Tree ref={this.gRef.treeCounters} treeData={this.state.treeDataKpiCounters} onSelect={this.onTreeKpiCountersSelected} checkable={true} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} switcherIcon={<CaretDownOutlined/>}/>
                                 </div>
                             </div>
                         </div>
@@ -2591,6 +2615,14 @@ export default class ServicePerformance extends React.PureComponent {
                                 </div>
                             </div>
                             <div className="BoxPropertiesSchema">
+                                <div>
+                                    <Form.Item className="BoxFormItemInput">
+                                        <Form.Item name="schemaZhName" noStyle><Input/></Form.Item>
+                                        <Tooltip placement="topLeft" title="输入指标组中文名称" arrowPointAtCenter>
+                                            <div className="input-icon"><QuestionCircleOutlined/></div>
+                                        </Tooltip>
+                                    </Form.Item>
+                                </div>
                                 <div className={"BoxSchemaIds"}>
                                     <Form.Item name="schemaIdA1" className="BoxFormItemInput">
                                         <Select options={this.state.optionsSchemaIdA1} onChange={(e) => {
@@ -2607,10 +2639,19 @@ export default class ServicePerformance extends React.PureComponent {
                                             this.onSelectSchemaIdChanged(e, "b1");
                                         }}/>
                                     </Form.Item>
-                                    <Form.Item name="schemaIdB2" className="BoxFormItemInput">
+                                </div>
+                                <div className={"BoxSchemaIds"}>
+
+                                <Form.Item name="schemaIdB2" className="BoxFormItemInput">
                                         <Select options={this.state.optionsSchemaIdB2} onChange={(e) => {
                                             this.onSelectSchemaIdChanged(e, "b2");
                                         }}/>
+                                    </Form.Item>
+                                    <Form.Item name="schemaObjectSubClass" className="BoxFormItemInput">
+                                        <Select options={this.state.optionsObjectSubClass}/>
+                                    </Form.Item>
+                                    <Form.Item name="schemaVendor" className="BoxFormItemInput">
+                                        <Select options={this.state.optionsVendor}/>
                                     </Form.Item>
                                     {/*<Select defaultValue={-99999} value={this.state.selectedSchema.schemaIdA1} options={this.state.optionsSchemaIdA1} onChange={(e) => {*/}
                                     {/*    this.onSelectSchemaIdChanged(e, "a1")*/}
@@ -2625,30 +2666,33 @@ export default class ServicePerformance extends React.PureComponent {
                                     {/*    this.onSelectSchemaIdChanged(e, "b2")*/}
                                     {/*}}/>*/}
                                 </div>
-                                <div>
+                                <div className="BoxSchemaName">
                                     <Form.Item className="BoxFormItemInput">
                                         <Form.Item name="schemaZhName" noStyle><Input/></Form.Item>
                                         <Tooltip placement="topLeft" title="输入指标组中文名称" arrowPointAtCenter>
                                             <div className="input-icon"><QuestionCircleOutlined/></div>
                                         </Tooltip>
                                     </Form.Item>
-                                </div>
-                                <div className={"BoxVendorObjectClass"}>
-                                    <Form.Item name="schemaVendor" className="BoxFormItemInput">
-                                        <Select options={this.state.optionsVendor}/>
-                                    </Form.Item>
-                                    <Form.Item name="schemaObjectClass" className="BoxFormItemInput">
-                                        <Select options={this.state.optionsObjectClass}
-                                                onChange={this.onSelectSchemaObjectClassChanged}/>
-                                    </Form.Item>
-                                    <Form.Item name="schemaObjectSubClass" className="BoxFormItemInput">
-                                        <Select options={this.state.optionsObjectSubClass}/>
-                                    </Form.Item>
-                                    <Form.Item name="schemaIntervalFlag" className="BoxFormItemInput">
-                                        <Select options={this.state.optionsIntervalFlag}/>
+                                    <Form.Item name="schemaIsMo" className="BoxFormItemInput">
+                                        <Select>
+                                            <Option value={0}>非MO指标组</Option>
+                                            <Option value={1}>是MO指标组</Option>
+                                        </Select>
+                                        {/*<Checkbox className="antdCheckbox">MO指标组</Checkbox>*/}
                                     </Form.Item>
                                 </div>
-                                <div>
+                                {/*<div className={"BoxVendorObjectClass"}>*/}
+                                {/*    /!*<Form.Item name="schemaIntervalFlag" className="BoxFormItemInput">*!/*/}
+                                {/*    /!*    <Select options={this.state.optionsIntervalFlag}/>*!/*/}
+                                {/*    /!*</Form.Item>*!/*/}
+                                {/*</div>*/}
+                                <div className="BoxTabNames">
+                                    <Form.Item className="BoxFormItemInput">
+                                        <Form.Item name="counterTabName" noStyle><Input/></Form.Item>
+                                        <Tooltip placement="topLeft" title="输入指标组统计数据存储表名称" arrowPointAtCenter>
+                                            <div className="input-icon"><QuestionCircleOutlined/></div>
+                                        </Tooltip>
+                                    </Form.Item>
                                     <Form.Item className="BoxFormItemInput">
                                         <Form.Item name="counterTabName" noStyle><Input/></Form.Item>
                                         <Tooltip placement="topLeft" title="输入指标组统计数据存储表名称" arrowPointAtCenter>
@@ -2690,11 +2734,17 @@ export default class ServicePerformance extends React.PureComponent {
                                             <Option value={1}>发送告警</Option>
                                         </Select>
                                     </Form.Item>
-                                    <Form.Item name="kpiFormat" className="BoxFormItemInput">
-                                        <Select>
-                                            <Option value={0}>不指定格式</Option>
-                                            <Option value={1}>格式：R2</Option>
-                                        </Select>
+                                    {/*<Form.Item name="kpiFormat" className="BoxFormItemInput">*/}
+                                    {/*    <Select>*/}
+                                    {/*        <Option value={0}>不指定格式</Option>*/}
+                                    {/*        <Option value={1}>格式：R2</Option>*/}
+                                    {/*    </Select>*/}
+                                    {/*</Form.Item>*/}
+                                    <Form.Item className="BoxFormItemInput">
+                                        <Form.Item name="kpiFormat" noStyle><Input/></Form.Item>
+                                        <Tooltip placement="topLeft" title="输入指标数据格式" arrowPointAtCenter>
+                                            <div className="input-icon"><QuestionCircleOutlined/></div>
+                                        </Tooltip>
                                     </Form.Item>
                                     <Form.Item className="BoxFormItemInput">
                                         <Form.Item name="kpiMinValue" noStyle><Input/></Form.Item>
@@ -2708,24 +2758,30 @@ export default class ServicePerformance extends React.PureComponent {
                                             <div className="input-icon"><QuestionCircleOutlined/></div>
                                         </Tooltip>
                                     </Form.Item>
+                                    <Form.Item className="BoxFormItemInput">
+                                        <Form.Item name="kpiUnit" noStyle><Input/></Form.Item>
+                                        <Tooltip placement="topLeft" title="输入指标数据单位" arrowPointAtCenter>
+                                            <div className="input-icon"><QuestionCircleOutlined/></div>
+                                        </Tooltip>
+                                    </Form.Item>
                                 </div>
-                                <div className={"BoxUsedInfo"}>
-                                    <div className={"BoxProductModuleName"}>
-                                        <Form.Item name="kpiUsedProduct" className="BoxFormItemInput">
-                                            <Select options={this.state.optionsProduct} onChange={this.onSelectKpiUsedProductChanged}/>
-                                        </Form.Item>
-                                        <Form.Item name="kpiUsedModule" className="BoxFormItemInput">
-                                            <Select options={this.state.optionsModule}/>
-                                        </Form.Item>
-                                        <Form.Item className="BoxFormItemInput">
-                                            <Form.Item name="kpiUsedTitle" noStyle><Input/></Form.Item>
-                                            <Tooltip placement="topLeft" title="输入该指标在界面上的显示标题" arrowPointAtCenter>
-                                                <div className="input-icon"><QuestionCircleOutlined/></div>
-                                            </Tooltip>
-                                        </Form.Item>
-                                        <Button icon={<PlusOutlined/>}/>
-                                    </div>
-                                </div>
+                                {/*<div className={"BoxUsedInfo"}>*/}
+                                {/*    <div className={"BoxProductModuleName"}>*/}
+                                {/*        <Form.Item name="kpiUsedProduct" className="BoxFormItemInput">*/}
+                                {/*            <Select options={this.state.optionsProduct} onChange={this.onSelectKpiUsedProductChanged}/>*/}
+                                {/*        </Form.Item>*/}
+                                {/*        <Form.Item name="kpiUsedModule" className="BoxFormItemInput">*/}
+                                {/*            <Select options={this.state.optionsModule}/>*/}
+                                {/*        </Form.Item>*/}
+                                {/*        <Form.Item className="BoxFormItemInput">*/}
+                                {/*            <Form.Item name="kpiUsedTitle" noStyle><Input/></Form.Item>*/}
+                                {/*            <Tooltip placement="topLeft" title="输入该指标在界面上的显示标题" arrowPointAtCenter>*/}
+                                {/*                <div className="input-icon"><QuestionCircleOutlined/></div>*/}
+                                {/*            </Tooltip>*/}
+                                {/*        </Form.Item>*/}
+                                {/*        <Button icon={<PlusOutlined/>}/>*/}
+                                {/*    </div>*/}
+                                {/*</div>*/}
                             </div>
                             <div className="BoxKpiExp">
                                 <Form.Item className="BoxFormItemInput">

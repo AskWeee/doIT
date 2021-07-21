@@ -26,6 +26,15 @@ import TadCommTree from "../entity/TadCommTree";
 export default class ServiceProject extends React.PureComponent {
     static contextType = GCtx;
 
+    /*
+     * 命名规范：
+     * sid = schema.id
+     * schemaId = schema.schema_id
+     * kid = kpi.id
+     * kpiId = kpi.kpi_id
+     * pkid = projectKpi.id
+     *
+     */
     gMap = {};
     gData = {};
     gCurrent = {
@@ -57,6 +66,7 @@ export default class ServiceProject extends React.PureComponent {
         treeSchemas: React.createRef(),
         treeKpis: React.createRef(),
         tableProjectKpis: React.createRef(),
+        selectProjectKpiTitles: React.createRef(),
     };
     gSchemaIdRegionCodes = [50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 99, 150, 151, 152, 153, 154, 155, 156, 157, 199];
     gSchemaIdDefault = "260959975"; // 通用-天-全国-保留
@@ -73,6 +83,7 @@ export default class ServiceProject extends React.PureComponent {
             styleLayout: "NN",
             treeDataProjects: [],
             treeDataKpiSchemas: [],
+            //treeSchemasSelectedKeys: [],
             treeDataKpis: [],
             treeProjectsHeight: 100,
             treeSchemasHeight: 100,
@@ -111,6 +122,7 @@ export default class ServiceProject extends React.PureComponent {
                 kpi_exp: ""
             },
             optionsProjectKpis: [],
+            selectProjectKpiTitlesValue: "",
             kpiExpDisplay: "",
             tableProjectKpisScrollX: "auto",
             tableProjectKpisScrollY: "auto",
@@ -215,6 +227,7 @@ export default class ServiceProject extends React.PureComponent {
         this.onSelectFilterTimeChanged = this.onSelectFilterTimeChanged.bind(this);
         this.onSelectFilterRegionChanged = this.onSelectFilterRegionChanged.bind(this);
         this.onSelectFilterObjectChanged = this.onSelectFilterObjectChanged.bind(this);
+        this.onSelectProjectKpiTitlesChanged = this.onSelectProjectKpiTitlesChanged.bind(this);
 
         this.showModal = this.showModal.bind(this);
         this.onModalButtonOkClicked = this.onModalButtonOkClicked.bind(this);
@@ -271,7 +284,9 @@ export default class ServiceProject extends React.PureComponent {
                 kid: selectedRows[0].kid,
                 kpi_ui_title: selectedRows[0].kpi_ui_title,
                 kpiUiTitleOld: selectedRows[0].kpi_ui_title,
-            }
+            };
+
+            this.findShowSchemaByKid(this.gCurrent.projectKpi.kid);
         },
     }
 
@@ -383,6 +398,169 @@ export default class ServiceProject extends React.PureComponent {
         }
 
         return schemas;
+    }
+
+    showSchemaProperties = (sid) => {
+        if (sid === undefined) {
+            this.setState({
+                schema: {
+                    schema_id: "",
+                    schema_business: "",
+                    schema_time: "",
+                    schema_region: "",
+                    schema_object: "",
+                    schema_enname: "",
+                    vendor_id: "",
+                    object_class: "",
+                    sub_class: "",
+                    interval_flag: "",
+                    counter_tab_name: "",
+                    tab_name: "",
+                },
+            });
+        } else {
+            let schema = this.gMap.schemas.get(sid);
+            let sids = this.splitSchemaId(schema.schema_id);
+
+            this.setState({
+                schema: {
+                    schema_id: schema.schema_id,
+                    schema_business: sids.a1,
+                    schema_time: sids.a2,
+                    schema_region: sids.hasRegion ? sids.b1 : "",
+                    schema_object: sids.hasRegion ? sids.b2 : sids.b1,
+                    schema_enname: schema.schema_enname,
+                    vendor_id: schema.vendor_id,
+                    object_class: schema.object_class,
+                    sub_class: schema.sub_class,
+                    interval_flag: schema.interval_flag,
+                    counter_tab_name: schema.counter_tab_name,
+                    tab_name: schema.tab_name
+                },
+            });
+        }
+    }
+
+    //todo <<<<< now >>>>> find and show schema by kid
+    findShowSchemaByKid = (kid) => {
+        if (this.gMap.kpis.has(kid)) {
+            let kpi = this.gMap.kpis.get(kid);
+            let sid = kpi.sid;
+
+            if (this.gMap.schemas.has(sid)) {
+                this.gRef.treeSchemas.current.scrollTo({key: sid});
+                this.gRef.treeSchemas.current.setState({
+                    selectedKeys: [sid]
+                });
+
+                this.gCurrent.schema = this.gMap.schemas.get(sid);
+                this.showSchemaProperties(sid);
+                this.gCurrent.kpi = this.gMap.kpis.get(kid);
+                this.showKpis(sid, kid);
+            }
+        }
+
+    }
+
+    showKpiProperties = (kid) => {
+
+        if (kid === undefined) {
+            this.setState({
+                kpi: {
+                    kpi_id: "",
+                    kpi_enname: "",
+                    kpi_alarm: "",
+                    kpi_format: "",
+                    kpi_value_min: "",
+                    kpi_value_max: "",
+                    kpi_exp: ""
+                },
+                optionsProjectKpis: [{key: -99999, label: "", value: -99999}],
+                selectProjectKpiTitlesValue: -99999,
+            });
+            this.doDisplayExpression("");
+        } else {
+            let kpi = this.gMap.kpis.get(kid);
+            let optionsProjectKpis = [{key: -99999, label: "默认显示标题 - " + kpi.kpi_zhname, value: -99999}];
+
+            kpi.kpiUiTitles.forEach((item) => {
+                let projectName = this.getProjectTitle(this.state.treeDataProjects, item.pid);
+                console.log(projectName);
+                if ((projectName !== "") && (item.kpi_ui_title !== null)) {
+                    optionsProjectKpis.push({key: item.id, label: projectName + " - " + item.kpi_ui_title, value: item.id});
+                }
+            });
+
+            this.setState({
+                kpi: {
+                    kpi_id: kpi.kpi_id,
+                    kpi_enname: kpi.kpi_enname,
+                    kpi_alarm: kpi.kpi_alarm,
+                    kpi_format: kpi.kpi_format,
+                    kpi_value_min: kpi.kpi_value_min,
+                    kpi_value_max: kpi.kpi_value_max,
+                    kpi_exp: kpi.kpi_exp
+                },
+                optionsProjectKpis: optionsProjectKpis,
+                selectProjectKpiTitlesValue: -99999,
+            });
+
+            let schema = this.gMap.schemas.get(kpi.sid);
+            let counterNames = [];
+
+            schema.counters.forEach((item) => {
+                if (this.gMap.counters.has(item)) {
+                    let counter = this.gMap.counters.get(item);
+                    counterNames.push(counter.counter_enname);
+                }
+            });
+            this.doDisplayExpression(kpi.kpi_exp, counterNames);
+        }
+    }
+
+    findShowKpi = (kid) => {
+        if (this.gMap.kpis.has(kid)) {
+            this.gRef.treeKpis.current.scrollTo({key: kid});
+            this.gRef.treeKpis.current.setState({
+                selectedKeys: [kid]
+            });
+            this.gCurrent.kpi = this.gMap.kpis.get(kid);
+            this.showKpiProperties(kid);
+        }
+    }
+
+    showKpis = (sid, kid) => {
+        let uiKpis = [];
+
+        if (sid !== undefined && this.gMap.schemas.has(sid)) {
+            let schema = this.gMap.schemas.get(sid);
+
+            schema.kpis.forEach((kid) => {
+                if (this.gMap.kpis.has(kid)) {
+
+                    let kpi = this.gMap.kpis.get(kid);
+                    let uiKpi = {
+                        key: kpi.id,
+                        title: <div className={"BoxKpiTitle"}>{kpi.kpi_id + " - " + kpi.kpi_zhname}</div>,
+                        children: []
+                    }
+                    let index = parseInt(kpi.kpi_id?.substr(kpi.kpi_id.length - 2, 2)) - 1;
+                    uiKpis[index] = uiKpi;
+                }
+            });
+
+        }
+
+        this.setState({
+            treeDataKpis: uiKpis,
+        });
+
+        this.findShowKpi(kid);
+    }
+
+
+    showProjectKpi = (kid) => {
+
     }
 
     // >>>>> dataSchemas to Map and antdTree
@@ -890,20 +1068,46 @@ export default class ServiceProject extends React.PureComponent {
         }
     }
 
-    getProjectTitle(treeNodes, id) {
+    getProjectTitle(treeNodes, id, rootNodes, deep, project) {
+        let symbolSplitterTitle = "_KST_";
+        let symbolSplitterDeep = "_KSD_";
         let myResult = "";
+
+        if (project === undefined) {
+            project = "";
+        }
+
+        if (rootNodes === undefined) {
+            rootNodes = [];
+            for (let i = 0; i < treeNodes.length; i++) {
+                rootNodes.push(treeNodes[i].key);
+            }
+        }
+
+        if (deep === undefined) {
+            deep = 1;
+        } else {
+            deep++;
+        }
 
         for (let i = 0; i < treeNodes.length; i++) {
             if (treeNodes[i].key === id) {
-                myResult = treeNodes[i].title;
-                return myResult;
+                myResult = myResult + deep + symbolSplitterDeep + treeNodes[i].title;
+                break
             } else {
-                this.setProjectTitle(treeNodes[i].children, id);
+                if (rootNodes.includes(treeNodes[i].key)) {
+                    deep = 1;
+                    project = deep + symbolSplitterDeep + treeNodes[i].title + symbolSplitterTitle;
+                } else {
+                    project += deep + symbolSplitterDeep + treeNodes[i].title + symbolSplitterTitle
+                }
+                myResult = this.getProjectTitle(treeNodes[i].children, id, rootNodes, deep, project);
             }
         }
 
         return myResult;
     }
+
 
     onInputProjectNameChanged(e) {
         this.gCurrent.project.name = e.target.value;
@@ -942,126 +1146,130 @@ export default class ServiceProject extends React.PureComponent {
     }
 
     // 表达式格式化及算法验证
-    doDisplayExpression(exp) {
-        if (exp === null) return;
-        if (exp.trim() === "" || exp === "指标计算表达式") return;
+    doDisplayExpression(exp, varNames) {
+        if (exp !== null && exp.trim() !== "" && exp !== "指标计算表达式") {
 
-        // 自动将中文符号，转为英文符号：( ) . + - * /
-        // 自动将连写符号，转为单个符号：. + - * /
-        // 限定有效字符，可用：( ) . + - * / a-z 0-9 _
-        let hasError = false;
-        let expVarNames = [];
-        let expTestNew = "";
-        exp = exp.replace(/^\s+|\s+$/g, "");                // 去除前后端空格
-        exp = exp.replace(/[\w.*]*\w[.]*/g, "__KV__$&");    // 标识counter名称，范例：((nmosdb....table_name.field01+nmosdb.test.field + a01 +abce_test 0.0.5) ..100. 100..200))
-        exp = exp.replace(/[.]/g, "__KD__");                // 标识符号：“.”
-        exp = exp.replace(/\s+/g, "");                      // 清除内部空格
-        let arrExp = exp.match(/(\W?\w*)/g);                // 分解出代码段
-        arrExp.pop();
-        let kIndex = 0;
-        let kpiExpDisplay = <div className="Expression">
-            {arrExp.map((item, index) => {
-                let ov = item.split("__KV__");
-                let operator = ov[0];
-                let className = "";
-                switch (operator) {
-                    case "(":
-                        kIndex++;
-                        className = "expKb_" + kIndex.toString().padStart(2, "0");
-                        break
-                    case ")":
-                        if (kIndex > 0) {
+            // 自动将中文符号，转为英文符号：( ) . + - * /
+            // 自动将连写符号，转为单个符号：. + - * /
+            // 限定有效字符，可用：( ) . + - * / a-z 0-9 _
+            let hasError = false;
+            let expVarNames = [];
+            let expTestNew = "";
+            exp = exp.replace(/^\s+|\s+$/g, "");                // 去除前后端空格
+            exp = exp.replace(/[\w.*]*\w[.]*/g, "__KV__$&");    // 标识counter名称，范例：((nmosdb....table_name.field01+nmosdb.test.field + a01 +abce_test 0.0.5) ..100. 100..200))
+            exp = exp.replace(/[.]/g, "__KD__");                // 标识符号：“.”
+            exp = exp.replace(/\s+/g, "");                      // 清除内部空格
+            let arrExp = exp.match(/(\W?\w*)/g);                // 分解出代码段
+            arrExp.pop();
+            let kIndex = 0;
+            let kpiExpDisplay = <div className="Expression">
+                {arrExp.map((item, index) => {
+                    let ov = item.split("__KV__");
+                    let operator = ov[0];
+                    let className = "";
+                    switch (operator) {
+                        case "(":
+                            kIndex++;
                             className = "expKb_" + kIndex.toString().padStart(2, "0");
-                            kIndex--;
-                        } else {
-                            kIndex = 0;
-                            className = "expKb_error";
-                            hasError = true;
-                        }
-                        break
-                    default:
-                        className = "expOperator";
-                        break
-                }
-                if (ov.length === 1) {
-                    expTestNew += operator;
-                    return <Fragment>
-                        <div key={index} className={className}>{operator}</div>
-                    </Fragment>
-                } else if (ov.length === 2) {
-                    let varName = ov[1].replace(/__KD__/g, ".");
-                    let classNameV = "expVar";
-                    if ((index + 1) < arrExp.length) {
-                        if (!(arrExp[index + 1].startsWith("+") ||
-                            arrExp[index + 1].startsWith("-") ||
-                            arrExp[index + 1].startsWith("*") ||
-                            arrExp[index + 1].startsWith("/") ||
-                            arrExp[index + 1].startsWith(")"))) {
-                            classNameV = "expVarError";
-                            hasError = true;
-                        }
+                            break
+                        case ")":
+                            if (kIndex > 0) {
+                                className = "expKb_" + kIndex.toString().padStart(2, "0");
+                                kIndex--;
+                            } else {
+                                kIndex = 0;
+                                className = "expKb_error";
+                                hasError = true;
+                            }
+                            break
+                        default:
+                            className = "expOperator";
+                            break
                     }
+                    if (ov.length === 1) {
+                        expTestNew += operator;
+                        return <Fragment>
+                            <div key={index} className={className}>{operator}</div>
+                        </Fragment>
+                    } else if (ov.length === 2) {
+                        let varName = ov[1].replace(/__KD__/g, ".");
+                        let classNameV = "expVar";
+                        if ((index + 1) < arrExp.length) {
+                            if (!(arrExp[index + 1].startsWith("+") ||
+                                arrExp[index + 1].startsWith("-") ||
+                                arrExp[index + 1].startsWith("*") ||
+                                arrExp[index + 1].startsWith("/") ||
+                                arrExp[index + 1].startsWith(")"))) {
+                                classNameV = "expVarError";
+                                hasError = true;
+                            }
+                        }
 
-                    if (this.isNumber(varName)) {
-                        varName = varName.replace(/\./g, "__KDN__");
+                        if (this.isNumber(varName)) {
+                            varName = varName.replace(/\./g, "__KDN__");
+                        } else {
+                            if (!varNames.includes(varName)) {
+                                classNameV = "expVarError";
+                                hasError = true;
+                            } else {
+                                expVarNames.push(varName);
+                            }
+                        }
+
+                        expTestNew += operator + varName;
+                        varName = varName.replace(/__KDN__/g, ".");
+                        return <Fragment>
+                            <div key={"operator_" + index} className={className}>{operator}</div>
+                            <div key={"value_" + index} className={classNameV}>{varName}</div>
+                        </Fragment>
                     } else {
-                        if (!this.gCurrent.counterNames.includes(varName)) {
-                            classNameV = "expVarError";
-                            hasError = true;
-                        } else {
-                            expVarNames.push(varName);
+                        hasError = true;
+                        let v = "";
+                        for (let i = 1; i < ov.length; i++) {
+                            v += ov[i] + " ";
                         }
+                        v = v.replace(/\s+$/, "");
+                        v = v.replace(/__KD__/g, ".");
+
+                        expTestNew += operator + v;
+                        return <Fragment>
+                            <div key={"operator_" + index} className={className}>{operator}</div>
+                            <div key={"value_" + index} className="expVarError">{v}</div>
+                        </Fragment>
                     }
+                })}
+            </div>;
+            this.setState({
+                kpiExpDisplay: kpiExpDisplay
+            }, () => {
+                if (!hasError) {
+                    try {
+                        let _dynamicTest;
+                        let strLets = "() => {\n";
 
-                    expTestNew += operator + varName;
-                    varName = varName.replace(/__KDN__/g, ".");
-                    return <Fragment>
-                        <div key={"operator_" + index} className={className}>{operator}</div>
-                        <div key={"value_" + index} className={classNameV}>{varName}</div>
-                    </Fragment>
-                } else {
-                    hasError = true;
-                    let v = "";
-                    for (let i = 1; i < ov.length; i++) {
-                        v += ov[i] + " ";
+                        expTestNew = expTestNew.replace(/\./g, "_");
+
+                        expVarNames.forEach((item) => {
+                            if (!this.isNumber(item)) {
+                                strLets += "let " + item.replace(/\./g, "_") + " = 1;\n";
+                            }
+                        });
+                        expTestNew = strLets + "let test = " + expTestNew + ";\nreturn test;\n}";
+                        expTestNew = expTestNew.replace(/__KDN__/g, ".");
+
+                        _dynamicTest = eval(expTestNew);
+                        let r = _dynamicTest();
+                        this.context.showMessage("模拟运算结果 = " + r + "（所有变量赋值为 1）");
+                    } catch (err) {
+                        this.context.showMessage(err.toString());
                     }
-                    v = v.replace(/\s+$/, "");
-                    v = v.replace(/__KD__/g, ".");
-
-                    expTestNew += operator + v;
-                    return <Fragment>
-                        <div key={"operator_" + index} className={className}>{operator}</div>
-                        <div key={"value_" + index} className="expVarError">{v}</div>
-                    </Fragment>
                 }
-            })}
-        </div>;
-        this.setState({
-            kpiExpDisplay: kpiExpDisplay
-        }, () => {
-            if (!hasError) {
-                try {
-                    let _dynamicTest;
-                    let strLets = "() => {\n";
-
-                    expTestNew = expTestNew.replace(/\./g, "_");
-
-                    expVarNames.forEach((item) => {
-                        if (!this.isNumber(item)) {
-                            strLets += "let " + item.replace(/\./g, "_") + " = 1;\n";
-                        }
-                    });
-                    expTestNew = strLets + "let test = " + expTestNew + ";\nreturn test;\n}";
-                    expTestNew = expTestNew.replace(/__KDN__/g, ".");
-
-                    _dynamicTest = eval(expTestNew);
-                    let r = _dynamicTest();
-                    this.context.showMessage("模拟运算结果 = " + r + "（所有变量赋值为 1）");
-                } catch (err) {
-                    this.context.showMessage(err.toString());
-                }
-            }
-        });
+            });
+        } else {
+            this.setState({
+                kpiExpDisplay: ""
+            });
+        }
     }
 
     // >>>>> 复制到剪贴板
@@ -1463,28 +1671,28 @@ export default class ServiceProject extends React.PureComponent {
             });
             this.gMap.kpiDict = mapKpiDict;
             if (this.gMap.kpiDict.has(1021)) {
-                let options = [{label: "业务分类", value: -99999}];
+                let options = [{key: -99999, label: "业务分类", value: -99999}];
                 this.gMap.kpiDict.get(1021).forEach((value, key) => {
-                    options.push({label: value.txt, value: value.id});
+                    options.push({key: value.id, label: value.txt, value: value.id});
                 });
                 this.setState({
                     optionsSchemaIdA1: options
                 })
             }
             if (this.gMap.kpiDict.has(1022)) {
-                let options = [{label: "时间粒度", value: -99999}];
+                let options = [{key: -99999, label: "时间粒度", value: -99999}];
                 this.gMap.kpiDict.get(1022).forEach((value, key) => {
-                    options.push({label: value.txt, value: value.id});
+                    options.push({key: value.id, label: value.txt, value: value.id});
                 });
                 this.setState({
                     optionsSchemaIdA2: options
                 })
             }
             if (this.gMap.kpiDict.has(1023)) {
-                let options = [{label: "空间粒度", value: -99999}];
+                let options = [{key: -99999, label: "空间粒度", value: -99999}];
                 this.gMap.kpiDict.get(1023).forEach((value, key) => {
                     if (this.gSchemaIdRegionCodes.includes(value.id)) {
-                        options.push({label: value.txt + "-" + value.id, value: value.id});
+                        options.push({key: value.id, label: value.txt + "-" + value.id, value: value.id});
                     }
                 });
                 this.setState({
@@ -1492,10 +1700,10 @@ export default class ServiceProject extends React.PureComponent {
                 })
             }
             if (this.gMap.kpiDict.has(1023)) {
-                let options = [{label: "网元类型", value: -99999}];
+                let options = [{key: -99999, label: "网元类型", value: -99999}];
                 this.gMap.kpiDict.get(1023).forEach((value, key) => {
                     if (!this.gSchemaIdRegionCodes.includes(value.id)) {
-                        options.push({label: value.txt, value: value.id});
+                        options.push({key: value.id, label: value.txt, value: value.id});
                     }
                 });
                 this.setState({
@@ -2272,93 +2480,19 @@ export default class ServiceProject extends React.PureComponent {
 
     //todo <<<<< now >>>>> on tree 源指标组 selected
     onTreeKpiSchemasSelected(selectedKeys, info) {
-        this.gCurrent.counterNames = [];
-
         if (info.selected) {
-            this.gRef.treeKpis.current.state.selectedKeys = [];
-
             let sid = selectedKeys[0];
-            let schema;
-            let uiKpis = [];
 
-            schema = this.gMap.schemas.get(sid);
-            this.gCurrent.schema = schema;
-
-            schema.kpis.forEach((kid) => {
-                if (this.gMap.kpis.has(kid)) {
-
-                    let kpi = this.gMap.kpis.get(kid);
-                    let uiKpi = {
-                        key: kpi.id,
-                        title: <div className={"BoxKpiTitle"}>{kpi.kpi_id + " - " + kpi.kpi_zhname}</div>,
-                        children: []
-                    }
-                    let index = parseInt(kpi.kpi_id?.substr(kpi.kpi_id.length - 2, 2)) - 1;
-                    uiKpis[index] = uiKpi;
-                }
-            });
-
-            let sids = this.splitSchemaId(schema.schema_id);
-
+            //todo get counternames
+            this.gCurrent.schema = this.gMap.schemas.get(sid);
+            this.showSchemaProperties(sid);
             this.gCurrent.kpi = null;
-            this.setState({
-                treeDataKpis: uiKpis,
-                schema: {
-                    schema_id: schema.schema_id,
-                    schema_business: sids.a1,
-                    schema_time: sids.a2,
-                    schema_region: sids.hasRegion ? sids.b1 : "",
-                    schema_object: sids.hasRegion ? sids.b2 : sids.b1,
-                    schema_enname: schema.schema_enname,
-                    vendor_id: schema.vendor_id,
-                    object_class: schema.object_class,
-                    sub_class: schema.sub_class,
-                    interval_flag: schema.interval_flag,
-                    counter_tab_name: schema.counter_tab_name,
-                    tab_name: schema.tab_name
-                },
-                kpi: {
-                    kpi_id: "",
-                    kpi_enname: "",
-                    kpi_alarm: "",
-                    kpi_format: "",
-                    kpi_value_min: "",
-                    kpi_value_max: "",
-                    kpi_exp: ""
-                },
-                optionsProjectKpis: [],
-            });
-            this.doDisplayExpression("");
+            this.showKpis(sid);
         } else {
+            this.gCurrent.schema = null;
+            this.showSchemaProperties();
             this.gCurrent.kpi = null;
-            this.setState({
-                treeDataKpis: [],
-                schema: {
-                    schema_id: "",
-                    schema_business: "",
-                    schema_time: "",
-                    schema_region: "",
-                    schema_object: "",
-                    schema_enname: "",
-                    vendor_id: "",
-                    object_class: "",
-                    sub_class: "",
-                    interval_flag: "",
-                    counter_tab_name: "",
-                    tab_name: "",
-                },
-                kpi: {
-                    kpi_id: "",
-                    kpi_enname: "",
-                    kpi_alarm: "",
-                    kpi_format: "",
-                    kpi_value_min: "",
-                    kpi_value_max: "",
-                    kpi_exp: ""
-                },
-                optionsProjectKpis: [],
-            });
-            this.doDisplayExpression("");
+            this.showKpis();
         }
     };
 
@@ -2367,44 +2501,11 @@ export default class ServiceProject extends React.PureComponent {
         if (info.selected) {
             let kid = selectedKeys[0];
 
-            let kpi = this.gMap.kpis.get(kid);
-            this.gCurrent.kpi = kpi;
-
-            let optionsProjectKpis = [];
-            kpi.kpiUiTitles.forEach((item) => {
-                let projectName = this.getProjectTitle(this.state.treeDataProjects, item.pid);
-                if ((projectName !== "") && (item.kpi_ui_title !== null)) {
-                    optionsProjectKpis.push({key: item.id, label: projectName + " - " + item.kpi_ui_title, value: item.id});
-                }
-            });
-            this.setState({
-                kpi: {
-                    kpi_id: kpi.kpi_id,
-                    kpi_enname: kpi.kpi_enname,
-                    kpi_alarm: kpi.kpi_alarm,
-                    kpi_format: kpi.kpi_format,
-                    kpi_value_min: kpi.kpi_value_min,
-                    kpi_value_max: kpi.kpi_value_max,
-                    kpi_exp: kpi.kpi_exp
-                },
-                optionsProjectKpis: optionsProjectKpis,
-            });
-            this.doDisplayExpression(kpi.kpi_exp);
+            this.gCurrent.kpi = this.gMap.kpis.get(kid);
+            this.showKpiProperties(kid);
         } else {
             this.gCurrent.kpi = null;
-            this.setState({
-                kpi: {
-                    kpi_id: "",
-                    kpi_enname: "",
-                    kpi_alarm: "",
-                    kpi_format: "",
-                    kpi_value_min: "",
-                    kpi_value_max: "",
-                    kpi_exp: ""
-                },
-                optionsProjectKpis: [],
-            })
-            this.doDisplayExpression("");
+            this.showKpiProperties();
         }
     }
 
@@ -2610,10 +2711,6 @@ export default class ServiceProject extends React.PureComponent {
         })
     }
 
-    onInputKpiExpChanged = lodash.debounce((e) => {
-        this.doDisplayExpression(e.target.value);
-    }, 500);
-
     onInputSchemaZhNameChanged(e) {
 
     }
@@ -2740,6 +2837,12 @@ export default class ServiceProject extends React.PureComponent {
         this.setState({
             treeDataKpiSchemas: treeDataKpiSchemas
         });
+    }
+
+    onSelectProjectKpiTitlesChanged(v) {
+        this.setState({
+            selectProjectKpiTitlesValue: v
+        })
     }
 
     //todo >>>>> render
@@ -2875,7 +2978,7 @@ export default class ServiceProject extends React.PureComponent {
                             </div>
                             <div className="BoxUsedInfo">
                                 <div className="BoxProductModuleName">
-                                    <Select options={this.state.optionsProjectKpis} size="small"/>
+                                    <Select options={this.state.optionsProjectKpis} value={this.state.selectProjectKpiTitlesValue} onChange={this.onSelectProjectKpiTitlesChanged} size="small"/>
                                 </div>
                             </div>
                         </div>

@@ -264,16 +264,18 @@ export default class DatabaseImport extends React.Component {
                     nodeType: "product"
                 }
                 nodeProductLine.children.push(nodeProduct);
-                this.gMap.products.get(item).modules.forEach(item => {
-                    let mId = item;
-                    let nodeModule = {
-                        key: plId + "_" + pId + "_" + mId,
-                        title: this.gMap.modules.get(mId).module_name,
-                        children: [],
-                        nodeType: "module"
-                    }
-                    nodeProduct.children.push(nodeModule);
-                })
+                if (this.gMap.products.has(item)) {
+                    this.gMap.products.get(item).modules.forEach(item => {
+                        let mId = item;
+                        let nodeModule = {
+                            key: plId + "_" + pId + "_" + mId,
+                            title: this.gMap.modules.get(mId).module_name,
+                            children: [],
+                            nodeType: "module"
+                        }
+                        nodeProduct.children.push(nodeModule);
+                    });
+                }
             })
         });
 
@@ -399,7 +401,9 @@ export default class DatabaseImport extends React.Component {
                         module_leader: item.module_leader
                     });
                 }
-                mapProducts.get(item.product_id).modules.push(myKey);
+                if (mapProducts.has(item.product_id)) {
+                    mapProducts.get(item.product_id).modules.push(myKey);
+                }
             });
 
             versions.data.data.forEach(function (item) {
