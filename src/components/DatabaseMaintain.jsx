@@ -1,9 +1,10 @@
 import React, {Fragment} from 'react'
 import './DatabaseMaintain.scss'
-import axios from "axios";
 import GCtx from "../GCtx";
-import {Button, Select, Tree, Checkbox, Table, Input, Tabs} from 'antd'
-import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined} from '@ant-design/icons'
+import lodash from "lodash";
+import axios from "axios";
+import {Button, Select, Tree, Table, Input, Tabs} from 'antd'
+import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, PlusSquareOutlined} from '@ant-design/icons'
 import TadTableColumn from '../entity/TadTableColumn'
 import Mock from 'mockjs'
 import TadTableIndex from "../entity/TadTableIndex";
@@ -11,8 +12,7 @@ import TadTablePartition from "../entity/TadTablePartition";
 import TadTableRelation from "../entity/TadTableRelation";
 import KColumnTitle from "./KColumnTitle";
 import TadTableIndexColumn from "../entity/TadTableIndexColumn";
-// import { DndProvider, useDrag, useDrop } from 'react-dnd';
-// import { sortableContainer, sortableElement, sortableHandle } from 'react-sortable-hoc';
+import TadTable from "../entity/TadTable";
 
 const {TabPane} = Tabs;
 
@@ -27,33 +27,17 @@ export default class DatabaseMaintain extends React.Component {
 
     gTableUnknownSelected = [];
     gTableKnownSelected = [];
-    gTablesUnknown = [];
 
     constructor(props) {
         super(props);
 
+        //todo >>>>> state
         this.state = {
-            lettersKnownTreeData: [],
-            dbUsersSelectOptions: [{value: -1, label: "请选择"}],
-            dbUsersSelected: -1,
-
-            productsTreeData: [],
-            tablesKnownTreeData: [],
-            tablesUnknownTreeData: [],
-            optionsDbUsers: [{value: -1, label: "请选择"}],
+            dbUsersSelectOptions: [{value: -1, label: "请选择产品线数据库用户"}],
             dbUserSelected: -1,
-            showKnownTable: false,
-            showUnknownTable: false,
-            uiRadioUnknownSelected: 0,
-            uiTableKnownDisplay: "none",
-            uiTableUnknownDisplay: "none",
-            message: '',
-            tablesAll: [],
-            tablesUnknown: [],
-            tablesKnown: [],
-            letters: ["a", "b"],
-            tableTableColumnsColumns: [],
-
+            treeDataProducts: [],
+            treeDataLettersKnown: [],
+            treeDataTablesKnown: [],
             dsColumns: [],
             dsIndexes: [],
             dsPartitions: [],
@@ -61,13 +45,11 @@ export default class DatabaseMaintain extends React.Component {
             dsRecords: [],
             tableSql: "",
             domTableSql: [],
-
             pageSizeColumns: 0,
             pageSizeIndexes: 0,
             pageSizePartitions: 0,
             pageSizeRelations: 0,
             pageSizeRecords: 0,
-
             isShownButtonAddColumn: "block",
             isShownButtonDeleteColumn: "block",
             isShownButtonAlterColumnConfirm: "none",
@@ -88,13 +70,11 @@ export default class DatabaseMaintain extends React.Component {
             isShownButtonDeleteRecord: "block",
             isShownButtonAlterRecordConfirm: "none",
             isShownButtonAlterRecordCancel: "none",
-
             isEditingKeyColumn: -1,
             isEditingKeyIndex: -1,
             isEditingKeyPartition: -1,
             isEditingKeyRelation: -1,
             isEditingKeyData: -1,
-
             editingColumn: {
                 key: -1,
                 column_id: -1,
@@ -144,15 +124,40 @@ export default class DatabaseMaintain extends React.Component {
                 data_flow: "",
                 desc: ""
             },
-
             styleLayout: "NNN",
             tablePropertiesScrollX: 1366,
             tablePropertiesScrollY: 400,
         }
 
-        this.test = this.test.bind(this);
-
+        //todo >>>>> bind
         this.doInit = this.doInit.bind(this);
+
+        this.restAddTable = this.restAddTable.bind(this);
+        this.restUpdateTable = this.restUpdateTable.bind(this);
+        this.restDeleteTable = this.restDeleteTable.bind(this);
+        this.restAddTableColumn = this.restAddTableColumn.bind(this);
+        this.restUpdateTableColumn = this.restUpdateTableColumn.bind(this);
+        this.restDeleteTableColumn = this.restDeleteTableColumn.bind(this);
+        this.restAddTableIndex = this.restAddTableIndex.bind(this);
+        this.restUpdateTableIndex = this.restUpdateTableIndex.bind(this);
+        this.restDeleteTableIndex = this.restDeleteTableIndex.bind(this);
+        this.restAddTableIndexColumn = this.restAddTableIndexColumn.bind(this);
+        this.restUpdateTableIndexColumn = this.restUpdateTableIndexColumn.bind(this);
+        this.restDeleteTableIndexColumn = this.restDeleteTableIndexColumn.bind(this);
+
+        this.doAddTable = this.doAddTable.bind(this);
+        this.doUpdateTable = this.doUpdateTable.bind(this);
+        this.doDeleteTable = this.doDeleteTable.bind(this);
+        this.doAddTableColumn = this.doAddTableColumn.bind(this);
+        this.doUpdateTableColumn = this.doUpdateTableColumn.bind(this);
+        this.doDeleteTableColumn = this.doDeleteTableColumn.bind(this);
+        this.doAddTableIndex = this.doAddTableIndex.bind(this);
+        this.doUpdateTableIndex = this.doUpdateTableIndex.bind(this);
+        this.doDeleteTableIndex = this.doDeleteTableIndex.bind(this);
+        this.doAddTableIndexColumn = this.doAddTableIndexColumn.bind(this);
+        this.doUpdateTableIndexColumn = this.doUpdateTableIndexColumn.bind(this);
+        this.doDeleteTableIndexColumn = this.doDeleteTableIndexColumn.bind(this);
+
         this.doNewGetAll = this.doNewGetAll.bind(this);
         this.doGetProductRelations = this.doGetProductRelations.bind(this);
         this.doNewGetProductLines = this.doNewGetProductLines.bind(this);
@@ -166,20 +171,21 @@ export default class DatabaseMaintain extends React.Component {
         this.doNewGetTypes = this.doNewGetTypes.bind(this);
         this.doGetTablesByLetter = this.doGetTablesByLetter.bind(this);
         this.doMock = this.doMock.bind(this);
-        this.onTreeLettersSelected = this.onTreeLettersSelected.bind(this);
         this.doGetTablePropertyIndexColumns = this.doGetTablePropertyIndexColumns.bind(this);
 
+        this.uiUpdateTable = this.uiUpdateTable.bind(this);
+        this.dsUpdateTable = this.dsUpdateTable.bind(this);
+        this.uiUpdateTableColumn = this.uiUpdateTableColumn.bind(this);
+        this.dsUpdateTableColumn = this.dsUpdateTableColumn.bind(this);
+        this.uiUpdateTableIndex = this.uiUpdateTableIndex.bind(this);
+        this.dsUpdateTableIndex = this.dsUpdateTableIndex.bind(this);
+        this.uiUpdateTableIndexColumn = this.uiUpdateTableIndexColumn.bind(this);
+        this.dsUpdateTableIndexColumn = this.dsUpdateTableIndexColumn.bind(this);
+
         this.onSelectDbUsersChanged = this.onSelectDbUsersChanged.bind(this);
-
-        this.onRadioUnknownChanged = this.onRadioUnknownChanged.bind(this);
-
-        this.onCheckboxKnownTableDisplayChanged = this.onCheckboxKnownTableDisplayChanged.bind(this);
-        this.onCheckboxUnknownTableDisplayChanged = this.onCheckboxUnknownTableDisplayChanged.bind(this);
-
         this.onSelect = this.onSelect.bind(this);
         this.onTableUnknownChecked = this.onTableUnknownChecked.bind(this);
         this.onTableKnownChecked = this.onTableKnownChecked.bind(this);
-        this.doTablesCompare = this.doTablesCompare.bind(this);
 
         this.onTreeProductsSelected = this.onTreeProductsSelected.bind(this);
         this.onTreeTablesKnownSelected = this.onTreeTablesKnownSelected.bind(this);
@@ -190,6 +196,9 @@ export default class DatabaseMaintain extends React.Component {
         this.onTreeLettersKnownSelected = this.onTreeLettersKnownSelected.bind(this);
         this.getTableId = this.getTableId.bind(this);
 
+        this.onButtonAddTableClicked = this.onButtonAddTableClicked.bind(this);
+        this.onButtonUpdateTableClicked = this.onButtonUpdateTableClicked.bind(this);
+        this.onButtonDeleteTableClicked = this.onButtonDeleteTableClicked.bind(this);
         this.onButtonAddColumnClicked = this.onButtonAddColumnClicked.bind(this);
         this.onButtonAlterColumnClicked = this.onButtonAlterColumnClicked.bind(this);
         this.onButtonDeleteColumnClicked = this.onButtonDeleteColumnClicked.bind(this);
@@ -220,10 +229,6 @@ export default class DatabaseMaintain extends React.Component {
 
         this.onInputIndexNameChanged = this.onInputIndexNameChanged.bind(this);
         this.onInputPartitionNameChanged = this.onInputPartitionNameChanged.bind(this);
-    }
-
-    test(s) {
-        console.log(s);
     }
 
     componentDidMount() {
@@ -402,8 +407,80 @@ export default class DatabaseMaintain extends React.Component {
         this.gUi.treeProductsData = dataTreeProducts;
 
         this.setState({
-            productsTreeData: this.gUi.treeProductsData,
+            treeDataProducts: this.gUi.treeProductsData,
         })
+    }
+
+    restAddTable(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restUpdateTable(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/update_table",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restDeleteTable(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restAddTableColumn(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_column",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restUpdateTableColumn(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/update_table_column",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restDeleteTableColumn(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table_column",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restAddTableIndex(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_index",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restUpdateTableIndex(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/update_table_index",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restDeleteTableIndex(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table_index",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restAddTableIndexColumn(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_index_column",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restUpdateTableIndexColumn(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/update_table_index_column",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restDeleteTableIndexColumn(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table_index_column",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
     }
 
     doNewGetAll() {
@@ -437,7 +514,7 @@ export default class DatabaseMaintain extends React.Component {
             let mapVersions = new Map();
             let mapManagers = new Map();
             let mapTables = new Map();
-            let mapTablesByName = new Map();
+            // let mapTablesByName = new Map();
             let mapColumns = new Map();
             let mapTypes = new Map();
 
@@ -503,7 +580,9 @@ export default class DatabaseMaintain extends React.Component {
                         module_leader: item.module_leader
                     });
                 }
-                mapProducts.get(item.product_id).modules.push(myKey);
+                if (mapProducts.has(item.product_id)) {
+                    mapProducts.get(item.product_id).modules.push(myKey);
+                }
             });
 
             versions.data.data.forEach(function (item) {
@@ -516,7 +595,9 @@ export default class DatabaseMaintain extends React.Component {
                         version_desc: item.user_desc
                     });
                 }
-                mapProducts.get(item.product_id).versions.push(myKey);
+                if (mapProducts.has(item.product_id)) {
+                    mapProducts.get(item.product_id).versions.push(myKey);
+                }
             });
 
             managers.data.data.forEach(function (item) {
@@ -547,9 +628,9 @@ export default class DatabaseMaintain extends React.Component {
                         partition_type: item.partition_type,
                         columns: []
                     });
-                    mapTablesByName.set(item.table_name, {
-                        table_id: myKey
-                    })
+                    // mapTablesByName.set(item.table_name, {
+                    //     table_id: myKey
+                    // })
                 }
             });
 
@@ -618,7 +699,7 @@ export default class DatabaseMaintain extends React.Component {
             this.gMap.versions = mapVersions;
             this.gMap.managers = mapManagers;
             this.gMap.tables = mapTables;
-            this.gMap.tablesByName = mapTablesByName;
+            // this.gMap.tablesByName = mapTablesByName;
             this.gMap.columns = mapColumns;
             this.gMap.types = mapTypes;
 
@@ -723,72 +804,381 @@ export default class DatabaseMaintain extends React.Component {
             {headers: {'Content-Type': 'application/json'}})
     }
 
-    // 获取某字母开头的表
+    // >>>>> 获取某字母开头的表
     doGetTablesByLetter(source, letter) {
-
         let myResult = [];
 
         if (letter === undefined) return myResult
 
-        let tables;
-        switch (source) {
-            case "known":
-                tables = this.gMap.tablesKnownByLetter;
-                break
-            case "unknown":
-                tables = this.gMap.tablesUnknownByLetter;
-                break
-            case "archived":
-                tables = this.gMap.tablesArchivedByLetter;
-                break
-            case "ignored":
-                tables = this.gMap.tablesIgnoredByLetter;
-                break
-            default:
-                break
-        }
+        if (!this.gMap.tablesByLetter.has(letter)) return myResult;
 
-        if (!tables.has(letter)) return myResult;
-
-        tables.get(letter).tables.forEach((value, key) => {
-            let tableName = key;
-
+        this.gMap.tablesByLetter.get(letter).tables.forEach((item) => {
+            let table = this.gMap.tables.get(item);
             let nodeTable = {
-                key: tableName,
-                title: tableName,
+                key: table.table_id,
+                title: table.table_name,
                 children: [],
-                olc: {
+                tag: {
                     nodeType: "table",
-                    tableId: value.tableId,
                 },
             }
 
-            value.columns.forEach((item) => {
-                let nodeColumn = {
-                    key: tableName + "." + item.name,
-                    title: item.name + " : " + item.type,
-                    children: [],
-                    olc: {
-                        nodeType: "table_column",
-                        dataType: item.type,
-                        dataLength: item.length
-                    },
-                }
-                nodeTable.children.push(nodeColumn);
-            })
             myResult.push(nodeTable);
         });
 
         return myResult;
     }
 
-    // ****************************************************************************************************
-    // show or hide...
-    // ****************************************************************************************************
+    doAddTable(params) {
+        this.restAddTable(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateTable(result.data.data, "add");
+                    this.dsUpdateTable(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doUpdateTable(params) {
+        this.restUpdateTable(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    // this.uiUpdateProjectKpi(result.data.data, "add");
+                    // this.dsUpdateProjectKpi(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doDeleteTable(params) {
+        this.restDeleteTable(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    // this.uiUpdateProjectKpi(result.data.data, "add");
+                    // this.dsUpdateProjectKpi(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    uiUpdateTable(table, what) {
+        switch (what) {
+            case "add":
+                let treeDataTablesKnown = lodash.cloneDeep(this.state.treeDataTablesKnown);
+                let uiTable = {
+                    key: table.table_id,
+                    title: table.table_name,
+                    children: [],
+                    tag: {
+
+                    }
+                };
+                treeDataTablesKnown.push(uiTable);
+
+                this.setState({
+                    treeDataTablesKnown: treeDataTablesKnown
+                })
+                break
+            case "update":
+                break
+            case "delete":
+                break
+            default:
+                break
+        }
+    }
+
+    dsUpdateTable(table, what) {
+        switch (what) {
+            case "add":
+                this.gMap.tables.set(table.table_id, table);
+                this.gMap.tablesByLetter.get(this.gCurrent.letterSelected).tables.push(table.table_id);
+                break
+            case "update":
+                break
+            case "delete":
+                break
+            default:
+                break
+        }
+    }
+
+    doAddTableColumn(params) {
+        this.restAddTableColumn(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateTableColumn(result.data.data, "add");
+                    this.dsUpdateTableColumn(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doUpdateTableColumn(params) {
+        this.restUpdateTableColumn(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    // this.uiUpdateProjectKpi(result.data.data, "add");
+                    // this.dsUpdateProjectKpi(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doDeleteTableColumn(params) {
+        this.restDeleteTableColumn(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    // this.uiUpdateProjectKpi(result.data.data, "add");
+                    // this.dsUpdateProjectKpi(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    uiUpdateTableColumn(column, what) {
+        switch (what) {
+            case "add":
+                let dsColumns = lodash.cloneDeep(this.state.dsColumns);
+                column.key = column.column_id;
+
+                dsColumns.push(lodash.cloneDeep(column));
+
+                this.setState({
+                    pageSizeColumns: dsColumns.length,
+                    dsColumns: dsColumns
+                })
+                break
+            case "update":
+                break
+            case "delete":
+                break
+            default:
+                break
+        }
+    }
+
+    dsUpdateTableColumn(table, what) {
+        switch (what) {
+            case "add":
+                this.gMap.tables.set(table.table_id, table);
+                this.gMap.tablesByLetter.get(this.gCurrent.letterSelected).tables.push(table.table_id);
+                break
+            case "update":
+                break
+            case "delete":
+                break
+            default:
+                break
+        }
+    }
+
+    doAddTableIndex(params) {
+        this.restAddTableIndex(params).then((result) => {
+            console.log(result);
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateTableIndex(result.data.data, "add");
+                    //this.dsUpdateTableIndex(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doUpdateTableIndex(params) {
+        this.restUpdateTable(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    // this.uiUpdateProjectKpi(result.data.data, "add");
+                    // this.dsUpdateProjectKpi(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doDeleteTableIndex(params) {
+        this.restDeleteTable(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    // this.uiUpdateProjectKpi(result.data.data, "add");
+                    // this.dsUpdateProjectKpi(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doAddTableIndexColumn(params) {
+        this.restAddTable(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateTable(result.data.data, "add");
+                    this.dsUpdateTable(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doUpdateTableIndexColumn(params) {
+        this.restUpdateTable(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    // this.uiUpdateProjectKpi(result.data.data, "add");
+                    // this.dsUpdateProjectKpi(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doDeleteTableIndexColumn(params) {
+        this.restDeleteTable(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    // this.uiUpdateProjectKpi(result.data.data, "add");
+                    // this.dsUpdateProjectKpi(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    uiUpdateTableIndex(index, what) {
+        console.log(index);
+        switch (what) {
+            case "add":
+                let dsIndexes = lodash.cloneDeep(this.state.dsIndexes);
+                index.key = index.id;
+
+                dsIndexes.push(lodash.cloneDeep(index));
+
+                this.setState({
+                    pageSizeIndexes: dsIndexes.length,
+                    dsIndexes: dsIndexes
+                })
+                break
+            case "update":
+                break
+            case "delete":
+                break
+            default:
+                break
+        }
+    }
+
+    dsUpdateTableIndex(table, what) {
+        switch (what) {
+            case "add":
+                this.gMap.tables.set(table.table_id, table);
+                this.gMap.tablesByLetter.get(this.gCurrent.letterSelected).tables.push(table.table_id);
+                break
+            case "update":
+                break
+            case "delete":
+                break
+            default:
+                break
+        }
+    }
+
+    uiUpdateTableIndexColumn(column, what) {
+        switch (what) {
+            case "add":
+                let dsColumns = lodash.cloneDeep(this.state.dsColumns);
+                column.key = column.column_id;
+
+                dsColumns.push(lodash.cloneDeep(column));
+
+                this.setState({
+                    pageSizeColumns: dsColumns.length,
+                    dsColumns: dsColumns
+                })
+                break
+            case "update":
+                break
+            case "delete":
+                break
+            default:
+                break
+        }
+    }
+
+    dsUpdateTableIndexColumn(table, what) {
+        switch (what) {
+            case "add":
+                this.gMap.tables.set(table.table_id, table);
+                this.gMap.tablesByLetter.get(this.gCurrent.letterSelected).tables.push(table.table_id);
+                break
+            case "update":
+                break
+            case "delete":
+                break
+            default:
+                break
+        }
+    }
 
     showProductTables() {
         this.setState({
-            tablesKnownTreeData: []
+            treeDataTablesKnown: []
         })
     }
 
@@ -803,56 +1193,60 @@ export default class DatabaseMaintain extends React.Component {
                 let mId = itemTable.module_id;
                 if ((mId === this.gCurrent.moduleId) && (uId === this.gCurrent.dbUserId)) {
                     let tId = itemTable.table_id;
-                    let firstLetter = itemTable.table_name[0];
+                    let firstLetter = itemTable.table_name[0].toUpperCase();
+
+                    //itemTable.columns = [];
                     setLetters.add(firstLetter);
 
-                    let mapTable = new Map();
                     if (!mapTablesByLetter.has(firstLetter)) {
-                        mapTable.set(itemTable.table_name, {tableId: tId, columns: []});
-                        mapTablesByLetter.set(firstLetter, {tables: mapTable});
+                        // mapTable.set(itemTable.table_name, {tableId: tId, columns: []});
+                        // mapTablesByLetter.set(firstLetter, {tables: mapTable});
+                        mapTablesByLetter.set(firstLetter, {tables: [itemTable.table_id]});
                     } else {
-                        mapTable = mapTablesByLetter.get(firstLetter).tables;
-                        mapTable.set(itemTable.table_name, {tableId: tId, columns: []});
+                        // mapTable = mapTablesByLetter.get(firstLetter).tables;
+                        // mapTable.set(itemTable.table_name, {tableId: tId, columns: []});
+                        mapTablesByLetter.get(firstLetter).tables.push(itemTable.table_id);
                     }
-                    this.gMap.tables.get(tId).columns.forEach((itemColumn) => {
-                        let tcId = itemColumn;
-                        let column = this.gMap.columns.get(tcId);
-                        mapTable.get(itemTable.table_name).columns.push({
-                            name: column.column_name,
-                            type: column.data_type,
-                            length: column.data_length
-                        });
-                    })
+
+                    // this.gMap.tables.get(tId).columns.forEach((itemColumn) => {
+                    //     let tcId = itemColumn;
+                    //     let column = this.gMap.columns.get(tcId);
+                    //     mapTable.get(itemTable.table_id).columns.push({
+                    //         name: column.column_name,
+                    //         type: column.data_type,
+                    //         length: column.data_length
+                    //     });
+                    // })
                 }
 
             });
 
-            this.gMap.tablesKnownByLetter = mapTablesByLetter;
+            this.gMap.tablesByLetter = mapTablesByLetter;
 
             // 生成UI数据
             let letters = Array.from(setLetters).sort();
-            let lettersKnownTreeData = [];
+            let treeDataLettersKnown = [];
             letters.forEach((item) => {
-                lettersKnownTreeData.push({
+                treeDataLettersKnown.push({
                     key: item,
                     title: item,
                     children: []
                 })
             })
 
-            let tablesKnownTreeData = this.doGetTablesByLetter("known", letters[0]);
-            this.gCurrent.letterKnownSelected = letters[0];
+            let treeDataTablesKnown = this.doGetTablesByLetter("known", letters[0]);
+            this.gCurrent.letterSelected = letters[0];
 
             this.setState({
                 lettersKnownSelectedKeys: [letters[0]],
-                lettersKnownTreeData: lettersKnownTreeData,
-                tablesKnownTreeData: tablesKnownTreeData
+                treeDataLettersKnown: treeDataLettersKnown,
+                treeDataTablesKnown: treeDataTablesKnown
             })
         }
     }
 
     showProductDbUsers() {
-        let dbUsersSelectOptions = [{value: -1, label: "请选择"}];
+        let dbUsersSelectOptions = [{value: -1, label: "请选择产品线数据库用户"}];
 
         this.gData.dbUsers.forEach((item) => {
             if (item.product_line_id === this.gCurrent.productLineId) {
@@ -865,7 +1259,7 @@ export default class DatabaseMaintain extends React.Component {
         });
 
         this.setState({
-            dbUsersSelected: -1,
+            dbUserSelected: -1,
             dbUsersSelectOptions: dbUsersSelectOptions
         })
 
@@ -885,19 +1279,15 @@ export default class DatabaseMaintain extends React.Component {
         return myResult;
     }
 
-    // ****************************************************************************************************
-    // TREE...
-    // ****************************************************************************************************
-
     onTreeLettersKnownSelected(selectedKeys) {
 
         if (selectedKeys[0] === undefined) return;
 
-        this.gCurrent.letterKnownSelected = selectedKeys[0];
+        this.gCurrent.letterSelected = selectedKeys[0];
 
         let tablesTreeData = this.doGetTablesByLetter("known", selectedKeys[0]);
         this.setState({
-            tablesKnownTreeData: tablesTreeData
+            treeDataTablesKnown: tablesTreeData
         })
     }
 
@@ -917,8 +1307,8 @@ export default class DatabaseMaintain extends React.Component {
 
                     this.setState({
                         lettersKnownSelectedKeys: [],
-                        lettersKnownTreeData: [],
-                        tablesKnownTreeData: []
+                        treeDataLettersKnown: [],
+                        treeDataTablesKnown: []
                     }, this.showProductDbUsers);
 
                     break
@@ -932,8 +1322,8 @@ export default class DatabaseMaintain extends React.Component {
 
                     this.setState({
                         lettersKnownSelectedKeys: [],
-                        lettersKnownTreeData: [],
-                        tablesKnownTreeData: []
+                        treeDataLettersKnown: [],
+                        treeDataTablesKnown: []
                     });
 
                     break
@@ -949,8 +1339,8 @@ export default class DatabaseMaintain extends React.Component {
 
                     this.setState({
                         lettersKnownSelectedKeys: [],
-                        lettersKnownTreeData: [],
-                        tablesKnownTreeData: []
+                        treeDataLettersKnown: [],
+                        treeDataTablesKnown: []
                     }, this.showModuleTables);
 
                     break
@@ -964,8 +1354,8 @@ export default class DatabaseMaintain extends React.Component {
 
             this.setState({
                 lettersKnownSelectedKeys: [],
-                lettersKnownTreeData: [],
-                tablesKnownTreeData: []
+                treeDataLettersKnown: [],
+                treeDataTablesKnown: []
             })
         }
 
@@ -975,9 +1365,9 @@ export default class DatabaseMaintain extends React.Component {
     onTreeTablesKnownSelected(selectedKeys, info) {
 
         if (selectedKeys[0] === undefined) return;
-        if (info.node.olc.nodeType !== "table") return;
+        if (info.node.tag.nodeType !== "table") return;
 
-        this.gCurrent.tableId = info.node.olc.tableId;
+        this.gCurrent.tableId = info.node.key;
 
         let myColumn = new TadTableColumn();
         let myIndex = new TadTableIndex();
@@ -991,8 +1381,8 @@ export default class DatabaseMaintain extends React.Component {
         myIndexColumn.table_id = tableId;
         myPartition.table_id = tableId;
         myPartition.key = tableId;
-        myPartition.partition_column = this.gMap.tables.get(tableId).partition_column;
-        myPartition.partition_type = this.gMap.tables.get(tableId).partition_type;
+        myPartition.partitionColumn = this.gMap.tables.get(tableId).partition_column;
+        myPartition.partitionType = this.gMap.tables.get(tableId).partition_type;
         myPartition.partitionNames = [];
         myPartition.partitionHighValues = [];
         myRelation.s_table_id = this.gCurrent.tableId;
@@ -1039,8 +1429,10 @@ export default class DatabaseMaintain extends React.Component {
                             <Fragment>{item.column_name} {item.data_type.toUpperCase()}(item.data_length),<br/></Fragment>);
                         break
                     default:
-                        tableSql += '\t"' + item.column_name + '" ' + item.data_type.toUpperCase() + ',\n';
-                        domTableSql.push(<Fragment>{item.column_name} {item.data_type.toUpperCase()},<br/></Fragment>);
+                        if (item.data_type !== null) {
+                            tableSql += '\t"' + item.column_name + '" ' + item.data_type.toUpperCase() + ',\n';
+                            domTableSql.push(<Fragment>{item.column_name} {item.data_type.toUpperCase()},<br/></Fragment>);
+                        }
                         break
                 }
 
@@ -1126,10 +1518,6 @@ export default class DatabaseMaintain extends React.Component {
         }));
     };
 
-    // ****************************************************************************************************
-    // SELECT...
-    // ****************************************************************************************************
-
     onSelectDbUsersChanged(value, option) {
 
         this.gCurrent.dbUserId = value;
@@ -1138,50 +1526,6 @@ export default class DatabaseMaintain extends React.Component {
         } else if (this.gCurrent.productsNodeSelectedType === "module") {
             this.showModuleTables()
         }
-    }
-
-    // ****************************************************************************************************
-    // CHECKBOX...
-    // ****************************************************************************************************
-
-    onCheckboxKnownTableDisplayChanged(e) {
-
-        let display = "none";
-        if (e.target.checked) {
-            display = "block";
-        }
-        this.setState({
-            showKnownTable: e.target.checked,
-            uiTableKnownDisplay: display
-        })
-    }
-
-    onCheckboxUnknownTableDisplayChanged(e) {
-
-        let display = "none";
-        if (e.target.checked) {
-            display = "block";
-        }
-        this.setState({
-            showUnknownTable: e.target.checked,
-            uiTableUnknownDisplay: display
-        })
-    }
-
-    onRadioUnknownChanged(e) {
-
-        this.setState({
-            uiRadioUnknownSelected: e.target.value
-        })
-    }
-
-    onTreeLettersSelected(selectedKeys) {
-        if (selectedKeys[0] === undefined) return;
-
-        let tablesUnknownTreeData = this.doGetTablesByLetter(selectedKeys[0]);
-        this.setState({
-            tablesUnknownTreeData: tablesUnknownTreeData
-        })
     }
 
     onSelect(selectedKeys, info) {
@@ -1198,58 +1542,32 @@ export default class DatabaseMaintain extends React.Component {
         this.gTableKnownSelected = info.checkedNodes;
     };
 
-    doTablesCompare() {
-        const {tablesKnown, tablesAll} = this.state;
-        for (let i = 0; i < tablesAll.length; i++) {
-            let isFound = false;
-            for (let j = 0; j < tablesKnown.length; j++) {
-                if (tablesAll[i].title === tablesKnown[j].title) {
-                    isFound = true;
-                    break;
-                }
-            }
-            if (!isFound) {
-                this.gTablesUnknown.push(tablesAll[i]);
-            }
-        }
+    //>>>>> on button 添加表 clicked
+    onButtonAddTableClicked(e) {
+        let myTable = new TadTable();
 
-        this.setState({
-            tablesUnknown: this.gTablesUnknown
-        })
+        myTable.table_name = this.gCurrent.letterSelected + "_TABLE_NEW";
+        myTable.module_id = this.gCurrent.moduleId;
+        myTable.db_user_id = this.gCurrent.dbUserId;
+
+        this.doAddTable(myTable);
     }
 
-    // ********** ********** ********** ********** **********
-    // BUTTON...
-    // ********** ********** ********** ********** **********
+    onButtonUpdateTableClicked(e) {
 
-    // Column...
+    }
+
+    onButtonDeleteTableClicked(e) {
+
+    }
+
+    //todo <<<<< now >>>>> on button 添加表字段 clicked
     onButtonAddColumnClicked() {
-        let tableId = this.gCurrent.tableId;
-        let objectId = null;
+        let myTableColumn = new TadTableColumn();
+        myTableColumn.table_id = this.gCurrent.tableId;
+        myTableColumn.column_name = "TABLE_COLUMN_NEW";
 
-        let myObject = new TadTableColumn();
-        myObject.table_id = tableId;
-
-        axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_column",
-            myObject,
-            {headers: {'Content-Type': 'application/json'}}
-        ).then((response) => {
-            let data = response.data;
-
-            if (data.success) {
-                objectId = data.data.column_id;
-                let uiObject = data.data;
-                uiObject.key = objectId;
-
-                let dsColumns = JSON.parse(JSON.stringify(this.state.dsColumns));
-
-                dsColumns.push(uiObject);
-                this.setState({
-                    pageSizeColumns: this.state.pageSizeColumns + 1,
-                    dsColumns: dsColumns
-                })
-            }
-        });
+        this.doAddTableColumn(myTableColumn);
     }
 
     onButtonAlterColumnClicked() {
@@ -1320,47 +1638,54 @@ export default class DatabaseMaintain extends React.Component {
 
     }
 
-    // Index...
+    //todo <<<<< now >>>>> on button 添加表索引 clicked
     onButtonAddIndexClicked() {
-        let tableId = this.gCurrent.tableId;
-        let indexId = null;
+        // let tableId = this.gCurrent.tableId;
+        // let indexId = null;
 
-        let myIndex = {
-            id: indexId,
-            table_id: tableId,
-            index_name: "新增索引",
-            index_type: "normal",
-            index_columns: "",
-            index_attributes: "",
-            index_desc: ""
-        }
 
-        axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_index",
-            myIndex,
-            {headers: {'Content-Type': 'application/json'}}
-        ).then((response) => {
-            let data = response.data;
+        let myIndex = new TadTableIndex();
+        myIndex.table_id = this.gCurrent.tableId;
+        myIndex.index_name = "NEW_TABLE_INDEX";
 
-            if (data.success) {
-                indexId = data.data.id;
-                let uiIndex = {
-                    key: indexId,
-                    index_name: "新增索引",
-                    index_type: "normal",
-                    index_columns: "",
-                    index_attributes: "",
-                    index_desc: ""
-                }
+        console.log(myIndex);
+        //     {
+        //     id: indexId,
+        //     table_id: tableId,
+        //     index_name: "新增索引",
+        //     index_type: "normal",
+        //     index_columns: "",
+        //     index_attributes: "",
+        //     index_desc: ""
+        // }
 
-                let dsIndexes = JSON.parse(JSON.stringify(this.state.dsIndexes));
-
-                dsIndexes.push(uiIndex);
-                this.setState({
-                    pageSizeTableIndexes: this.state.pageSizeTableIndexes + 1,
-                    dsIndexes: dsIndexes
-                })
-            }
-        });
+        this.doAddTableIndex(myIndex);
+        // axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_index",
+        //     myIndex,
+        //     {headers: {'Content-Type': 'application/json'}}
+        // ).then((response) => {
+        //     let data = response.data;
+        //
+        //     if (data.success) {
+        //         indexId = data.data.id;
+        //         let uiIndex = {
+        //             key: indexId,
+        //             index_name: "新增索引",
+        //             index_type: "normal",
+        //             index_columns: "",
+        //             index_attributes: "",
+        //             index_desc: ""
+        //         }
+        //
+        //         let dsIndexes = JSON.parse(JSON.stringify(this.state.dsIndexes));
+        //
+        //         dsIndexes.push(uiIndex);
+        //         this.setState({
+        //             pageSizeTableIndexes: this.state.pageSizeTableIndexes + 1,
+        //             dsIndexes: dsIndexes
+        //         })
+        //     }
+        // });
     }
 
     onButtonAlterIndexClicked() {
@@ -1431,7 +1756,6 @@ export default class DatabaseMaintain extends React.Component {
 
     }
 
-    // Partition...
     onButtonAddPartitionClicked() {
 
         let tableId = this.gCurrent.tableId;
@@ -1535,7 +1859,6 @@ export default class DatabaseMaintain extends React.Component {
 
     }
 
-    // Relation...
     onButtonAddRelationClicked() {
         let tableId = this.gCurrent.tableId;
         let relationId = null;
@@ -1634,10 +1957,14 @@ export default class DatabaseMaintain extends React.Component {
     }
 
     onButtonProductsChangeComponentSizeClicked(e) {
-
         let styleLayout = "NNN";
 
-        if (this.state.styleLayout !== "SNN") styleLayout = "SNN";
+        if (this.state.styleLayout === "NNN")
+            styleLayout = "SNN";
+        else if (this.state.styleLayout === "SNN")
+            styleLayout = "NNN";
+        else if (this.state.styleLayout === "SSN")
+            styleLayout = "NNN";
 
         this.setState({
             styleLayout: styleLayout
@@ -1645,17 +1972,20 @@ export default class DatabaseMaintain extends React.Component {
     }
 
     onButtonTablesChangeComponentSizeClicked(e) {
-
         let styleLayout = "NNN";
 
-        if (this.state.styleLayout !== "SSN") styleLayout = "SSN";
+        if (this.state.styleLayout === "NNN")
+            styleLayout = "SSN";
+        else if (this.state.styleLayout === "SNN")
+            styleLayout = "SSN";
+        else if (this.state.styleLayout === "SSN")
+            styleLayout = "SNN";
 
         this.setState({
             styleLayout: styleLayout
         })
     }
 
-    // Record...
     onButtonAddRecordClicked() {
         let tableId = this.gCurrent.tableId;
         let indexId = null;
@@ -1765,10 +2095,6 @@ export default class DatabaseMaintain extends React.Component {
     onButtonDeleteRecordClicked() {
 
     }
-
-    // ********** ********** ********** ********** **********
-    // TABLE ROW...
-    // ********** ********** ********** ********** **********
 
     onRowColumnSelected = {
         onChange: (selectedRowKeys, selectedRows) => {
@@ -1962,10 +2288,6 @@ export default class DatabaseMaintain extends React.Component {
         }
     }
 
-    // ********** ********** ********** ********** **********
-    // INPUT...
-    // ********** ********** ********** ********** **********
-
     onInputIndexNameChanged(e) {
 
         let editingIndex = JSON.parse(JSON.stringify(this.state.editingIndex));
@@ -1984,6 +2306,7 @@ export default class DatabaseMaintain extends React.Component {
         })
     }
 
+    //todo >>>>> render
     render() {
         const columnsColumn = [
             {
@@ -2100,7 +2423,6 @@ export default class DatabaseMaintain extends React.Component {
                 dataIndex: 'index_columns',
                 key: 'index_columns',
                 render: (text, record, index) => {
-                    console.log(text, record, index);
                     return (
                         <Fragment>
                             {this.state.isEditingKeyIndex !== record.key && (
@@ -2156,7 +2478,6 @@ export default class DatabaseMaintain extends React.Component {
                 key: 'partitionNames',
                 width: 200,
                 render: (text, record, index) => {
-                    console.log(record);
                     return (
                         <Fragment>
                             {this.state.isEditingKeyPartition !== record.key && (
@@ -2196,7 +2517,6 @@ export default class DatabaseMaintain extends React.Component {
                 key: 'partitionHighValues',
                 width: 800,
                 render: (text, record, index) => {
-                    console.log(record);
                     return (
                         <Fragment>
                             {this.state.isEditingKeyPartition !== record.key && (
@@ -2277,305 +2597,241 @@ export default class DatabaseMaintain extends React.Component {
         //     {value: "wow", name: "复合分区"},
         // ]
 
-        return <div
-            className={this.state.styleLayout === "NNN" ? "DatabaseMaintain BoxNormal" :
-                this.state.styleLayout === "SNN" ? "DatabaseMaintain BoxSmall" :
-                    this.state.styleLayout === "SSN" ? "DatabaseMaintain BoxSmallSmall" : "DatabaseMaintain BoxNormal"
-            }>
-            <div className={"BoxProductsInfo"}>
-                <div className={"BoxTitleBar"}>
-                    <Button
-                        size={"small"}
-                        type={"ghost"}
-                        icon={this.state.styleLayout === "NNN" ? <CaretLeftOutlined/> : <CaretRightOutlined/>}
-                        onClick={this.onButtonProductsChangeComponentSizeClicked}/>
+        return (
+            <div className={this.state.styleLayout === "NNN" ? "DatabaseMaintain BoxNormal" : this.state.styleLayout === "SNN" ? "DatabaseMaintain BoxSmall" : this.state.styleLayout === "SSN" ? "DatabaseMaintain BoxSmallSmall" : "DatabaseMaintain BoxNormal"}>
+                <div className={"BoxProductsInfo"}>
+                    <div className={"BoxTitleBar"}>
+                        <div className={this.state.styleLayout === "NNN" ? "BoxTitle" : "BoxTitle BoxHidden"}>产品信息：</div>
+                        <Button onClick={this.onButtonProductsChangeComponentSizeClicked} icon={this.state.styleLayout === "NNN" ? <CaretLeftOutlined/> : <CaretRightOutlined/>} size={"small"} type={"ghost"}/>
+                    </div>
+                    <div className={this.state.styleLayout === "NNN" ? "BoxTree" : "BoxTree BoxHidden"}>
+                        <Tree treeData={this.state.treeDataProducts} onSelect={this.onTreeProductsSelected} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true}/>
+                    </div>
+                    <div className={this.state.styleLayout === "NNN" ? "BoxDescription" : "BoxDescription BoxHidden"}>information</div>
                 </div>
-                {this.state.styleLayout === "NNN" ? (
-                    <Fragment>
+                <div className={"BoxKnown"}>
+                    <div className={"BoxTitleBar"}>
+                        <div className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxTitle" : "BoxTitle BoxHidden"}>库表信息：</div>
+                        <Button onClick={this.onButtonTablesChangeComponentSizeClicked} icon={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? <CaretLeftOutlined/> : <CaretRightOutlined/>} size={"small"} type={"ghost"}/>
+                    </div>
+                    <div className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxSelect" : "BoxSelect BoxHidden"}>
+                        <Select ref={this.refSelectDbUsers} onChange={this.onSelectDbUsersChanged} defaultValue={this.state.dbUserSelected} options={this.state.dbUsersSelectOptions}/>
+                    </div>
+                    <div className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxToolbar" : "BoxToolbar BoxHidden"}>
+                        <div className={"BoxSearch"}>
+                            <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
+                        </div>
+                        <Button onClick={this.onButtonAddTableClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新增</Button>
+                        <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>修改</Button>
+                        {/*<Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditConfirmClicked}>确认</Button>*/}
+                        {/*<Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditCancelClicked}>放弃</Button>*/}
+                        <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>删除</Button>
+                        {/*<Checkbox>分组显示</Checkbox>*/}
+                    </div>
+                    <div className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxTreeAndTable" : "BoxTreeAndTable BoxHidden"}>
+                        <div className={"BoxList"}>
+                            {this.state.treeDataLettersKnown.length ? (
+                                <Tree treeData={this.state.treeDataLettersKnown} onSelect={this.onTreeLettersKnownSelected} defaultSelectedKeys={this.state.lettersKnownSelectedKeys} className={"TreeLetters"} blockNode={true} showLine={{showLeafIcon: false}} showIcon={false}/>
+                            ) : (<div>&nbsp;</div>)}
+                        </div>
                         <div className={"BoxTree"}>
-                            <Tree
-                                blockNode={true}
-                                showLine={{showLeafIcon: false}}
-                                showIcon={true}
-                                switcherIcon={<CaretDownOutlined/>}
-                                onSelect={this.onTreeProductsSelected}
-                                treeData={this.state.productsTreeData}
-                            />
-                        </div>
-                        <div className={"BoxDescription"}>information</div>
-                    </Fragment>
-                ) : (<Fragment>
-                    <div>&nbsp;</div>
-                    <div>&nbsp;</div>
-                </Fragment>)}
-            < /div>
-            <div className={"BoxKnown"}>
-                <div className={"BoxTitleBar"}>
-                    <Button
-                        size={"small"}
-                        type={"ghost"}
-                        icon={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ?
-                            <CaretLeftOutlined/> : <CaretRightOutlined/>}
-                        onClick={this.onButtonTablesChangeComponentSizeClicked}/>
-                </div>
-                {(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? (
-                    <Fragment>
-                        <div className={"BoxSelect"}>
-                            <Select ref={this.refSelectDbUsers}
-                                    onChange={this.onSelectDbUsersChanged}
-                                    defaultValue={this.state.dbUsersSelected}
-                                    options={this.state.dbUsersSelectOptions}/>
-                        </div>
-                        <div className={"BoxToolbar"}>
-                            <Checkbox>分组显示</Checkbox>
-                        </div>
-                        <div className={"BoxTreeAndTable"}>
-                            <div className={"BoxList"}>
-                                {this.state.lettersKnownTreeData.length ? (
-                                    <Tree
-                                        className={"TreeLetters"}
-                                        blockNode={true}
-                                        showLine={{showLeafIcon: false}}
-                                        showIcon={false}
-                                        defaultSelectedKeys={this.state.lettersKnownSelectedKeys}
-                                        onSelect={this.onTreeLettersKnownSelected}
-                                        treeData={this.state.lettersKnownTreeData}
-                                    />
-                                ) : (<div>&nbsp;</div>)}
-                            </div>
-                            <div className={"BoxTree"}>
-                                <div className={"BoxTree2"}>
-                                    <Tree className={"TreeKnown"}
-                                          blockNode={true}
-                                          showLine={true}
-                                          showIcon={true}
-                                          switcherIcon={<CaretDownOutlined/>}
-                                          onSelect={this.onTreeTablesKnownSelected}
-                                          treeData={this.state.tablesKnownTreeData}
-                                    /></div>
+                            <div className={"BoxTree2"}>
+                                <Tree className={"TreeKnown"} treeData={this.state.treeDataTablesKnown} onSelect={this.onTreeTablesKnownSelected} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
                             </div>
                         </div>
-                    </Fragment>
-                ) : (<Fragment>
-                    <div>&nbsp;</div>
-                    <div>&nbsp;</div>
-                    <div>&nbsp;</div>
-                </Fragment>)}
-            </div>
-            <div className={"BoxPropertiesBorder"}>
-                <div>&nbsp;</div>
-                <div>&nbsp;</div>
-                <div>&nbsp;</div>
-                <div>&nbsp;</div>
-                <div className={"BoxProperties"}>
-                    <div className={"BoxTableProperties"}>
-                        <Input placeholder="请输该表用途的简单描述"/>
-                        <Select/>
-                        <Select/>
-                    </div>
-                    <div className={"BoxOtherProperties"}>
-                        <Tabs defaultActiveKey="1" type="card" tabBarGutter={5} animated={false}>
-                            <TabPane tab="表字段" key="1">
-                                <div className={"BoxTableColumnProperties"}>
-                                    <div className={"BoxToolbar"}>
-                                        <div className={"BoxLabel"}>&nbsp;</div>
-                                        <Button onClick={this.onButtonAddColumnClicked}
-                                                style={{display: this.state.isShownButtonAddColumn}}>新增</Button>
-                                        <Button
-                                            onClick={this.onButtonAlterColumnClicked}
-                                            disabled={this.state.isShownButtonAlterColumnConfirm === "block"}>修改</Button>
-                                        <Button onClick={this.onButtonDeleteColumnClicked}
-                                                style={{display: this.state.isShownButtonDeleteColumn}}>删除</Button>
-                                        <Button onClick={this.onButtonAlterColumnConfirmClicked}
-                                                style={{display: this.state.isShownButtonAlterColumnConfirm}}>确认</Button>
-                                        <Button onClick={this.onButtonAlterColumnCancelClicked}
-                                                style={{display: this.state.isShownButtonAlterColumnCancel}}>放弃</Button>
-                                    </div>
-                                    <div ref={this.refBoxDetail} className={"BoxDetail"}>
-                                        <Table
-                                            dataSource={this.state.dsColumns}
-                                            columns={columnsColumn}
-                                            scroll={{
-                                                x: this.state.tablePropertiesScrollX,
-                                                y: this.state.tablePropertiesScrollY
-                                            }}
-                                            bordered={true}
-                                            size={"small"}
-                                            pagination={{
-                                                pageSize: this.state.pageSizeColumns,
-                                                position: ["none", "none"]
-                                            }}
-                                            rowSelection={{
-                                                type: "radio",
-                                                ...this.onRowColumnSelected
-                                            }}/>
-                                    </div>
-                                </div>
-                            </TabPane>
-                            <TabPane tab="表索引" key="2">
-                                <div className={"BoxTableIndexProperties"}>
-                                    <div className={"BoxToolbar"}>
-                                        <div className={"BoxLabel"}>&nbsp;</div>
-                                        <Button
-                                            onClick={this.onButtonAddIndexClicked}
-                                            style={{display: this.state.isShownButtonAddIndex}}>新增</Button>
-                                        <Button
-                                            onClick={this.onButtonAlterIndexClicked}
-                                            disabled={this.state.isShownButtonAlterIndexConfirm === "block"}>修改</Button>
-                                        <Button
-                                            onClick={this.onButtonDeleteIndexClicked}
-                                            style={{display: this.state.isShownButtonDeleteIndex}}>删除</Button>
-                                        <Button
-                                            onClick={this.onButtonAlterIndexConfirmClicked}
-                                            style={{display: this.state.isShownButtonAlterIndexConfirm}}>确认</Button>
-                                        <Button
-                                            onClick={this.onButtonAlterIndexCancelClicked}
-                                            style={{display: this.state.isShownButtonAlterIndexCancel}}>放弃</Button>
-                                    </div>
-                                    <div className={"BoxDetail"}>
-                                        <Table
-                                            dataSource={this.state.dsIndexes}
-                                            columns={columnsIndex}
-                                            scroll={{y: this.state.tablePropertiesScrollY}}
-                                            bordered={true}
-                                            size={"small"}
-                                            pagination={{
-                                                pageSize: this.state.pageSizeIndexes,
-                                                position: ["none", "none"]
-                                            }}
-                                            rowSelection={{
-                                                type: "radio",
-                                                ...this.onRowIndexSelected
-                                            }}/>
-                                    </div>
-                                </div>
-                            </TabPane>
-                            <TabPane tab="表分区" key="3">
-                                <div className={"BoxTablePartitionProperties"}>
-                                    <div className={"BoxToolbar"}>
-                                        <div className={"BoxLabel"}>&nbsp;</div>
-                                        <Button
-                                            onClick={this.onButtonAddPartitionClicked}
-                                            style={{display: this.state.isShownButtonAddPartition}}>新增</Button>
-                                        <Button
-                                            onClick={this.onButtonAlterPartitionClicked}
-                                            disabled={this.state.isShownButtonAlterPartitionConfirm === "block"}>修改</Button>
-                                        <Button
-                                            onClick={this.onButtonDeletePartitionClicked}
-                                            style={{display: this.state.isShownButtonDeletePartition}}>删除</Button>
-                                        <Button
-                                            onClick={this.onButtonAlterPartitionConfirmClicked}
-                                            style={{display: this.state.isShownButtonAlterPartitionConfirm}}>确认</Button>
-                                        <Button
-                                            onClick={this.onButtonAlterPartitionCancelClicked}
-                                            style={{display: this.state.isShownButtonAlterPartitionCancel}}>放弃</Button>
-                                    </div>
-                                    <div className={"BoxDetail"}>
-                                        <Table
-                                            dataSource={this.state.dsPartitions}
-                                            columns={columnsPartition}
-                                            scroll={{x: 1920, y: this.state.tablePropertiesScrollY}}
-                                            bordered={true}
-                                            size={"small"}
-                                            pagination={{
-                                                pageSize: this.state.pageSizePartitions,
-                                                position: ["none", "none"]
-                                            }}
-                                            rowSelection={{
-                                                type: "radio",
-                                                ...this.onRowPartitionSelected
-                                            }}/>
-                                    </div>
-                                </div>
-                            </TabPane>
-                            <TabPane tab="表关联" key="4">
-                                <div className={"BoxTableRelationProperties"}>
-                                    <div className={"BoxToolbar"}>
-                                        <div className={"BoxLabel"}>&nbsp;</div>
-                                        <Button onClick={this.onButtonAddRelationClicked}
-                                                style={{display: this.state.isShownButtonAddRelation}}>新增</Button>
-                                        <Button
-                                            onClick={this.onButtonAlterRelationClicked}
-                                            disabled={this.state.isShownButtonAlterRelationConfirm === "block"}>修改</Button>
-                                        <Button onClick={this.onButtonDeleteRelationClicked}
-                                                style={{display: this.state.isShownButtonDeleteRelation}}>删除</Button>
-                                        <Button onClick={this.onButtonAlterRelationConfirmClicked}
-                                                style={{display: this.state.isShownButtonAlterRelationConfirm}}>确认</Button>
-                                        <Button onClick={this.onButtonAlterRelationCancelClicked}
-                                                style={{display: this.state.isShownButtonAlterRelationCancel}}>放弃</Button>
-                                    </div>
-                                    <div className={"BoxDetail"}>
-                                        <Table
-                                            dataSource={this.state.dsRelations}
-                                            columns={columnsRelation}
-                                            scroll={{y: 400}}
-                                            bordered={true}
-                                            size={"small"}
-                                            pagination={{
-                                                pageSize: this.state.pageSizeRelations,
-                                                position: ["none", "none"]
-                                            }}
-                                            rowSelection={{
-                                                type: "radio",
-                                                ...this.onRowRelationSelected
-                                            }}/>
-                                    </div>
-                                </div>
-                            </TabPane>
-                            <TabPane tab="表数据" key="5">
-                                <div className={"BoxTableRelationProperties"}>
-                                    <div className={"BoxToolbar"}>
-                                        <div className={"BoxLabel"}>&nbsp;</div>
-                                        <Button onClick={this.onButtonAddIndexClicked}
-                                                style={{display: this.state.isShownButtonAddRecord}}>新增</Button>
-                                        <Button
-                                            onClick={this.onButtonAlterIndexClicked}
-                                            disabled={this.state.isShownButtonAlterRecordConfirm === "block"}>修改</Button>
-                                        <Button onClick={this.onButtonDeleteIndexClicked}
-                                                style={{display: this.state.isShownButtonDeleteRecord}}>删除</Button>
-                                        <Button onClick={this.onButtonAlterIndexConfirmClicked}
-                                                style={{display: this.state.isShownButtonAlterRecordConfirm}}>确认</Button>
-                                        <Button onClick={this.onButtonAlterIndexCancelClicked}
-                                                style={{display: this.state.isShownButtonAlterRecordCancel}}>放弃</Button>
-                                    </div>
-                                    <div className={"BoxDetail"}>
-                                        <Table
-                                            dataSource={this.state.dsRecords}
-                                            columns={this.state.columnsRecord}
-                                            scroll={{y: 400}}
-                                            bordered={true}
-                                            size={"small"}
-                                            pagination={{
-                                                pageSize: this.state.pageSizeRecords,
-                                                position: ["none", "none"]
-                                            }}
-                                            rowSelection={{
-                                                type: "radio",
-                                                ...this.onRowRecordSelected
-                                            }}/>
-                                    </div>
-                                </div>
-                            </TabPane>
-                            <TabPane tab="表SQL" key="6">
-                                <div className={"BoxTableSqlProperties"}>
-                                    <div className={"BoxDetail"}>
-                                        <pre>{this.state.tableSql}</pre>
-                                        {/*<div>*/}
-                                        {/*    {this.state.domTableSql.map((item, index) => {*/}
-                                        {/*        return item*/}
-                                        {/*    })}*/}
-                                        {/*</div>*/}
-                                    </div>
-                                </div>
-                            </TabPane>
-                        </Tabs>
                     </div>
                 </div>
-                <div>&nbsp;</div>
-                <div>&nbsp;</div>
-                <div>&nbsp;</div>
-                <div>&nbsp;</div>
+                <div className={"BoxPropertiesBorder"}>
+                    <div className={"BoxProperties"}>
+                        <div className={"BoxTableProperties"}>
+                            <Input placeholder="请输该表用途的简单描述"/>
+                            <Select/>
+                            <Select/>
+                        </div>
+                        <div className={"BoxOtherProperties"}>
+                            <Tabs defaultActiveKey="1" type="card" tabBarGutter={5} animated={false}>
+                                <TabPane tab="表字段" key="1">
+                                    <div className={"BoxTableColumnProperties"}>
+                                        <div className={"BoxToolbar"}>
+                                            <div className={"BoxLabel"}>&nbsp;</div>
+                                            <Button onClick={this.onButtonAddColumnClicked} style={{display: this.state.isShownButtonAddColumn}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新增</Button>
+                                            <Button onClick={this.onButtonAlterColumnClicked} disabled={this.state.isShownButtonAlterColumnConfirm === "block"} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>修改</Button>
+                                            <Button onClick={this.onButtonDeleteColumnClicked} style={{display: this.state.isShownButtonDeleteColumn}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>删除</Button>
+                                            <Button onClick={this.onButtonAlterColumnConfirmClicked} style={{display: this.state.isShownButtonAlterColumnConfirm}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>确认</Button>
+                                            <Button onClick={this.onButtonAlterColumnCancelClicked} style={{display: this.state.isShownButtonAlterColumnCancel}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>放弃</Button>
+                                        </div>
+                                        <div ref={this.refBoxDetail} className={"BoxDetail"}>
+                                            <Table
+                                                dataSource={this.state.dsColumns}
+                                                columns={columnsColumn}
+                                                scroll={{
+                                                    x: this.state.tablePropertiesScrollX,
+                                                    y: this.state.tablePropertiesScrollY
+                                                }}
+                                                bordered={true}
+                                                size={"small"}
+                                                pagination={{
+                                                    pageSize: this.state.pageSizeColumns,
+                                                    position: ["none", "none"]
+                                                }}
+                                                rowSelection={{
+                                                    type: "radio",
+                                                    ...this.onRowColumnSelected
+                                                }}/>
+                                        </div>
+                                    </div>
+                                </TabPane>
+                                <TabPane tab="表索引" key="2">
+                                    <div className={"BoxTableIndexProperties"}>
+                                        <div className={"BoxToolbar"}>
+                                            <div className={"BoxLabel"}>&nbsp;</div>
+                                            <Button onClick={this.onButtonAddIndexClicked} style={{display: this.state.isShownButtonAddIndex}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新增</Button>
+                                            <Button onClick={this.onButtonAlterIndexClicked} disabled={this.state.isShownButtonAlterIndexConfirm === "block"} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>修改</Button>
+                                            <Button onClick={this.onButtonDeleteIndexClicked} style={{display: this.state.isShownButtonDeleteIndex}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>删除</Button>
+                                            <Button onClick={this.onButtonAlterIndexConfirmClicked} style={{display: this.state.isShownButtonAlterIndexConfirm}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>确认</Button>
+                                            <Button onClick={this.onButtonAlterIndexCancelClicked} style={{display: this.state.isShownButtonAlterIndexCancel}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>放弃</Button>
+                                        </div>
+                                        <div className={"BoxDetail"}>
+                                            <Table
+                                                dataSource={this.state.dsIndexes}
+                                                columns={columnsIndex}
+                                                scroll={{y: this.state.tablePropertiesScrollY}}
+                                                bordered={true}
+                                                size={"small"}
+                                                pagination={{
+                                                    pageSize: this.state.pageSizeIndexes,
+                                                    position: ["none", "none"]
+                                                }}
+                                                rowSelection={{
+                                                    type: "radio",
+                                                    ...this.onRowIndexSelected
+                                                }}/>
+                                        </div>
+                                    </div>
+                                </TabPane>
+                                <TabPane tab="表分区" key="3">
+                                    <div className={"BoxTablePartitionProperties"}>
+                                        <div className={"BoxToolbar"}>
+                                            <div className={"BoxLabel"}>&nbsp;</div>
+                                            <Button
+                                                onClick={this.onButtonAddPartitionClicked}
+                                                style={{display: this.state.isShownButtonAddPartition}}>新增</Button>
+                                            <Button
+                                                onClick={this.onButtonAlterPartitionClicked}
+                                                disabled={this.state.isShownButtonAlterPartitionConfirm === "block"}>修改</Button>
+                                            <Button
+                                                onClick={this.onButtonDeletePartitionClicked}
+                                                style={{display: this.state.isShownButtonDeletePartition}}>删除</Button>
+                                            <Button
+                                                onClick={this.onButtonAlterPartitionConfirmClicked}
+                                                style={{display: this.state.isShownButtonAlterPartitionConfirm}}>确认</Button>
+                                            <Button
+                                                onClick={this.onButtonAlterPartitionCancelClicked}
+                                                style={{display: this.state.isShownButtonAlterPartitionCancel}}>放弃</Button>
+                                        </div>
+                                        <div className={"BoxDetail"}>
+                                            <Table
+                                                dataSource={this.state.dsPartitions}
+                                                columns={columnsPartition}
+                                                scroll={{x: 1920, y: this.state.tablePropertiesScrollY}}
+                                                bordered={true}
+                                                size={"small"}
+                                                pagination={{
+                                                    pageSize: this.state.pageSizePartitions,
+                                                    position: ["none", "none"]
+                                                }}
+                                                rowSelection={{
+                                                    type: "radio",
+                                                    ...this.onRowPartitionSelected
+                                                }}/>
+                                        </div>
+                                    </div>
+                                </TabPane>
+                                <TabPane tab="表关联" key="4">
+                                    <div className={"BoxTableRelationProperties"}>
+                                        <div className={"BoxToolbar"}>
+                                            <div className={"BoxLabel"}>&nbsp;</div>
+                                            <Button onClick={this.onButtonAddRelationClicked}
+                                                    style={{display: this.state.isShownButtonAddRelation}}>新增</Button>
+                                            <Button
+                                                onClick={this.onButtonAlterRelationClicked}
+                                                disabled={this.state.isShownButtonAlterRelationConfirm === "block"}>修改</Button>
+                                            <Button onClick={this.onButtonDeleteRelationClicked}
+                                                    style={{display: this.state.isShownButtonDeleteRelation}}>删除</Button>
+                                            <Button onClick={this.onButtonAlterRelationConfirmClicked}
+                                                    style={{display: this.state.isShownButtonAlterRelationConfirm}}>确认</Button>
+                                            <Button onClick={this.onButtonAlterRelationCancelClicked}
+                                                    style={{display: this.state.isShownButtonAlterRelationCancel}}>放弃</Button>
+                                        </div>
+                                        <div className={"BoxDetail"}>
+                                            <Table
+                                                dataSource={this.state.dsRelations}
+                                                columns={columnsRelation}
+                                                scroll={{y: 400}}
+                                                bordered={true}
+                                                size={"small"}
+                                                pagination={{
+                                                    pageSize: this.state.pageSizeRelations,
+                                                    position: ["none", "none"]
+                                                }}
+                                                rowSelection={{
+                                                    type: "radio",
+                                                    ...this.onRowRelationSelected
+                                                }}/>
+                                        </div>
+                                    </div>
+                                </TabPane>
+                                <TabPane tab="表数据" key="5">
+                                    <div className={"BoxTableRelationProperties"}>
+                                        <div className={"BoxToolbar"}>
+                                            <div className={"BoxLabel"}>&nbsp;</div>
+                                            <Button onClick={this.onButtonAddIndexClicked}
+                                                    style={{display: this.state.isShownButtonAddRecord}}>新增</Button>
+                                            <Button
+                                                onClick={this.onButtonAlterIndexClicked}
+                                                disabled={this.state.isShownButtonAlterRecordConfirm === "block"}>修改</Button>
+                                            <Button onClick={this.onButtonDeleteIndexClicked}
+                                                    style={{display: this.state.isShownButtonDeleteRecord}}>删除</Button>
+                                            <Button onClick={this.onButtonAlterIndexConfirmClicked}
+                                                    style={{display: this.state.isShownButtonAlterRecordConfirm}}>确认</Button>
+                                            <Button onClick={this.onButtonAlterIndexCancelClicked}
+                                                    style={{display: this.state.isShownButtonAlterRecordCancel}}>放弃</Button>
+                                        </div>
+                                        <div className={"BoxDetail"}>
+                                            <Table
+                                                dataSource={this.state.dsRecords}
+                                                columns={this.state.columnsRecord}
+                                                scroll={{y: 400}}
+                                                bordered={true}
+                                                size={"small"}
+                                                pagination={{
+                                                    pageSize: this.state.pageSizeRecords,
+                                                    position: ["none", "none"]
+                                                }}
+                                                rowSelection={{
+                                                    type: "radio",
+                                                    ...this.onRowRecordSelected
+                                                }}/>
+                                        </div>
+                                    </div>
+                                </TabPane>
+                                <TabPane tab="表SQL" key="6">
+                                    <div className={"BoxTableSqlProperties"}>
+                                        <div className={"BoxDetail"}>
+                                            <pre>{this.state.tableSql}</pre>
+                                            {/*<div>*/}
+                                            {/*    {this.state.domTableSql.map((item, index) => {*/}
+                                            {/*        return item*/}
+                                            {/*    })}*/}
+                                            {/*</div>*/}
+                                        </div>
+                                    </div>
+                                </TabPane>
+                            </Tabs>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
+        )
     }
 }

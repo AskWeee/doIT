@@ -1,13 +1,22 @@
 $tabs-border-color: rgb(225,225,225);
 $colorComponentToolbar: rgb(175,225,255);
 
+.BoxHidden {
+    width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-width: 0 !important;
+    overflow: hidden !important;
+}
+
 .BoxNormal {
     background: red;
-    grid-template-columns: 2fr 3fr 5fr;
+    grid-template-columns: 2fr 3fr 4fr;
 }
 
 .BoxSmall {
-    grid-template-columns: auto 1fr 3fr;
+    grid-template-columns: auto 1fr 2fr;
 }
 
 .BoxSmallSmall {
@@ -55,25 +64,33 @@ $colorComponentToolbar: rgb(175,225,255);
 
 .DatabaseMaintain {
     display: grid;
-    background: rgba(55, 175, 255, 0.2);
-    grid-gap: 5px;
-    margin: 5px;
+    background: darkgray;
+    //grid-gap: 5px;
+    //margin: 5px;
     border: 1px solid rgba(55, 55, 55, 1);
-    padding: 5px;
+    margin: 5px;
     overflow: hidden;
 
     .BoxProductsInfo {
         //border: 1px solid rgba(55,55,55,1);
-        background: darkgray;
+        background: lightgray;
         display: grid;
         grid-template-rows: auto 1fr 160px;
         overflow: hidden;
+        margin: 3px;
 
         .BoxTitleBar {
             //border: 1px solid rgba(55,55,55,1);
             background: $colorComponentToolbar;
             display: grid;
-            justify-content: end;
+            grid-template-columns: 1fr auto;
+
+            .BoxTitle {
+                display: grid;
+                align-content: center;
+                margin: 0 0 0 5px;
+                color: black;
+            }
         }
 
         .BoxTree {
@@ -81,41 +98,63 @@ $colorComponentToolbar: rgb(175,225,255);
             //border: 1px solid rgba(55,55,55,1);
             display: grid;
             overflow: auto;
-            margin: 5px 5px 0 5px;
+            margin: 3px 3px 0 3px;
         }
 
         .BoxDescription {
             background: rgba(255, 255, 255, 1);
             //border: 1px solid rgba(55,55,55,1);
             color: black;
-            margin: 5px;
+            margin: 3px;
             padding: 5px;
         }
     }
 
     .BoxKnown {
         //border: 1px solid rgba(55,55,55,1);
-        background: darkgray;
+        background: lightgray;
         display: grid;
         grid-template-rows: auto auto auto 1fr;
         overflow: hidden;
+        margin: 3px 3px 3px 0;
 
         .BoxTitleBar {
             //border: 1px solid rgba(55,55,55,1);
             background: $colorComponentToolbar;
             display: grid;
-            justify-content: end;
+            grid-template-columns: 1fr auto;
+
+            .BoxTitle {
+                display: grid;
+                align-content: center;
+                margin: 0 0 0 5px;
+                color: black;
+            }
+
         }
 
         .BoxSelect {
             display: grid;
-            margin: 5px 5px 0 5px;
+            margin: 3px 3px 0 3px;
         }
 
         .BoxToolbar {
             background: rgba(255, 255, 255, 1);
-            padding: 5px;
-            margin: 5px 5px 0 5px;
+            margin: 3px 3px 0 3px;
+            display: grid;
+            grid-template-columns: 1fr auto auto auto;
+
+            .BoxSearch {
+                margin: 3px 2px 3px 3px;
+            }
+
+            Button {
+                margin: 3px 3px 3px 0;
+
+                &:first-child {
+                    margin: 0;
+                }
+            }
         }
 
         .BoxTreeAndTable {
@@ -123,7 +162,7 @@ $colorComponentToolbar: rgb(175,225,255);
             grid-template-columns: 80px 1fr;
             overflow: hidden;
             background: white;
-            margin: 5px;
+            margin: 3px;
 
             .BoxList {
                 display: grid;
@@ -159,19 +198,21 @@ $colorComponentToolbar: rgb(175,225,255);
     }
 
     .BoxPropertiesBorder {
-        border: 1px solid gray;
+        //border: 1px solid gray;
         background: lightgray;
         display: grid;
-        grid-template-rows: 5px 1fr 5px;
-        grid-template-columns: 5px 1fr 5px;
+        //grid-template-rows: 5px 1fr 5px;
+        //grid-template-columns: 5px 1fr 5px;
         color: black;
         overflow: hidden;
+        margin: 3px 3px 3px 0;
 
         .BoxProperties {
             display: grid;
             grid-template-rows: auto 1fr;
             grid-gap: 5px;
             overflow: hidden;
+            margin: 3px;
 
             .BoxTableProperties {
                 padding-right: 5px;

@@ -7,5 +7,8 @@ export default class TadTablePartition {
         this.high_value = null;
         this.partition_position = null;
         this.partition_desc = null;
+
+        this.partitionColumn = null;
+        this.partitionType = null;
     }
 }

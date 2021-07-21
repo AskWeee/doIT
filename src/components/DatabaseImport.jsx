@@ -1673,6 +1673,7 @@ export default class DatabaseImport extends React.Component {
                                 let item = value.columns[j];
                                 let myIndexColumn = new TadTableIndexColumn();
                                 myIndexColumn.table_id = data.data.table_id;
+                                myIndexColumn.index_id = item.id;
                                 myIndexColumn.index_name = item.indexName;
                                 myIndexColumn.column_name = item.columnName;
                                 myIndexColumn.column_position = item.columnPosition;
