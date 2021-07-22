@@ -10,6 +10,7 @@ import LowcodeSingleTable from "./LowcodeSingleTable";
 import ServicePerformance from "./ServicePerformance";
 import {CloseOutlined} from '@ant-design/icons';
 import ServiceProject from "./ServiceProject";
+import HelpUs from "./HelpUs";
 
 class Content extends React.Component {
     static contextType = GCtx;
@@ -109,6 +110,10 @@ class Content extends React.Component {
 
     showComponentServiceProject() {
         this.showComponent("指标项目应用管理", <ServiceProject key="menu_service_project"/>)
+    }
+
+    showComponentHelpUs() {
+        this.showComponent("系统需求及问题列表", <HelpUs key="menu_help_us"/>);
     }
 
     showComponent(title, jsxCom) {

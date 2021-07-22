@@ -1,0 +1,188 @@
+$tabs-border-color: rgb(225, 225, 225);
+$colorComponentToolbar: rgb(175, 225, 255);
+
+.BoxHidden {
+    width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-width: 0 !important;
+    overflow: hidden !important;
+}
+
+.shadowElement {
+    top: -999px;
+    left: -999px;
+    opacity: 0;
+    position: absolute;
+}
+
+.InputReadonly {
+    padding: 0;
+    margin: 0;
+    color: black;
+    padding-left: 5px;
+}
+
+.HelpUs {
+    background: #0f4f8f;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: hidden;
+
+    .BoxTreeOlcEvents {
+        overflow: hidden;
+        display: grid;
+        grid-template-rows: auto 1fr;
+        background: white;
+        border: 1px solid lighten($colorComponentToolbar, 50%);
+
+        .BoxTitleBar {
+            //border: 1px solid rgba(55,55,55,1);
+            //border: {
+            //    width: 0 0 1px 0;
+            //    style: solid;
+            //    color: darken($colorComponentToolbar, 50%);
+            //}
+            background: $colorComponentToolbar;
+            display: grid;
+            grid-template-rows: 1fr;
+            grid-template-columns: 1fr auto;
+            //justify-content: end;
+            font-weight: bold;
+            height: 32px;
+
+            .BoxTitle {
+                margin: 0 0 0 10px;
+                color: black;
+                display: grid;
+                align-content: center;
+            }
+
+            .BoxButtons {
+                display: grid;
+                align-content: center;
+                margin: 0 5px 0 0;
+                grid-template-columns: auto auto auto auto;
+                grid-gap: 3px;
+            }
+        }
+
+        .BoxTreeInstance {
+            background: #4b7d4b;
+            overflow: hidden;
+            display: grid;
+            margin: 5px;
+
+            .BoxReq {
+            }
+
+            .BoxReqClosed {
+                color: darkgreen;
+            }
+
+            .BoxBug {
+                color: darkred;
+                font-weight: bold;
+            }
+        }
+    }
+
+    .BoxOlcEventProperties {
+        overflow: hidden;
+        display: grid;
+        margin: 0 0 0 3px;
+        grid-template-rows: auto 1fr;
+        background: white;
+        border: 1px solid lighten($colorComponentToolbar, 50%);
+
+        .BoxTitleBar {
+            //border: 1px solid rgba(55,55,55,1);
+            //border: {
+            //    width: 0 0 1px 0;
+            //    style: solid;
+            //    color: darken($colorComponentToolbar, 50%);
+            //}
+            background: $colorComponentToolbar;
+            display: grid;
+            grid-template-rows: 1fr;
+            grid-template-columns: 1fr auto;
+            //justify-content: end;
+            font-weight: bold;
+            height: 32px;
+
+            .BoxTitle {
+                margin: 0 0 0 10px;
+                color: black;
+                display: grid;
+                align-content: center;
+            }
+
+            .BoxButtons {
+                display: grid;
+                grid-template-columns: auto auto;
+                grid-gap: 3px;
+                align-content: center;
+                margin: 0 5px 0 0;
+            }
+        }
+
+        .BoxProperties {
+            background: white;
+            overflow: hidden;
+            display: grid;
+            margin: 5px;
+            grid-template-rows: auto auto auto auto 1fr auto;
+            grid-gap: 5px;
+
+            .BoxTitle {
+                color: black;
+                margin: 0 0 0 5px;
+            }
+
+            .BoxValueTitle {
+                display: grid;
+            }
+
+            .BoxValueCustomer {
+                display: grid;
+                width: 200px;
+            }
+
+            .BoxValueDeveloper {
+                display: grid;
+                width: 200px;
+            }
+
+            .BoxValueStatus {
+                display: grid;
+                width: 200px;
+            }
+
+            .BoxFormItemInput {
+                background: darkslategray;
+                margin: 0;
+
+                //.ant-form-item-control {
+                //    display: grid !important;
+                //}
+                //.ant-form-item-control-input {
+                //    display: grid !important;
+                //
+                //    .ant-form-item-control-input-content {
+                //        display: grid !important;
+                //        background: red;
+                //    }
+                //}
+                .clsTextArea {
+
+                }
+            }
+
+            .BoxRow {
+                display: grid;
+                grid-template-rows: auto 1fr;
+            }
+        }
+    }
+}

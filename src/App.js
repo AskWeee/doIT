@@ -157,6 +157,9 @@ class App extends React.Component {
             case 'menu_service_project':
                 this.ComContent.showComponentServiceProject();
                 break
+            case 'menu_help_us':
+                this.ComContent.showComponentHelpUs();
+                break
             default:
                 break
         }
