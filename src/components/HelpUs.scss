@@ -74,16 +74,55 @@ $colorComponentToolbar: rgb(175, 225, 255);
             display: grid;
             margin: 5px;
 
-            .BoxReq {
+            .BoxReqNew {
             }
 
-            .BoxReqClosed {
+            .BoxReqWait {
+                color: black;
+                font-weight: bold;
+            }
+
+            .BoxReqDoing {
+                color: black;
+                font-weight: bold;
+
+                &:before {
+                    content: ">>> ";
+                }
+            }
+
+            .BoxReqDone{
                 color: darkgreen;
             }
 
-            .BoxBug {
+            .BoxReqClosed {
+                color: darkgray;
+            }
+
+            .BoxBugNew {
+                color: darkred;
+            }
+
+            .BoxBugWait {
                 color: darkred;
                 font-weight: bold;
+            }
+
+            .BoxBugDoing {
+                color: darkred;
+                font-weight: bold;
+
+                &:before {
+                    content: ">>> ";
+                }
+            }
+
+            .BoxBugDone{
+                color: darkgreen;
+            }
+
+            .BoxBugClosed {
+                color: darkgray;
             }
         }
     }

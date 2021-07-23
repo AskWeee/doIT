@@ -179,22 +179,53 @@ export default class HelpUs extends React.PureComponent {
     }
 
     getOeClassName(oe) {
-        let nodeClassName = "BoxReq";
-        console.log(oe);
+        let nodeClassName = "";
 
         if (oe.type.toUpperCase() === "BUG") {
-            nodeClassName = "BoxBug";
-            if (oe.status.toUpperCase() === "CLOSED") {
-                nodeClassName = "BoxBugClosed";
+            switch (oe.status.toUpperCase()) {
+                case "NEW":
+                    nodeClassName = "BoxBugNew";
+                    break
+                case "WAIT":
+                    nodeClassName = "BoxBugWait";
+                    break
+                case "DOING":
+                    nodeClassName = "BoxBugDoing";
+                    break
+                case "DONE":
+                    nodeClassName = "BoxBugDone";
+                    break
+                case "CLOSED":
+                    nodeClassName = "BoxBugClosed";
+                    break
+                default:
+                    break
             }
         } else {
-            if (oe.status.toUpperCase() === "CLOSED") {
-                nodeClassName = "BoxReqClosed";
+            switch (oe.status.toUpperCase()) {
+                case "NEW":
+                    nodeClassName = "BoxReqNew";
+                    break
+                case "WAIT":
+                    nodeClassName = "BoxReqWait";
+                    break
+                case "DOING":
+                    nodeClassName = "BoxReqDoing";
+                    break
+                case "DONE":
+                    nodeClassName = "BoxReqDone";
+                    break
+                case "CLOSED":
+                    nodeClassName = "BoxReqClosed";
+                    break
+                default:
+                    break
             }
         }
 
         return nodeClassName;
     }
+
     //todo >>>>> do Get All
     doGetAll() {
         axios.all([
@@ -322,7 +353,7 @@ export default class HelpUs extends React.PureComponent {
         if (info.selected) {
             let oe = this.gMap.olcEvents.get(selectedKeys[0]);
             this.gCurrent.olcEvent = oe;
-            console.log(oe);
+
             if (oe.desc === null) oe.desc = "";
 
             this.gRef.inputValueTitle.current.setValue(oe.title);
@@ -386,7 +417,6 @@ export default class HelpUs extends React.PureComponent {
     }
 
     onButtonSaveClicked(e) {
-        console.log(this.gDynamic);
         let oe = new TadOlcEvent();
 
         oe.uuid = this.gCurrent.olcEvent.uuid;
@@ -410,9 +440,11 @@ export default class HelpUs extends React.PureComponent {
             oe.desc = this.gDynamic.valueDesc;
         }
 
-        console.log(oe);
-
         this.doUpdateOlcEvent(oe);
+        this.gDynamic = {};
+        this.setState({
+            isOlcEventEditing: false
+        })
     }
 
     onButtonRecoverClicked(e) {
@@ -462,7 +494,7 @@ export default class HelpUs extends React.PureComponent {
             {label: "排队", value: "WAIT"},
             {label: "开干", value: "DOING"},
             {label: "搞定", value: "DONE"},
-            {label: "关闭", value: "CLOSED"},
+            {label: "废弃", value: "CLOSED"},
         ];
         return (
             <div className="HelpUs">
@@ -517,7 +549,7 @@ export default class HelpUs extends React.PureComponent {
                         <div className="BoxRow">
                             <div className="BoxTitle">简述：</div>
                             <Form.Item name="valueDesc" className="BoxFormItemInput">
-                                <Input.TextArea className="clsTextArea" autoSize={{ minRows: 13, maxRows: 30 }} onChange={this.onInputValueDescChanged}/>
+                                <Input.TextArea className="clsTextArea" autoSize={{ minRows: 13, maxRows: 13 }} onChange={this.onInputValueDescChanged}/>
                             </Form.Item>
                         </div>
                     </Form>

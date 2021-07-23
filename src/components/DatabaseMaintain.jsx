@@ -3,6 +3,7 @@ import './DatabaseMaintain.scss'
 import GCtx from "../GCtx";
 import lodash from "lodash";
 import axios from "axios";
+import moment from 'moment';
 import {Button, Select, Tree, Table, Input, Tabs} from 'antd'
 import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, PlusSquareOutlined} from '@ant-design/icons'
 import TadTableColumn from '../entity/TadTableColumn'
@@ -24,6 +25,7 @@ export default class DatabaseMaintain extends React.Component {
     gData = {};
     gCurrent = {};
     refBoxDetail = React.createRef();
+    gDynamic = {};
 
     gTableUnknownSelected = [];
     gTableKnownSelected = [];
@@ -127,6 +129,8 @@ export default class DatabaseMaintain extends React.Component {
             styleLayout: "NNN",
             tablePropertiesScrollX: 1366,
             tablePropertiesScrollY: 400,
+            isTableNameEditing: false,
+            tableColumnEditingKey: null,
         }
 
         //todo >>>>> bind
@@ -197,7 +201,7 @@ export default class DatabaseMaintain extends React.Component {
         this.getTableId = this.getTableId.bind(this);
 
         this.onButtonAddTableClicked = this.onButtonAddTableClicked.bind(this);
-        this.onButtonUpdateTableClicked = this.onButtonUpdateTableClicked.bind(this);
+        this.onButtonRenameTableClicked = this.onButtonRenameTableClicked.bind(this);
         this.onButtonDeleteTableClicked = this.onButtonDeleteTableClicked.bind(this);
         this.onButtonAddColumnClicked = this.onButtonAddColumnClicked.bind(this);
         this.onButtonAlterColumnClicked = this.onButtonAlterColumnClicked.bind(this);
@@ -226,9 +230,17 @@ export default class DatabaseMaintain extends React.Component {
         this.onButtonAlterRecordCancelClicked = this.onButtonAlterRecordCancelClicked.bind(this);
         this.onButtonProductsChangeComponentSizeClicked = this.onButtonProductsChangeComponentSizeClicked.bind(this);
         this.onButtonTablesChangeComponentSizeClicked = this.onButtonTablesChangeComponentSizeClicked.bind(this);
+        this.onButtonTableNameEditingConfirmClicked = this.onButtonTableNameEditingConfirmClicked.bind(this);
+        this.onButtonTableNameEditingCancelClicked = this.onButtonTableNameEditingCancelClicked.bind(this);
+        this.onButtonColumnEditingConfirmClicked = this.onButtonColumnEditingConfirmClicked.bind(this);
+        this.onButtonColumnEditingCancelClicked = this.onButtonColumnEditingCancelClicked.bind(this);
 
         this.onInputIndexNameChanged = this.onInputIndexNameChanged.bind(this);
         this.onInputPartitionNameChanged = this.onInputPartitionNameChanged.bind(this);
+        this.onInputTableNameChanged = this.onInputTableNameChanged.bind(this);
+        this.onInputColumnNameChanged = this.onInputColumnNameChanged.bind(this);
+
+        this.onTabsTablePropertiesChanged = this.onTabsTablePropertiesChanged.bind(this);
     }
 
     componentDidMount() {
@@ -849,8 +861,8 @@ export default class DatabaseMaintain extends React.Component {
         this.restUpdateTable(params).then((result) => {
             if (result.status === 200) {
                 if (result.data.success) {
-                    // this.uiUpdateProjectKpi(result.data.data, "add");
-                    // this.dsUpdateProjectKpi(result.data.data, "add");
+                    this.uiUpdateTable(result.data.data, "update");
+                    this.dsUpdateTable(result.data.data, "update");
                     this.context.showMessage("成功，内部ID为：" + result.data.data.id);
                 } else {
                     this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
@@ -877,25 +889,39 @@ export default class DatabaseMaintain extends React.Component {
         });
     }
 
+    //todo >>>>> ui update table
     uiUpdateTable(table, what) {
+        let treeDataTablesKnown = lodash.cloneDeep(this.state.treeDataTablesKnown);
+
         switch (what) {
             case "add":
-                let treeDataTablesKnown = lodash.cloneDeep(this.state.treeDataTablesKnown);
                 let uiTable = {
                     key: table.table_id,
                     title: table.table_name,
                     children: [],
                     tag: {
-
+                        nodeType: "table"
                     }
                 };
                 treeDataTablesKnown.push(uiTable);
 
                 this.setState({
                     treeDataTablesKnown: treeDataTablesKnown
+                }, () => {
+                    this.gCurrent.tableId = table.table_id;
                 })
                 break
             case "update":
+                for(let i = 0; i < treeDataTablesKnown.length; i++) {
+                    if (treeDataTablesKnown[i].key === table.table_id) {
+                        treeDataTablesKnown[i].title = table.table_name;
+                        break
+                    }
+                }
+
+                this.setState({
+                    treeDataTablesKnown: treeDataTablesKnown
+                });
                 break
             case "delete":
                 break
@@ -904,13 +930,23 @@ export default class DatabaseMaintain extends React.Component {
         }
     }
 
+    //todo >>>>> ds update table
     dsUpdateTable(table, what) {
         switch (what) {
             case "add":
+                table.columns = [];
+                table.indexes = [];
+                table.partitions = [];
+                table.relations = [];
                 this.gMap.tables.set(table.table_id, table);
-                this.gMap.tablesByLetter.get(this.gCurrent.letterSelected).tables.push(table.table_id);
+                if (this.gMap.tablesByLetter.has(this.gCurrent.letterSelected)) {
+                    this.gMap.tablesByLetter.get(this.gCurrent.letterSelected).tables.push(table.table_id);
+                } else {
+                    this.gMap.tablesByLetter.set(this.gCurrent.letterSelected, {tables: [table.table_id]});
+                }
                 break
             case "update":
+                this.gMap.tables.get(table.table_id).table_name = table.table_name;
                 break
             case "delete":
                 break
@@ -939,8 +975,8 @@ export default class DatabaseMaintain extends React.Component {
         this.restUpdateTableColumn(params).then((result) => {
             if (result.status === 200) {
                 if (result.data.success) {
-                    // this.uiUpdateProjectKpi(result.data.data, "add");
-                    // this.dsUpdateProjectKpi(result.data.data, "add");
+                    this.uiUpdateTableColumn(result.data.data, "update");
+                    this.dsUpdateTableColumn(result.data.data, "update");
                     this.context.showMessage("成功，内部ID为：" + result.data.data.id);
                 } else {
                     this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
@@ -967,10 +1003,12 @@ export default class DatabaseMaintain extends React.Component {
         });
     }
 
+    //todo >>>>> ui update table column
     uiUpdateTableColumn(column, what) {
+        let dsColumns = lodash.cloneDeep(this.state.dsColumns);
+
         switch (what) {
             case "add":
-                let dsColumns = lodash.cloneDeep(this.state.dsColumns);
                 column.key = column.column_id;
 
                 dsColumns.push(lodash.cloneDeep(column));
@@ -981,6 +1019,15 @@ export default class DatabaseMaintain extends React.Component {
                 })
                 break
             case "update":
+                for(let i = 0; i < dsColumns.length; i++) {
+                    if (dsColumns[i].column_id === column.column_id) {
+                        dsColumns[i].column_name = column.column_name;
+                        break
+                    }
+                }
+                this.setState({
+                    dsColumns: dsColumns
+                })
                 break
             case "delete":
                 break
@@ -989,13 +1036,17 @@ export default class DatabaseMaintain extends React.Component {
         }
     }
 
-    dsUpdateTableColumn(table, what) {
+    //todo >>>>> ds update table column
+    dsUpdateTableColumn(column, what) {
         switch (what) {
             case "add":
-                this.gMap.tables.set(table.table_id, table);
-                this.gMap.tablesByLetter.get(this.gCurrent.letterSelected).tables.push(table.table_id);
+                this.gMap.columns.set(column.column_id, column);
+                if (this.gMap.tables.has(column.table_id)) {
+                    this.gMap.tables.get(column.table_id).columns.push(column.column_id);
+                }
                 break
             case "update":
+                this.gMap.columns.get(column.column_id).column_name = column.column_name;
                 break
             case "delete":
                 break
@@ -1279,22 +1330,23 @@ export default class DatabaseMaintain extends React.Component {
         return myResult;
     }
 
-    onTreeLettersKnownSelected(selectedKeys) {
+    //todo >>>>> on tree 表名首字母 selected
+    onTreeLettersKnownSelected(selectedKeys, info) {
+        if (info.selected) {
+            this.gCurrent.letterSelected = selectedKeys[0];
 
-        if (selectedKeys[0] === undefined) return;
-
-        this.gCurrent.letterSelected = selectedKeys[0];
-
-        let tablesTreeData = this.doGetTablesByLetter("known", selectedKeys[0]);
-        this.setState({
-            treeDataTablesKnown: tablesTreeData
-        })
+            let tablesTreeData = this.doGetTablesByLetter("known", selectedKeys[0]);
+            this.setState({
+                treeDataTablesKnown: tablesTreeData
+            })
+        } else {
+            this.gCurrent.letterSelected = undefined;
+        }
     }
 
+    //todo >>>>> on Tree 产品 selected
     onTreeProductsSelected(selectedKeys, info) {
-
         if (info.selected) {
-
             let ids = selectedKeys[0].toString().split("_");
             let nodeType = info.node.nodeType;
             this.gCurrent.productsNodeSelectedType = nodeType;
@@ -1308,7 +1360,16 @@ export default class DatabaseMaintain extends React.Component {
                     this.setState({
                         lettersKnownSelectedKeys: [],
                         treeDataLettersKnown: [],
-                        treeDataTablesKnown: []
+                        treeDataTablesKnown: [],
+                        pageSizeColumns: 0,
+                        dsColumns: [],
+                        pageSizeIndexes: 0,
+                        dsIndexes: [],
+                        pageSizePartitions: 0,
+                        dsPartitions: [],
+                        pageSizeRelations: 0,
+                        dsRelations: [],
+                        tableSql: "",
                     }, this.showProductDbUsers);
 
                     break
@@ -1323,7 +1384,16 @@ export default class DatabaseMaintain extends React.Component {
                     this.setState({
                         lettersKnownSelectedKeys: [],
                         treeDataLettersKnown: [],
-                        treeDataTablesKnown: []
+                        treeDataTablesKnown: [],
+                        pageSizeColumns: 0,
+                        dsColumns: [],
+                        pageSizeIndexes: 0,
+                        dsIndexes: [],
+                        pageSizePartitions: 0,
+                        dsPartitions: [],
+                        pageSizeRelations: 0,
+                        dsRelations: [],
+                        tableSql: "",
                     });
 
                     break
@@ -1340,7 +1410,16 @@ export default class DatabaseMaintain extends React.Component {
                     this.setState({
                         lettersKnownSelectedKeys: [],
                         treeDataLettersKnown: [],
-                        treeDataTablesKnown: []
+                        treeDataTablesKnown: [],
+                        pageSizeColumns: 0,
+                        dsColumns: [],
+                        pageSizeIndexes: 0,
+                        dsIndexes: [],
+                        pageSizePartitions: 0,
+                        dsPartitions: [],
+                        pageSizeRelations: 0,
+                        dsRelations: [],
+                        tableSql: "",
                     }, this.showModuleTables);
 
                     break
@@ -1351,171 +1430,175 @@ export default class DatabaseMaintain extends React.Component {
             this.gCurrent.productLineId = undefined;
             this.gCurrent.productId = undefined;
             this.gCurrent.moduleId = undefined;
+            this.gCurrent.letterSelected = undefined;
+            this.gCurrent.tableId = undefined;
 
             this.setState({
                 lettersKnownSelectedKeys: [],
                 treeDataLettersKnown: [],
-                treeDataTablesKnown: []
-            })
+                treeDataTablesKnown: [],
+                pageSizeColumns: 0,
+                dsColumns: [],
+                pageSizeIndexes: 0,
+                dsIndexes: [],
+                pageSizePartitions: 0,
+                dsPartitions: [],
+                pageSizeRelations: 0,
+                dsRelations: [],
+                tableSql: "",
+            });
         }
 
 
     };
 
+    //todo >>>>> on Tree 表 selected
     onTreeTablesKnownSelected(selectedKeys, info) {
+        // if (selectedKeys[0] === undefined) return;
+        // if (info.node.tag.nodeType !== "table") return;
 
-        if (selectedKeys[0] === undefined) return;
-        if (info.node.tag.nodeType !== "table") return;
+        if (info.selected && info.node.tag.nodeType === "table") {
+            this.gCurrent.tableId = info.node.key;
 
-        this.gCurrent.tableId = info.node.key;
+            let myColumn = new TadTableColumn();
+            let myIndex = new TadTableIndex();
+            let myIndexColumn = new TadTableIndexColumn();
+            let myPartition = new TadTablePartition();
+            let myRelation = new TadTableRelation();
 
-        let myColumn = new TadTableColumn();
-        let myIndex = new TadTableIndex();
-        let myIndexColumn = new TadTableIndexColumn();
-        let myPartition = new TadTablePartition();
-        let myRelation = new TadTableRelation();
+            let tableId = this.gCurrent.tableId;
+            myColumn.table_id = tableId;
+            myIndex.table_id = tableId;
+            myIndexColumn.table_id = tableId;
+            myPartition.table_id = tableId;
+            myPartition.key = tableId;
+            myPartition.partitionColumn = this.gMap.tables.get(tableId).partition_column;
+            myPartition.partitionType = this.gMap.tables.get(tableId).partition_type;
+            myPartition.partitionNames = [];
+            myPartition.partitionHighValues = [];
+            myRelation.s_table_id = this.gCurrent.tableId;
 
-        let tableId = this.gCurrent.tableId;
-        myColumn.table_id = tableId;
-        myIndex.table_id = tableId;
-        myIndexColumn.table_id = tableId;
-        myPartition.table_id = tableId;
-        myPartition.key = tableId;
-        myPartition.partitionColumn = this.gMap.tables.get(tableId).partition_column;
-        myPartition.partitionType = this.gMap.tables.get(tableId).partition_type;
-        myPartition.partitionNames = [];
-        myPartition.partitionHighValues = [];
-        myRelation.s_table_id = this.gCurrent.tableId;
+            axios.all([
+                this.doGetTablePropertyColumns(myColumn),
+                this.doGetTablePropertyIndexes(myIndex),
+                this.doGetTablePropertyIndexColumns(myIndexColumn),
+                this.doGetTablePropertyPartitions(myPartition),
+                this.doGetTablePropertyRelations(myRelation)
+            ]).then(axios.spread((
+                columns,
+                indexes,
+                indexColumns,
+                partitions,
+                relations) => {
 
-        axios.all([
-            this.doGetTablePropertyColumns(myColumn),
-            this.doGetTablePropertyIndexes(myIndex),
-            this.doGetTablePropertyIndexColumns(myIndexColumn),
-            this.doGetTablePropertyPartitions(myPartition),
-            this.doGetTablePropertyRelations(myRelation)
-        ]).then(axios.spread((
-            columns,
-            indexes,
-            indexColumns,
-            partitions,
-            relations) => {
+                let pageSizeColumns = columns.data.data.length;
+                let dsColumns = [];
+                let pageSizeIndexes = indexes.data.data.length;
+                let dsIndexes = [];
+                let dsIndexColumns = [];
+                let pageSizePartitions = partitions.data.data.length;
+                let dsPartitions = [];
+                let pageSizeRelations = relations.data.data.length;
+                let dsRelations = [];
 
-            let pageSizeColumns = columns.data.data.length;
-            let dsColumns = [];
-            let pageSizeIndexes = indexes.data.data.length;
-            let dsIndexes = [];
-            let dsIndexColumns = [];
-            let pageSizePartitions = partitions.data.data.length;
-            let dsPartitions = [];
-            let pageSizeRelations = relations.data.data.length;
-            let dsRelations = [];
+                let table = this.gMap.tables.get(this.gCurrent.tableId);
 
-            let table = this.gMap.tables.get(this.gCurrent.tableId);
-            let tableSql = 'CREATE TABLE "' + table.table_name + '"(\n';
-            let domTableSql = [];
+                columns.data.data.forEach((item) => {
+                    let uiObject = item;
+                    uiObject.key = item.column_id;
+                    dsColumns.push(uiObject);
+                })
 
-            domTableSql.push(<Fragment>create table {table.table_name}(<br/></Fragment>);
+                let indexSql = "";
+                if (indexes.data.data.length > 0) {
+                    indexes.data.data.forEach((item) => {
+                        let uiObject = item;
+                        uiObject.key = item.id;
+                        uiObject.columns = [];
 
-            columns.data.data.forEach((item) => {
-                let uiObject = item;
-                uiObject.key = item.column_id;
-                dsColumns.push(uiObject);
-
-                switch (item.data_type) {
-                    case "varchar":
-                    case "varchar2":
-                        tableSql += '\t"' + item.column_name + '" ' + item.data_type.toUpperCase() + '(' + item.data_length + '),\n';
-                        domTableSql.push(
-                            <Fragment>{item.column_name} {item.data_type.toUpperCase()}(item.data_length),<br/></Fragment>);
-                        break
-                    default:
-                        if (item.data_type !== null) {
-                            tableSql += '\t"' + item.column_name + '" ' + item.data_type.toUpperCase() + ',\n';
-                            domTableSql.push(<Fragment>{item.column_name} {item.data_type.toUpperCase()},<br/></Fragment>);
+                        indexSql += 'CREATE INDEX "' + item.index_name + '" ON "' + table.table_name + '" (\n';
+                        for (let i = 0; i < indexColumns.data.data.length; i++) {
+                            let indexName = indexColumns.data.data[i].index_name;
+                            if (indexName === item.index_name) {
+                                let columnName = indexColumns.data.data[i].column_name;
+                                let descend = indexColumns.data.data[i].descend;
+                                let columnPosition = indexColumns.data.data[i].column_position;
+                                uiObject.columns.push({
+                                    columnName: columnName,
+                                    descend: descend,
+                                    columnPosition: columnPosition
+                                });
+                                indexSql += '\t"' + columnName + '",\n';
+                            }
                         }
-                        break
+                        dsIndexes.push(uiObject);
+                        indexSql = indexSql.substr(0, indexSql.length - 2);
+                        indexSql += '\n);\n\n'
+                    });
+
+                    indexColumns.data.data.forEach((item) => {
+                        dsIndexColumns.push(item);
+                    });
                 }
 
-            })
+                let partitionSql = "";
+                if (partitions.data.data.length > 0) {
+                    switch (myPartition.partition_type) {
+                        case "range":
+                            partitionSql += 'PARTITION BY ' + myPartition.partition_type.toUpperCase() + '(' + myPartition.partition_column + ') (\n';
+                            partitions.data.data.forEach((item) => {
+                                myPartition.partitionNames.push(item.partition_name);
+                                myPartition.partitionHighValues.push(item.high_value);
+                                partitionSql += '\tPARTITION "' + item.partition_name + '" VALUES LESS THAN (' + item.high_value + '),\n';
+                            })
+                            break
+                        case "list":
+                            break
+                        case "hash":
+                            break
+                        default:
+                            break
+                    }
+                    dsPartitions.push(myPartition);
+                    partitionSql = partitionSql.substr(0, partitionSql.length - 2);
+                    partitionSql += '\n);\n\n';
+                }
 
-            tableSql = tableSql.substr(0, tableSql.length - 2);
-            tableSql += "\n);\n\n";
-            domTableSql.push(<Fragment>);<br/></Fragment>);
-
-            let indexSql = "";
-            if (indexes.data.data.length > 0) {
-                indexes.data.data.forEach((item) => {
+                relations.data.data.forEach((item) => {
                     let uiObject = item;
                     uiObject.key = item.id;
-                    uiObject.columns = [];
+                    dsRelations.push(uiObject);
+                })
 
-                    indexSql += 'CREATE INDEX "' + item.index_name + '" ON "' + table.table_name + '" (\n';
-                    for (let i = 0; i < indexColumns.data.data.length; i++) {
-                        let indexName = indexColumns.data.data[i].index_name;
-                        if (indexName === item.index_name) {
-                            let columnName = indexColumns.data.data[i].column_name;
-                            let descend = indexColumns.data.data[i].descend;
-                            let columnPosition = indexColumns.data.data[i].column_position;
-                            uiObject.columns.push({
-                                columnName: columnName,
-                                descend: descend,
-                                columnPosition: columnPosition
-                            });
-                            indexSql += '\t"' + columnName + '",\n';
-                        }
-                    }
-                    dsIndexes.push(uiObject);
-                    indexSql = indexSql.substr(0, indexSql.length - 2);
-                    indexSql += '\n);\n\n'
-                });
-
-                indexColumns.data.data.forEach((item) => {
-                    dsIndexColumns.push(item);
-                });
-            }
-
-            let partitionSql = "";
-            if (partitions.data.data.length > 0) {
-                switch (myPartition.partition_type) {
-                    case "range":
-                        partitionSql += 'PARTITION BY ' + myPartition.partition_type.toUpperCase() + '(' + myPartition.partition_column + ') (\n';
-                        partitions.data.data.forEach((item) => {
-                            myPartition.partitionNames.push(item.partition_name);
-                            myPartition.partitionHighValues.push(item.high_value);
-                            partitionSql += '\tPARTITION "' + item.partition_name + '" VALUES LESS THAN (' + item.high_value + '),\n';
-                        })
-                        break
-                    case "list":
-                        break
-                    case "hash":
-                        break
-                    default:
-                        break
-                }
-                dsPartitions.push(myPartition);
-                partitionSql = partitionSql.substr(0, partitionSql.length - 2);
-                partitionSql += '\n);\n\n';
-            }
-
-            relations.data.data.forEach((item) => {
-                let uiObject = item;
-                uiObject.key = item.id;
-                dsRelations.push(uiObject);
-            })
+                this.setState({
+                    pageSizeColumns: pageSizeColumns,
+                    dsColumns: dsColumns,
+                    pageSizeIndexes: pageSizeIndexes,
+                    dsIndexes: dsIndexes,
+                    pageSizePartitions: pageSizePartitions,
+                    dsPartitions: dsPartitions,
+                    pageSizeRelations: pageSizeRelations,
+                    dsRelations: dsRelations,
+                    tableSql: this.getTableSql(table),
+                    // domTableSql: domTableSql
+                })
+            }));
+        } else {
+            this.gCurrent.tableId = undefined;
 
             this.setState({
-                pageSizeColumns: pageSizeColumns,
-                dsColumns: dsColumns,
-                pageSizeIndexes: pageSizeIndexes,
-                dsIndexes: dsIndexes,
-                pageSizePartitions: pageSizePartitions,
-                dsPartitions: dsPartitions,
-                pageSizeRelations: pageSizeRelations,
-                dsRelations: dsRelations,
-                tableSql: tableSql + indexSql + partitionSql,
-                // domTableSql: domTableSql
-            })
-        }));
+                pageSizeColumns: 0,
+                dsColumns: [],
+                pageSizeIndexes: 0,
+                dsIndexes: [],
+                pageSizePartitions: 0,
+                dsPartitions: [],
+                pageSizeRelations: 0,
+                dsRelations: [],
+                tableSql: "",
+            });
+        }
+
     };
 
     onSelectDbUsersChanged(value, option) {
@@ -1542,18 +1625,120 @@ export default class DatabaseMaintain extends React.Component {
         this.gTableKnownSelected = info.checkedNodes;
     };
 
-    //>>>>> on button 添加表 clicked
+    //todo <<<<< now >>>>> on button 添加表 clicked
     onButtonAddTableClicked(e) {
         let myTable = new TadTable();
 
-        myTable.table_name = this.gCurrent.letterSelected + "_TABLE_NEW";
+        if (this.gCurrent.letterSelected === undefined) {
+            this.gCurrent.letterSelected = "T";
+
+            let treeDataTablesKnown = this.doGetTablesByLetter("known", this.gCurrent.letterSelected);
+
+            this.setState({
+                treeDataTablesKnown: treeDataTablesKnown
+            })
+        }
+        myTable.table_name = this.gCurrent.letterSelected + "_TABLE_NEW_" + moment().format("YYYYMMDDHHmmss");
         myTable.module_id = this.gCurrent.moduleId;
         myTable.db_user_id = this.gCurrent.dbUserId;
 
         this.doAddTable(myTable);
     }
 
-    onButtonUpdateTableClicked(e) {
+    onInputTableNameChanged(e) {
+        this.gDynamic.tableName = e.target.value;
+    }
+
+    onButtonTableNameEditingConfirmClicked(e) {
+        let table = new TadTable();
+
+        table.table_id = this.gCurrent.tableId;
+        table.table_name = this.gDynamic.tableName;
+
+        this.doUpdateTable(table);
+
+        this.gDynamic.tableName = undefined;
+        this.setState({
+            isTableNameEditing: false
+        })
+    }
+
+    onButtonTableNameEditingCancelClicked(e) {
+        let treeDataTablesKnown = lodash.cloneDeep(this.state.treeDataTablesKnown);
+        let title = this.gMap.tables.get(this.gCurrent.tableId).table_name;
+
+        this.setTableTitle(treeDataTablesKnown, this.gCurrent.tableId, title);
+
+        this.setState({
+            isTableNameEditing: false,
+            treeDataTablesKnown: treeDataTablesKnown
+        })
+
+    }
+
+    onInputColumnNameChanged(e) {
+        this.gDynamic.columnName = e.target.value;
+    }
+
+    onButtonColumnEditingConfirmClicked(e) {
+        // let table = new TadTable();
+        //
+        // table.table_id = this.gCurrent.tableId;
+        // table.table_name = this.gDynamic.tableName;
+        //
+        // this.doUpdateTable(table);
+        //
+        this.gDynamic.tableName = undefined;
+        this.setState({
+            isColumnEditing: false
+        })
+    }
+
+    onButtonColumnEditingCancelClicked(e) {
+        // let treeDataTablesKnown = lodash.cloneDeep(this.state.treeDataTablesKnown);
+        // let title = this.gMap.tables.get(this.gCurrent.tableId).table_name;
+        //
+        // this.setTableTitle(treeDataTablesKnown, this.gCurrent.tableId, title);
+
+        this.setState({
+            isColumnEditing: false,
+            // treeDataTablesKnown: treeDataTablesKnown
+        })
+
+    }
+
+    setTableTitle(treeNodes, id, title) {
+        for (let i = 0; i < treeNodes.length; i++) {
+            if (treeNodes[i].key === id) {
+                treeNodes[i].title = title;
+                return
+            }
+        }
+    }
+
+    //todo <<<<< now >>>>> set table name editable
+    setTableNameEditable(treeNodes, id) {
+        for (let i = 0; i < treeNodes.length; i++) {
+            if (treeNodes[i].key === id) {
+                treeNodes[i].title = <div className="tableNameEditing">
+                    <Input defaultValue={treeNodes[i].title} onChange={this.onInputTableNameChanged} size={"small"}/>
+                    <Button onClick={this.onButtonTableNameEditingConfirmClicked} size={"small"} type={"primary"}>确认</Button>
+                    <Button onClick={this.onButtonTableNameEditingCancelClicked} size={"small"} type={"primary"}>放弃</Button></div>;
+                break
+            }
+        }
+    }
+
+    onButtonRenameTableClicked(e) {
+        if (this.gCurrent.tableId !== undefined) {
+            let treeDataTablesKnown = lodash.cloneDeep(this.state.treeDataTablesKnown);
+            this.setTableNameEditable(treeDataTablesKnown, this.gCurrent.tableId);
+
+            this.setState({
+                isTableNameEditing: true,
+                treeDataTablesKnown: treeDataTablesKnown
+            })
+        }
 
     }
 
@@ -1570,9 +1755,12 @@ export default class DatabaseMaintain extends React.Component {
         this.doAddTableColumn(myTableColumn);
     }
 
+    //todo >>>>> on Button 修改字段属性 clicked
     onButtonAlterColumnClicked() {
 
         this.setState({
+            isColumnEditing: true,
+            tableColumnEditingKey: this.gCurrent.columnId,
             isShownButtonAddIndex: "none",
             isShownButtonDeleteIndex: "none",
             isShownButtonAlterIndexConfirm: "block",
@@ -1581,7 +1769,18 @@ export default class DatabaseMaintain extends React.Component {
     }
 
     onButtonAlterColumnConfirmClicked() {
+        let column = new TadTableColumn();
 
+        column.column_id = this.gCurrent.columnId;
+        column.column_name = this.gDynamic.columnName;
+
+        this.doUpdateTableColumn(column);
+
+        this.setState({
+            isColumnEditing: false,
+            tableColumnEditingKey: null,
+        })
+        /*
         let myIndex = new TadTableIndex();
         myIndex.id = this.state.editingIndex.id;
         myIndex.table_id = this.state.editingIndex.table_id;
@@ -1621,16 +1820,14 @@ export default class DatabaseMaintain extends React.Component {
                 })
             }
         });
-
+        */
     }
 
     onButtonAlterColumnCancelClicked() {
 
         this.setState({
-            isShownButtonAddIndex: "block",
-            isShownButtonDeleteIndex: "block",
-            isShownButtonAlterIndexConfirm: "none",
-            isShownButtonAlterIndexCancel: "none",
+            tableColumnEditingKey: null,
+            isColumnEditing: false,
         })
     }
 
@@ -1759,7 +1956,7 @@ export default class DatabaseMaintain extends React.Component {
     onButtonAddPartitionClicked() {
 
         let tableId = this.gCurrent.tableId;
-        let partitionId = null;
+        let partitionId = undefined;
 
         let myObject = new TadTablePartition();
         myObject.table_id = tableId;
@@ -1861,7 +2058,7 @@ export default class DatabaseMaintain extends React.Component {
 
     onButtonAddRelationClicked() {
         let tableId = this.gCurrent.tableId;
-        let relationId = null;
+        let relationId = undefined;
 
         let myRelation = new TadTableRelation();
         myRelation.s_table_id = tableId;
@@ -1988,7 +2185,7 @@ export default class DatabaseMaintain extends React.Component {
 
     onButtonAddRecordClicked() {
         let tableId = this.gCurrent.tableId;
-        let indexId = null;
+        let indexId = undefined;
 
         let myIndex = {
             id: indexId,
@@ -2098,6 +2295,8 @@ export default class DatabaseMaintain extends React.Component {
 
     onRowColumnSelected = {
         onChange: (selectedRowKeys, selectedRows) => {
+            this.gCurrent.columnId = selectedRowKeys[0];
+            console.log(this.gCurrent);
             let isShownButtonAlterIndexConfirm = this.state.isShownButtonAlterIndexConfirm;
             if (isShownButtonAlterIndexConfirm === "block") return false;
 
@@ -2306,6 +2505,91 @@ export default class DatabaseMaintain extends React.Component {
         })
     }
 
+    getTableSql(table) {
+        let strSql = "CREATE TABLE ";
+
+        strSql += table.table_name + "(\n";
+
+        table.columns.forEach((item) => {
+            if (this.gMap.columns.has(item)) {
+                let column = this.gMap.columns.get(item);
+                let dataType = column.data_type === null ? "UNKNOWN" : column.data_type.toLowerCase();
+
+                switch (dataType) {
+                    case "varchar":
+                    case "varchar2":
+                    case "string":
+                        strSql += "\t" + column.column_name + " VARCHAR(" + column.data_length + "),\n";
+                        break
+                    case "number":
+                    case "int":
+                    case "float":
+                    case "double":
+                        strSql += "\t" + column.column_name + " INT,\n";
+                        break
+                    case "date":
+                    case "datetime":
+                        strSql += "\t" + column.column_name + " DATETIME,\n";
+                        break
+                    default:
+                        strSql += "\t" + column.column_name + " " + dataType + ",\n"
+                        break
+                }
+
+            }
+        });
+
+        strSql += ");\n";
+
+        return strSql;
+    }
+
+    getTableSqlHtml(table) {
+        /*
+                        //let tableSql = 'CREATE TABLE "' + table.table_name + '"(\n';
+                //let domTableSql = [];
+
+                //domTableSql.push(<Fragment>create table {table.table_name}(<br/></Fragment>);
+                switch (item.data_type) {
+                    case "varchar":
+                    case "varchar2":
+                        //tableSql += '\t"' + item.column_name + '" ' + item.data_type.toUpperCase() + '(' + item.data_length + '),\n';
+                        //domTableSql.push(
+                        //    <Fragment>{item.column_name} {item.data_type.toUpperCase()}(item.data_length),<br/></Fragment>);
+                        break
+                    default:
+                        if (item.data_type !== null) {
+                            //tableSql += '\t"' + item.column_name + '" ' + item.data_type.toUpperCase() + ',\n';
+                            //domTableSql.push(<Fragment>{item.column_name} {item.data_type.toUpperCase()},<br/></Fragment>);
+                        }
+                        break
+                }
+
+                //tableSql = tableSql.substr(0, tableSql.length - 2);
+                //tableSql += "\n);\n\n";
+                //domTableSql.push(<Fragment>);<br/></Fragment>);
+
+
+         */
+    }
+
+    onTabsTablePropertiesChanged(key) {
+        switch (key) {
+            case "tablePaneSql":
+                if (this.gMap.tables.has(this.gCurrent.tableId)) {
+                    let table = this.gMap.tables.get(this.gCurrent.tableId)
+                    let strSql = this.getTableSql(table);
+
+                    this.setState({
+                        tableSql: strSql
+                    });
+                }
+                break
+            default:
+                break
+        }
+    }
+
     //todo >>>>> render
     render() {
         const columnsColumn = [
@@ -2315,6 +2599,19 @@ export default class DatabaseMaintain extends React.Component {
                 key: 'column_name',
                 className: 'clsColumnColumnName',
                 width: 200,
+                render: (text, record, index) => {
+                    return (
+                        (this.state.tableColumnEditingKey === record.key) ? (
+                            <div className="clsProjectKpiUiTitleEditor">
+                                <Input defaultValue={record.column_name} onChange={this.onInputColumnNameChanged}/>
+                            </div>
+                        ) : (
+                            <div className="clsProjectKpiUiTitle">
+                                {record.column_name}
+                            </div>
+                        )
+                    )
+                }
             },
             {
                 title: <KColumnTitle content='数据类型' className={'clsColumnTitle'}/>,
@@ -2622,7 +2919,7 @@ export default class DatabaseMaintain extends React.Component {
                             <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
                         </div>
                         <Button onClick={this.onButtonAddTableClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新增</Button>
-                        <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>修改</Button>
+                        <Button onClick={this.onButtonRenameTableClicked} disabled={this.state.isTableNameEditing} size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>修改</Button>
                         {/*<Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditConfirmClicked}>确认</Button>*/}
                         {/*<Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditCancelClicked}>放弃</Button>*/}
                         <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>删除</Button>
@@ -2636,7 +2933,7 @@ export default class DatabaseMaintain extends React.Component {
                         </div>
                         <div className={"BoxTree"}>
                             <div className={"BoxTree2"}>
-                                <Tree className={"TreeKnown"} treeData={this.state.treeDataTablesKnown} onSelect={this.onTreeTablesKnownSelected} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
+                                <Tree className={"TreeKnown"} treeData={this.state.treeDataTablesKnown} onSelect={this.onTreeTablesKnownSelected} selectable={!this.state.isTableNameEditing} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
                             </div>
                         </div>
                     </div>
@@ -2649,16 +2946,16 @@ export default class DatabaseMaintain extends React.Component {
                             <Select/>
                         </div>
                         <div className={"BoxOtherProperties"}>
-                            <Tabs defaultActiveKey="1" type="card" tabBarGutter={5} animated={false}>
-                                <TabPane tab="表字段" key="1">
+                            <Tabs defaultActiveKey="tablePaneColumns" type="card" tabBarGutter={5} animated={false} onChange={this.onTabsTablePropertiesChanged}>
+                                <TabPane tab="表字段" key="tablePaneColumns">
                                     <div className={"BoxTableColumnProperties"}>
                                         <div className={"BoxToolbar"}>
                                             <div className={"BoxLabel"}>&nbsp;</div>
-                                            <Button onClick={this.onButtonAddColumnClicked} style={{display: this.state.isShownButtonAddColumn}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新增</Button>
-                                            <Button onClick={this.onButtonAlterColumnClicked} disabled={this.state.isShownButtonAlterColumnConfirm === "block"} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>修改</Button>
-                                            <Button onClick={this.onButtonDeleteColumnClicked} style={{display: this.state.isShownButtonDeleteColumn}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>删除</Button>
-                                            <Button onClick={this.onButtonAlterColumnConfirmClicked} style={{display: this.state.isShownButtonAlterColumnConfirm}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>确认</Button>
-                                            <Button onClick={this.onButtonAlterColumnCancelClicked} style={{display: this.state.isShownButtonAlterColumnCancel}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>放弃</Button>
+                                            <Button onClick={this.onButtonAddColumnClicked} disabled={this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新增</Button>
+                                            <Button onClick={this.onButtonAlterColumnClicked} disabled={this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>修改</Button>
+                                            <Button onClick={this.onButtonAlterColumnConfirmClicked} disabled={!this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>确认</Button>
+                                            <Button onClick={this.onButtonAlterColumnCancelClicked} disabled={!this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>放弃</Button>
+                                            <Button onClick={this.onButtonDeleteColumnClicked} disabled={this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>删除</Button>
                                         </div>
                                         <div ref={this.refBoxDetail} className={"BoxDetail"}>
                                             <Table
@@ -2674,14 +2971,16 @@ export default class DatabaseMaintain extends React.Component {
                                                     pageSize: this.state.pageSizeColumns,
                                                     position: ["none", "none"]
                                                 }}
-                                                rowSelection={{
-                                                    type: "radio",
-                                                    ...this.onRowColumnSelected
-                                                }}/>
+                                                rowSelection={(this.state.tableColumnEditingKey === null) && {type: "radio", ...this.onRowColumnSelected}}
+                                                // rowSelection={{
+                                                //     type: "radio",
+                                                //     ...this.onRowColumnSelected
+                                                // }}
+                                            />
                                         </div>
                                     </div>
                                 </TabPane>
-                                <TabPane tab="表索引" key="2">
+                                <TabPane tab="表索引" key="tablePaneIndexes">
                                     <div className={"BoxTableIndexProperties"}>
                                         <div className={"BoxToolbar"}>
                                             <div className={"BoxLabel"}>&nbsp;</div>
@@ -2709,7 +3008,7 @@ export default class DatabaseMaintain extends React.Component {
                                         </div>
                                     </div>
                                 </TabPane>
-                                <TabPane tab="表分区" key="3">
+                                <TabPane tab="表分区" key="tablePanePartitions">
                                     <div className={"BoxTablePartitionProperties"}>
                                         <div className={"BoxToolbar"}>
                                             <div className={"BoxLabel"}>&nbsp;</div>
@@ -2747,7 +3046,7 @@ export default class DatabaseMaintain extends React.Component {
                                         </div>
                                     </div>
                                 </TabPane>
-                                <TabPane tab="表关联" key="4">
+                                <TabPane tab="表关联" key="tablePaneRelations">
                                     <div className={"BoxTableRelationProperties"}>
                                         <div className={"BoxToolbar"}>
                                             <div className={"BoxLabel"}>&nbsp;</div>
@@ -2781,7 +3080,7 @@ export default class DatabaseMaintain extends React.Component {
                                         </div>
                                     </div>
                                 </TabPane>
-                                <TabPane tab="表数据" key="5">
+                                <TabPane tab="表数据" key="tablePaneData">
                                     <div className={"BoxTableRelationProperties"}>
                                         <div className={"BoxToolbar"}>
                                             <div className={"BoxLabel"}>&nbsp;</div>
@@ -2815,7 +3114,7 @@ export default class DatabaseMaintain extends React.Component {
                                         </div>
                                     </div>
                                 </TabPane>
-                                <TabPane tab="表SQL" key="6">
+                                <TabPane tab="表SQL" key="tablePaneSql">
                                     <div className={"BoxTableSqlProperties"}>
                                         <div className={"BoxDetail"}>
                                             <pre>{this.state.tableSql}</pre>

@@ -3,6 +3,7 @@ import './DatabaseConfig.scss'
 import GCtx from "../GCtx";
 import axios from "axios";
 import lodash from "lodash";
+import moment from 'moment';
 import {Button, Select, Tree, Table, Input} from 'antd'
 import {CaretDownOutlined, PlusSquareOutlined} from '@ant-design/icons'
 import TadProductLine from "../entity/TadProductLine";
@@ -21,9 +22,12 @@ export default class DatabaseConfig extends React.Component {
     gRef = {
         treeProducts: React.createRef(),
         inputProductLineName: React.createRef(),
+        inputProductName: React.createRef(),
+        inputModuleName: React.createRef(),
         boxTableProductManagers: React.createRef(),
         boxTableDbUsers: React.createRef(),
     }
+    gDynamic = {};
 
     constructor(props) {
         super(props);
@@ -54,6 +58,8 @@ export default class DatabaseConfig extends React.Component {
         this.doInit = this.doInit.bind(this);
 
         this.restUpdateProductLine = this.restUpdateProductLine.bind(this);
+        this.restUpdateProduct = this.restUpdateProduct.bind(this);
+        this.restUpdateModule = this.restUpdateModule.bind(this);
         this.restGetDbUsers = this.restGetDbUsers.bind(this);
         this.restAddDbUser = this.restAddDbUser.bind(this);
         this.restUpdateDbUser = this.restUpdateDbUser.bind(this);
@@ -67,11 +73,15 @@ export default class DatabaseConfig extends React.Component {
         this.doNewGetProductVersions = this.doNewGetProductVersions.bind(this);
         this.doNewGetProductManagers = this.doNewGetProductManagers.bind(this);
         this.doUpdateProductLine = this.doUpdateProductLine.bind(this);
+        this.doUpdateProduct = this.doUpdateProduct.bind(this);
+        this.doUpdateModule = this.doUpdateModule.bind(this);
         this.doAddDbUser = this.doAddDbUser.bind(this);
         this.doUpdateDbUser = this.doUpdateDbUser.bind(this);
         this.doDeleteDbUser = this.doDeleteDbUser.bind(this);
 
         this.uiUpdateProductLine = this.uiUpdateProductLine.bind(this);
+        this.uiUpdateProduct = this.uiUpdateProduct.bind(this);
+        this.uiUpdateModule = this.uiUpdateModule.bind(this);
 
         this.onTreeProductsSelected = this.onTreeProductsSelected.bind(this);
 
@@ -89,6 +99,8 @@ export default class DatabaseConfig extends React.Component {
         this.onInputProductLineNameChanged = this.onInputProductLineNameChanged.bind(this);
         this.onInputDbUserNameChanged = this.onInputDbUserNameChanged.bind(this);
         this.onInputDbUserDescChanged = this.onInputDbUserDescChanged.bind(this);
+        this.onInputProductNameChanged = this.onInputProductNameChanged.bind(this);
+        this.onInputModuleNameChanged = this.onInputModuleNameChanged.bind(this);
     }
 
     test(s) {
@@ -111,7 +123,9 @@ export default class DatabaseConfig extends React.Component {
                 key: plId,
                 title: valuePl.product_line_name,
                 children: [],
-                nodeType: "NODE_PRODUCT_LINE"
+                tag: {
+                    nodeType: "NODE_PRODUCT_LINE"
+                }
             }
             dataTreeProducts.push(nodeProductLine);
             valuePl.products.forEach(item => {
@@ -120,7 +134,9 @@ export default class DatabaseConfig extends React.Component {
                     key: plId + "_" + pId,
                     title: this.gMap.products.get(pId).product_name,
                     children: [],
-                    nodeType: "NODE_PRODUCT"
+                    tag: {
+                        nodeType: "NODE_PRODUCT"
+                    }
                 }
                 nodeProductLine.children.push(nodeProduct);
                 this.gMap.products.get(item).modules.forEach(item => {
@@ -129,7 +145,9 @@ export default class DatabaseConfig extends React.Component {
                         key: plId + "_" + pId + "_" + mId,
                         title: this.gMap.modules.get(mId).module_name,
                         children: [],
-                        nodeType: "NODE_MODULE"
+                        tag: {
+                            nodeType: "NODE_MODULE"
+                        }
                     }
                     nodeProduct.children.push(nodeModule);
                 })
@@ -151,6 +169,18 @@ export default class DatabaseConfig extends React.Component {
 
     restUpdateProductLine(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/update_product_line",
+            params,
+            {headers: {'Content-Type': 'application/json'}});
+    }
+
+    restUpdateProduct(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/update_product",
+            params,
+            {headers: {'Content-Type': 'application/json'}});
+    }
+
+    restUpdateModule(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/update_module",
             params,
             {headers: {'Content-Type': 'application/json'}});
     }
@@ -396,6 +426,39 @@ export default class DatabaseConfig extends React.Component {
 
     }
 
+    doUpdateProduct(params) {
+        this.restUpdateProduct(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateProduct(result.data.data, "update");
+                    //this.dsUpdateProductLine(result.data.data, "update");
+                    this.context.showMessage("更新成功，指标内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+
+    }
+
+    doUpdateModule(params) {
+        this.restUpdateModule(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateModule(result.data.data, "update");
+                    //this.dsUpdateProductLine(result.data.data, "update");
+                    this.context.showMessage("更新成功，指标内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+
+    }
 
     doAddDbUser(params) {
         this.restAddDbUser(params).then((result) => {
@@ -460,6 +523,54 @@ export default class DatabaseConfig extends React.Component {
         })
     }
 
+    uiUpdateProduct(product) {
+        let treeDataProducts = lodash.cloneDeep(this.state.treeDataProducts);
+
+        for (let i = 0; i < treeDataProducts.length; i++) {
+            if (treeDataProducts[i].key === this.gCurrent.productLineId) {
+                for (let j = 0; j < treeDataProducts[i].children.length; j++) {
+                    let ids = treeDataProducts[i].children[j].key.split("_");
+                    console.log(treeDataProducts[i].children[j].key, ids[1], this.gCurrent.productId);
+                    if ( ids[1] === this.gCurrent.productId.toString()) {
+                        console.log(product.product_name);
+                        treeDataProducts[i].children[j].title = product.product_name;
+                        break
+                    }
+                }
+            }
+        }
+
+        this.setState({
+            treeDataProducts: treeDataProducts
+        })
+    }
+
+    uiUpdateModule(module) {
+        let treeDataProducts = lodash.cloneDeep(this.state.treeDataProducts);
+
+        for (let i = 0; i < treeDataProducts.length; i++) {
+            if (treeDataProducts[i].key === this.gCurrent.productLineId) {
+                for (let j = 0; j < treeDataProducts[i].children.length; j++) {
+                    let ids = treeDataProducts[i].children[j].key.split("_");
+                    if ( ids[1] === this.gCurrent.productId.toString()) {
+                        for (let k = 0; k < treeDataProducts[i].children[j].children.length; k++) {
+                            let mids = treeDataProducts[i].children[j].children[k].key.split("_");
+                            if ( mids[2] === this.gCurrent.moduleId.toString()) {
+                                treeDataProducts[i].children[j].children[k].title = module.module_name;
+                                break
+                            }
+                        }
+                        break
+                    }
+                }
+            }
+        }
+
+        this.setState({
+            treeDataProducts: treeDataProducts
+        })
+    }
+
     uiUpdateDbUser(dbUser, what) {
         let tableDataDbUsers = lodash.cloneDeep(this.state.tableDataDbUsers);
 
@@ -468,7 +579,7 @@ export default class DatabaseConfig extends React.Component {
                 tableDataDbUsers.push(dbUser);
                 break
             case "update":
-                for(let i = 0; i < tableDataDbUsers.length; i++) {
+                for (let i = 0; i < tableDataDbUsers.length; i++) {
                     if (tableDataDbUsers[i].user_id === dbUser.user_id) {
                         tableDataDbUsers[i].user_name = dbUser.user_name;
                         tableDataDbUsers[i].user_desc = dbUser.user_desc;
@@ -514,7 +625,7 @@ export default class DatabaseConfig extends React.Component {
     //todo on tree 产品 selected
     onTreeProductsSelected(selectedKeys, info) {
         if (info.selected) {
-            let nodeType = info.node.nodeType;
+            let nodeType = info.node.tag.nodeType;
 
             this.gCurrent.nodeTypeSelected = nodeType;
 
@@ -573,7 +684,12 @@ export default class DatabaseConfig extends React.Component {
                     })
                     this.gCurrent.productLineId = parseInt(selectedKeys[0].split("_")[0]);
                     this.gCurrent.productId = parseInt(selectedKeys[0].split("_")[1]);
-                    break
+
+                    if (this.gMap.products.has(this.gCurrent.productId)) {
+                        let product = this.gMap.products.get(this.gCurrent.productId);
+                        this.gRef.inputProductName.current.setValue(product.product_name);
+                    }
+                        break
                 case "NODE_MODULE":
                     this.setState({
                         isShownProductLineProperties: "none",
@@ -583,6 +699,12 @@ export default class DatabaseConfig extends React.Component {
                     this.gCurrent.productLineId = parseInt(selectedKeys[0].split("_")[0]);
                     this.gCurrent.productId = parseInt(selectedKeys[0].split("_")[1]);
                     this.gCurrent.moduleId = parseInt(selectedKeys[0].split("_")[2]);
+
+                    if (this.gMap.modules.has(this.gCurrent.moduleId)) {
+                        let module = this.gMap.modules.get(this.gCurrent.moduleId);
+                        this.gRef.inputModuleName.current.setValue(module.module_name);
+                    }
+
                     break
                 default:
                     this.setState({
@@ -612,8 +734,8 @@ export default class DatabaseConfig extends React.Component {
 
     //todo <<<<< now >>>>> on button 添加产品线 clicked
     onButtonAddProductLineClicked() {
-        console.log(this.gCurrent);
         let myObject = new TadProductLine();
+        myObject.product_line_name = "新建产品线 - " + moment().format("YYYYMMDDHHmmss");
 
         axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_product_line",
             myObject,
@@ -639,8 +761,8 @@ export default class DatabaseConfig extends React.Component {
 
     //todo <<<<< now >>>>> on button 添加产品 clicked
     onButtonAddProductClicked() {
-        console.log(this.gCurrent);
         let myObject = new TadProduct();
+        myObject.product_name = "新建产品 - " + moment().format("YYYYMMDDHHmmss");
 
         axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_product",
             myObject,
@@ -654,10 +776,14 @@ export default class DatabaseConfig extends React.Component {
                 let uiObject = {
                     key: productLineId + "_" + productId,
                     title: data.data.product_name + "-" + productId,
-                    children: []
+                    children: [],
+                    tag: {
+                        nodeType: "NODE_PRODUCT"
+                    }
                 }
 
                 let treeDataProducts = lodash.cloneDeep(this.state.treeDataProducts)
+                console.log(treeDataProducts);
 
                 treeDataProducts.forEach((item) => {
                     if (item.key === productLineId) {
@@ -691,6 +817,7 @@ export default class DatabaseConfig extends React.Component {
 
         let myObject = new TadModule();
         myObject.product_id = productId;
+        myObject.module_name = "新建模块 - " + moment().format("YYYYMMDDHHmmss");
 
         axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_module",
             myObject,
@@ -704,7 +831,10 @@ export default class DatabaseConfig extends React.Component {
                 let myModule = {
                     key: productLineId + "_" + productId + "_" + moduleId,
                     title: data.data.module_name + "-" + moduleId,
-                    children: []
+                    children: [],
+                    tag: {
+                        nodeType: "NODE_MODULE"
+                    }
                 }
 
                 let treeDataProducts = lodash.cloneDeep(this.state.treeDataProducts);
@@ -738,13 +868,27 @@ export default class DatabaseConfig extends React.Component {
             case "NODE_PRODUCT_LINE":
                 let productLine = new TadProductLine();
                 productLine.product_line_id = this.gCurrent.productLineId;
-                productLine.product_line_name = this.gCurrent.productLineName;
+                productLine.product_line_name = this.gDynamic.productLineName;
 
                 this.doUpdateProductLine(productLine);
                 break
             case "NODE_PRODUCT":
+                let product = new TadProduct();
+
+                product.product_id = this.gCurrent.productId;
+                product.product_name = this.gDynamic.productName;
+                // product.product_desc = this.gDynamic.productDesc;
+
+                this.doUpdateProduct(product);
                 break
             case "NODE_MODULE":
+                let module = new TadModule();
+
+                module.module_id = this.gCurrent.moduleId;
+                module.module_name = this.gDynamic.moduleName;
+                // product.product_desc = this.gDynamic.productDesc;
+
+                this.doUpdateModule(module);
                 break
             case "NODE_UNKNOWN":
             default:
@@ -806,8 +950,17 @@ export default class DatabaseConfig extends React.Component {
             }
         })
     }
+
     onInputProductLineNameChanged(e) {
-        this.gCurrent.productLineName = e.target.value;
+        this.gDynamic.productLineName = e.target.value;
+    }
+
+    onInputProductNameChanged(e) {
+        this.gDynamic.productName = e.target.value;
+    }
+
+    onInputModuleNameChanged(e) {
+        this.gDynamic.moduleName = e.target.value;
     }
 
     onInputDbUserNameChanged(e) {
@@ -843,7 +996,7 @@ export default class DatabaseConfig extends React.Component {
         },
     }
 
-//todo >>>>> render
+    //todo >>>>> render
     render() {
         // const managers = [
         //     {
@@ -987,18 +1140,19 @@ export default class DatabaseConfig extends React.Component {
                             <Input className="InputPropertyValue"/>
                         </div>
                         <div className={"BoxProductProperties"} style={{display: this.state.isShownProductProperties}}>
-                            <div>产品名称：</div>
-                            <Input/>
-                            <div>产品经理：</div>
-                            <Select/>
-                            <div className={"BoxToolbar"}>
-                                <div>产品版本信息：</div>
-                                <div className={"Right"}>
-                                    <Button>新增</Button>
-                                    <Button>修改</Button>
-                                    <Button>删除</Button>
-                                </div>
+                            <div className="PropertyName">产品名称：</div>
+                            <Input ref={this.gRef.inputProductName} className="InputPropertyValue" onChange={this.onInputProductNameChanged}/>
+                            <div className="PropertyName">产品经理：</div>
+                            <Select className="SelectPropertyValue"/>
+                            <div className={"BoxToolbar2"}>
+                                <div className="ToolbarTitle">产品版本信息：</div>
+                                <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonAddDbUserClicked}>新增</Button>
+                                <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonUpdateDbUserClicked}>修改</Button>
+                                <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditConfirmClicked}>确认</Button>
+                                <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditCancelClicked}>放弃</Button>
+                                <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>删除</Button>
                             </div>
+                            <div className="BoxTable">
                             <Table
                                 dataSource={[]}
                                 columns={columnsVersions}
@@ -1009,17 +1163,18 @@ export default class DatabaseConfig extends React.Component {
                                 }}
                                 scroll={{y: 100}}
                             />
-                            <div>产品简述：</div>
-                            <Input/>
+                            </div>
+                            <div className="PropertyName">产品简述：</div>
+                            <Input className="InputPropertyValue"/>
                         </div>
                         <div className={"BoxModuleProperties"} style={{display: this.state.isShownModuleProperties}}>
-                            <div>模块名称：</div>
-                            <Input/>
-                            <div>模块负责人：</div>
-                            <Input/>
+                            <div className="PropertyName">模块名称：</div>
+                            <Input ref={this.gRef.inputModuleName} className="InputPropertyValue" onChange={this.onInputModuleNameChanged}/>
+                            <div className="PropertyName">模块负责人：</div>
+                            <Input className="InputPropertyValue"/>
                             <div>&nbsp;</div>
-                            <div>模块简述：</div>
-                            <Input/>
+                            <div className="PropertyName">模块简述：</div>
+                            <Input className="InputPropertyValue"/>
                         </div>
                     </div>
                 </div>

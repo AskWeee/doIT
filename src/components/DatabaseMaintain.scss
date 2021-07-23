@@ -16,7 +16,7 @@ $colorComponentToolbar: rgb(175,225,255);
 }
 
 .BoxSmall {
-    grid-template-columns: auto 1fr 2fr;
+    grid-template-columns: auto 2fr 3fr;
 }
 
 .BoxSmallSmall {
@@ -70,6 +70,13 @@ $colorComponentToolbar: rgb(175,225,255);
     border: 1px solid rgba(55, 55, 55, 1);
     margin: 5px;
     overflow: hidden;
+
+    .tableNameEditing {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        grid-gap: 3px;
+        padding: 3px 0;
+    }
 
     .BoxProductsInfo {
         //border: 1px solid rgba(55,55,55,1);
@@ -293,7 +300,7 @@ $colorComponentToolbar: rgb(175,225,255);
 
                     .BoxToolbar {
                         display: grid;
-                        grid-template-columns: 1fr auto auto auto;
+                        grid-template-columns: 1fr auto auto auto auto auto;
                         grid-gap: 5px;
 
                         .BoxLabel {

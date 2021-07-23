@@ -135,18 +135,64 @@
         display: grid;
         grid-template-rows: auto auto auto auto auto 1fr auto 80px;
         grid-gap: 5px;
-        background: rgba(250, 250, 250, 1);
+        background: lightgray;
         border: {
           width: 1px;
           style: solid;
           color: white;
         }
         color: black;
-        padding: 5px;
+        margin: 0 5px 5px 5px;
 
         .BoxToolbar {
           display: grid;
           grid-template-columns: 1fr auto auto;
+        }
+
+        .BoxToolbar2 {
+          display: grid;
+          grid-template-columns: 1fr auto auto auto auto auto;
+          margin: 0 5px 0 5px;
+
+          Button {
+            margin-left: 3px;
+          }
+
+          .ToolbarTitle {
+            display: grid;
+            align-content: center;
+          }
+        }
+
+        .PropertyName {
+          margin: 0 5px 0 5px;
+
+          &:first-child {
+            margin-top: 5px;
+          }
+        }
+
+        .InputPropertyValue {
+          display: grid;
+          margin: 0 5px 0 5px;
+          width: auto!important;
+
+          &:last-child {
+            margin-bottom: 5px;
+          }
+        }
+
+        .SelectPropertyValue {
+          display: grid;
+          margin: 0 5px 0 5px;
+          width: auto!important;
+        }
+
+        .BoxTable {
+          background: white;
+          display: grid;
+          overflow: hidden;
+          margin: 0 5px 0 5px;
         }
       }
 
@@ -154,17 +200,42 @@
         display: grid;
         grid-template-rows: auto auto auto auto 1fr auto 80px;
         grid-gap: 5px;
+        background: lightgray;
         border: {
           width: 1px;
           style: solid;
           color: white;
         }
         color: black;
-        padding: 5px;
+        margin: 0 5px 5px 5px;
 
         .BoxToolbar {
           display: grid;
           grid-template-columns: 1fr auto auto;
+        }
+        .PropertyName {
+          margin: 0 5px 0 5px;
+
+          &:first-child {
+            margin-top: 5px;
+          }
+        }
+
+        .InputPropertyValue {
+          display: grid;
+          margin: 0 5px 0 5px;
+          width: auto!important;
+
+          &:last-child {
+            margin-bottom: 5px;
+          }
+        }
+
+        .BoxTable {
+          background: white;
+          display: grid;
+          overflow: hidden;
+          margin: 0 5px 0 5px;
         }
       }
     }
