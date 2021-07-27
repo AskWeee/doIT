@@ -4,7 +4,7 @@ import GCtx from "../GCtx";
 import lodash from "lodash";
 import axios from "axios";
 import moment from 'moment';
-import {Button, Select, Tree, Table, Input, Tabs} from 'antd'
+import {Button, Select, Tree, Table, Input, Tabs, Checkbox} from 'antd'
 import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, PlusSquareOutlined} from '@ant-design/icons'
 import TadTableColumn from '../entity/TadTableColumn'
 import Mock from 'mockjs'
@@ -23,7 +23,9 @@ export default class DatabaseMaintain extends React.Component {
     gUi = {};
     gMap = {};
     gData = {};
-    gCurrent = {};
+    gCurrent = {
+        selectDynamicColumnDataType: React.createRef()
+    };
     refBoxDetail = React.createRef();
     gDynamic = {};
 
@@ -238,7 +240,18 @@ export default class DatabaseMaintain extends React.Component {
         this.onInputIndexNameChanged = this.onInputIndexNameChanged.bind(this);
         this.onInputPartitionNameChanged = this.onInputPartitionNameChanged.bind(this);
         this.onInputTableNameChanged = this.onInputTableNameChanged.bind(this);
+
         this.onInputColumnNameChanged = this.onInputColumnNameChanged.bind(this);
+        this.onInputColumnDataLengthChanged = this.onInputColumnDataLengthChanged.bind(this);
+        this.onInputColumnDataDefaultChanged = this.onInputColumnDataDefaultChanged.bind(this);
+        this.onInputColumnSplitFlagChanged = this.onInputColumnSplitFlagChanged.bind(this);
+        this.onInputColumnRepeatFlagChanged = this.onInputColumnRepeatFlagChanged.bind(this);
+        this.onInputColumnDescChanged = this.onInputColumnDescChanged.bind(this);
+
+        this.onCheckboxColumnPrimaryFlagChanged = this.onCheckboxColumnPrimaryFlagChanged.bind(this);
+        this.onCheckboxColumnNullableFlagChanged = this.onCheckboxColumnNullableFlagChanged.bind(this);
+
+        this.onSelectColumnDataTypeChanged = this.onSelectColumnDataTypeChanged.bind(this);
 
         this.onTabsTablePropertiesChanged = this.onTabsTablePropertiesChanged.bind(this);
     }
@@ -1022,6 +1035,14 @@ export default class DatabaseMaintain extends React.Component {
                 for(let i = 0; i < dsColumns.length; i++) {
                     if (dsColumns[i].column_id === column.column_id) {
                         dsColumns[i].column_name = column.column_name;
+                        dsColumns[i].data_type = column.data_type;
+                        dsColumns[i].data_length = column.data_length;
+                        dsColumns[i].primary_flag = column.primary_flag;
+                        dsColumns[i].nullable_flag = column.nullable_flag;
+                        dsColumns[i].data_default = column.data_default;
+                        dsColumns[i].split_flag = column.split_flag;
+                        dsColumns[i].repeat_flag = column.repeat_flag;
+                        dsColumns[i].column_desc = column.column_desc;
                         break
                     }
                 }
@@ -1046,7 +1067,16 @@ export default class DatabaseMaintain extends React.Component {
                 }
                 break
             case "update":
-                this.gMap.columns.get(column.column_id).column_name = column.column_name;
+                let myColumn = this.gMap.columns.get(column.column_id);
+                myColumn.column_name = column.column_name;
+                myColumn.data_type = column.data_type;
+                myColumn.data_length = column.data_length;
+                myColumn.primary_flag = column.primary_flag;
+                myColumn.nullable_flag = column.nullable_flag;
+                myColumn.data_default = column.data_default;
+                myColumn.split_flag = column.split_flag;
+                myColumn.repeat_flag = column.repeat_flag;
+                myColumn.column_desc = column.column_desc;
                 break
             case "delete":
                 break
@@ -1615,6 +1645,10 @@ export default class DatabaseMaintain extends React.Component {
         //
     };
 
+    onSelectColumnDataTypeChanged(v) {
+        this.gDynamic.columnDataType = v;
+    }
+
     onTableUnknownChecked(checkedKeys, info) {
 
         this.gTableUnknownSelected = info.checkedNodes;
@@ -1678,6 +1712,34 @@ export default class DatabaseMaintain extends React.Component {
 
     onInputColumnNameChanged(e) {
         this.gDynamic.columnName = e.target.value;
+    }
+
+    onInputColumnDataLengthChanged(e) {
+        this.gDynamic.columnDataLength = e.target.value;
+    }
+
+    onInputColumnDataDefaultChanged(e) {
+        this.gDynamic.columnDataDefault = e.target.value;
+    }
+
+    onInputColumnSplitFlagChanged(e) {
+        this.gDynamic.columnSplitFlag = e.target.value;
+    }
+
+    onInputColumnRepeatFlagChanged(e) {
+        this.gDynamic.columnRepeatFlag = e.target.value;
+    }
+
+    onInputColumnDescChanged(e) {
+        this.gDynamic.columnDesc = e.target.value;
+    }
+
+    onCheckboxColumnPrimaryFlagChanged(e) {
+        this.gDynamic.columnPrimaryFlag = e.target.checked ? "yes" : "no";
+    }
+
+    onCheckboxColumnNullableFlagChanged(e) {
+        this.gDynamic.columnNullableFlag = e.target.checked ? "yes" : "no";
     }
 
     onButtonColumnEditingConfirmClicked(e) {
@@ -1772,7 +1834,17 @@ export default class DatabaseMaintain extends React.Component {
         let column = new TadTableColumn();
 
         column.column_id = this.gCurrent.columnId;
-        column.column_name = this.gDynamic.columnName;
+
+        console.log(this.gDynamic);
+        if (this.gDynamic.columnName !== undefined) column.column_name = this.gDynamic.columnName;
+        if (this.gDynamic.columnDataType !== undefined)column.data_type = this.gDynamic.columnDataType;
+        if (this.gDynamic.columnDataLength !== undefined)column.data_length = this.gDynamic.columnDataLength;
+        if (this.gDynamic.columnDataDefault !== undefined)column.data_default = this.gDynamic.columnDataDefault;
+        if (this.gDynamic.columnSplitFlag !== undefined)column.split_flag = this.gDynamic.columnSplitFlag;
+        if (this.gDynamic.columnRepeatFlag !== undefined)column.repeat_flag = this.gDynamic.columnRepeatFlag;
+        if (this.gDynamic.columnDesc !== undefined) column.column_desc = this.gDynamic.columnDesc;
+        if (this.gDynamic.columnPrimaryFlag !== undefined) column.primary_flag = this.gDynamic.columnPrimaryFlag;
+        if (this.gDynamic.columnNullableFlag !== undefined) column.nullable_flag = this.gDynamic.columnNullableFlag;
 
         this.doUpdateTableColumn(column);
 
@@ -2592,13 +2664,49 @@ export default class DatabaseMaintain extends React.Component {
 
     //todo >>>>> render
     render() {
+        const optionsDataType = [
+            {label: "请选择", value: -99999},
+            {label: "字符串", value: "string"},
+            {label: "整数", value: "int"},
+            {label: "浮点数", value: "double"},
+            {label: "日期", value: "datetime"},
+        ];
+        const optionsYesOrNo = [
+            {label: "是", value: "yes"},
+            {label: "否", value: "no"},
+        ];
+
+        const getDataType = (dataType) => {
+            let myResult = null;
+            for (let i = 0; i < optionsDataType.length; i++) {
+                if (optionsDataType[i].value == dataType) {
+                    myResult = optionsDataType[i].label;
+                    break
+                }
+            }
+
+            return myResult
+        }
+
+        const getYesOrNo = (flag) => {
+            let myResult = null;
+            for (let i = 0; i < optionsYesOrNo.length; i++) {
+                if (optionsYesOrNo[i].value == flag) {
+                    myResult = optionsYesOrNo[i].label;
+                    break
+                }
+            }
+
+            return myResult
+        }
+
         const columnsColumn = [
             {
                 title: <KColumnTitle content='字段名称' className={'clsColumnTitle'}/>,
                 dataIndex: 'column_name',
                 key: 'column_name',
                 className: 'clsColumnColumnName',
-                width: 200,
+                width: 300,
                 render: (text, record, index) => {
                     return (
                         (this.state.tableColumnEditingKey === record.key) ? (
@@ -2620,6 +2728,19 @@ export default class DatabaseMaintain extends React.Component {
                 align: 'center',
                 className: 'clsColumnColumnName',
                 width: 100,
+                render: (text, record, index) => {
+                    return (
+                        (this.state.tableColumnEditingKey === record.key) ? (
+                            <div className="TableColumnDataTypeEditor">
+                                <Select options={optionsDataType} defaultValue={record.data_type === null ? -99999 : record.data_type} onChange={this.onSelectColumnDataTypeChanged}/>
+                            </div>
+                        ) : (
+                            <div className="TableColumnDataType">
+                                {getDataType(record.data_type)}
+                            </div>
+                        )
+                    )
+                }
             },
             {
                 title: <KColumnTitle content='数据长度' className={'clsColumnTitle'}/>,
@@ -2628,6 +2749,19 @@ export default class DatabaseMaintain extends React.Component {
                 align: 'right',
                 className: 'clsColumnColumnName',
                 width: 100,
+                render: (text, record, index) => {
+                    return (
+                        (this.state.tableColumnEditingKey === record.key) ? (
+                            <div className="clsProjectKpiUiTitleEditor">
+                                <Input defaultValue={record.data_length} onChange={this.onInputColumnDataLengthChanged}/>
+                            </div>
+                        ) : (
+                            <div className="clsProjectKpiUiTitle">
+                                {record.data_length}
+                            </div>
+                        )
+                    )
+                }
             },
             {
                 title: <KColumnTitle content='主键' className={'clsColumnTitle'}/>,
@@ -2635,7 +2769,20 @@ export default class DatabaseMaintain extends React.Component {
                 key: 'primary_flag',
                 align: 'center',
                 className: 'clsColumnColumnName',
-                width: 100,
+                width: 60,
+                render: (text, record, index) => {
+                    return (
+                        (this.state.tableColumnEditingKey === record.key) ? (
+                            <div className="clsProjectKpiUiTitleEditor">
+                                <Checkbox defaultChecked={(record.primary_flag === null) ? false : (record.primary_flag === "yes" ? true : false)} onChange={this.onCheckboxColumnPrimaryFlagChanged}>是</Checkbox>
+                            </div>
+                        ) : (
+                            <div className="clsProjectKpiUiTitle">
+                                {getYesOrNo(record.primary_flag)}
+                            </div>
+                        )
+                    )
+                }
             },
             {
                 title: <KColumnTitle content='可空' className={'clsColumnTitle'}/>,
@@ -2643,7 +2790,20 @@ export default class DatabaseMaintain extends React.Component {
                 key: 'nullable_flag',
                 align: 'center',
                 className: 'clsColumnColumnName',
-                width: 100,
+                width: 60,
+                render: (text, record, index) => {
+                    return (
+                        (this.state.tableColumnEditingKey === record.key) ? (
+                            <div className="clsProjectKpiUiTitleEditor">
+                                <Checkbox defaultChecked={(record.nullable_flag === null) ? false : (record.nullable_flag === "yes" ? true : false)} onChange={this.onCheckboxColumnNullableFlagChanged}>是</Checkbox>
+                            </div>
+                        ) : (
+                            <div className="clsProjectKpiUiTitle">
+                                {getYesOrNo(record.nullable_flag)}
+                            </div>
+                        )
+                    )
+                }
             },
             {
                 title: <KColumnTitle content='缺省值' className={'clsColumnTitle'}/>,
@@ -2652,6 +2812,19 @@ export default class DatabaseMaintain extends React.Component {
                 align: 'center',
                 className: 'clsColumnColumnName',
                 width: 200,
+                render: (text, record, index) => {
+                    return (
+                        (this.state.tableColumnEditingKey === record.key) ? (
+                            <div className="clsProjectKpiUiTitleEditor">
+                                <Input defaultValue={record.data_default} onChange={this.onInputColumnDataDefaultChanged}/>
+                            </div>
+                        ) : (
+                            <div className="clsProjectKpiUiTitle">
+                                {record.data_default}
+                            </div>
+                        )
+                    )
+                }
             },
             {
                 title: <KColumnTitle content='分隔符' className={'clsColumnTitle'}/>,
@@ -2660,6 +2833,19 @@ export default class DatabaseMaintain extends React.Component {
                 align: 'center',
                 className: 'clsColumnColumnName',
                 width: 100,
+                render: (text, record, index) => {
+                    return (
+                        (this.state.tableColumnEditingKey === record.key) ? (
+                            <div className="clsProjectKpiUiTitleEditor">
+                                <Input defaultValue={record.split_flag} onChange={this.onInputColumnSplitFlagChanged}/>
+                            </div>
+                        ) : (
+                            <div className="clsProjectKpiUiTitle">
+                                {record.split_flag}
+                            </div>
+                        )
+                    )
+                }
             },
             {
                 title: <KColumnTitle content='重复标识' chong className={'clsColumnTitle'}/>,
@@ -2668,13 +2854,38 @@ export default class DatabaseMaintain extends React.Component {
                 align: 'center',
                 className: 'clsColumnColumnName',
                 width: 100,
+                render: (text, record, index) => {
+                    return (
+                        (this.state.tableColumnEditingKey === record.key) ? (
+                            <div className="clsProjectKpiUiTitleEditor">
+                                <Input defaultValue={record.repeat_flag} onChange={this.onInputColumnRepeatFlagChanged}/>
+                            </div>
+                        ) : (
+                            <div className="clsProjectKpiUiTitle">
+                                {record.repeat_flag}
+                            </div>
+                        )
+                    )
+                }
             },
             {
                 title: <KColumnTitle content='字段简述' className={'clsColumnTitle'}/>,
                 dataIndex: 'column_desc',
                 key: 'column_desc',
                 className: 'clsColumnColumnName',
-                width: 200,
+                render: (text, record, index) => {
+                    return (
+                        (this.state.tableColumnEditingKey === record.key) ? (
+                            <div className="clsProjectKpiUiTitleEditor">
+                                <Input defaultValue={record.column_desc} onChange={this.onInputColumnDescChanged}/>
+                            </div>
+                        ) : (
+                            <div className="clsProjectKpiUiTitle">
+                                {record.column_desc}
+                            </div>
+                        )
+                    )
+                }
             },
         ];
         const columnsIndex = [
@@ -2912,7 +3123,7 @@ export default class DatabaseMaintain extends React.Component {
                         <Button onClick={this.onButtonTablesChangeComponentSizeClicked} icon={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? <CaretLeftOutlined/> : <CaretRightOutlined/>} size={"small"} type={"ghost"}/>
                     </div>
                     <div className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxSelect" : "BoxSelect BoxHidden"}>
-                        <Select ref={this.refSelectDbUsers} onChange={this.onSelectDbUsersChanged} defaultValue={this.state.dbUserSelected} options={this.state.dbUsersSelectOptions}/>
+                        <Select onChange={this.onSelectDbUsersChanged} defaultValue={this.state.dbUserSelected} options={this.state.dbUsersSelectOptions}/>
                     </div>
                     <div className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxToolbar" : "BoxToolbar BoxHidden"}>
                         <div className={"BoxSearch"}>

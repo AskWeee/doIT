@@ -1,73 +1,135 @@
-.BoxDatabaseExport {
+$tabs-border-color: rgb(225,225,225);
+$colorComponentToolbar: rgb(175,225,255);
+
+.BoxHidden {
+    width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-width: 0 !important;
+    overflow: hidden !important;
+}
+
+.BoxNormal {
+
+}
+
+.DatabaseExportSmall {
+    grid-template-columns: auto 2fr 3fr !important;
+}
+
+.DatabaseExportSmallSmall {
+    grid-template-columns: auto auto 1fr !important;
+}
+
+.DatabaseExport {
     display: grid;
+    grid-template-columns: auto auto 1fr;
+    background: darkgray;
+    border: 1px solid rgba(55, 55, 55, 1);
+    margin: 5px;
+    overflow: hidden;
 
-    .DatabaseExport {
+    .BoxProducts {
+        //border: 1px solid rgba(55,55,55,1);
+        background: lightgray;
         display: grid;
-        background: rgba(55, 175, 255, 0.2);
-        grid-template-columns: 2fr 3fr 110px 3fr;
-        grid-gap: 5px;
-        margin: 5px;
-        border: 1px solid rgba(55, 55, 55, 1);
-        padding: 5px;
+        grid-template-rows: auto 1fr;
         overflow: hidden;
+        margin: 3px;
 
-        .BoxProductsInfo {
-            display: grid;
-            //background: rgba(55,175, 255, 0.2);
+        .BoxTitleBar {
             //border: 1px solid rgba(55,55,55,1);
-            grid-template-rows: 1fr 160px;
-            grid-gap: 5px;
+            background: $colorComponentToolbar;
+            display: grid;
+            grid-template-columns: 1fr auto;
 
-            .BoxLabel {
-                //background: rgba(55,175, 255, 0.2);
-                //border: 1px solid rgba(55,55,55,1);
+            .BoxTitle {
                 display: grid;
-                align-content: end;
-                margin-left: 5px;
-            }
-
-            .BoxTree {
-                background: rgba(55, 175, 255, 0.2);
-                //border: 1px solid rgba(55,55,55,1);
-                display: grid;
-                overflow: auto;
-            }
-
-            .BoxDescription {
-                background: rgba(255, 255, 255, 1);
-                //border: 1px solid rgba(55,55,55,1);
+                align-content: center;
+                margin: 0 0 0 5px;
+                color: black;
             }
         }
 
-        .BoxKnown {
+        .BoxTree {
+            background: rgba(55, 175, 255, 0.2);
+            //border: 1px solid rgba(55,55,55,1);
             display: grid;
-            grid-template-rows: auto 1fr;
-            grid-gap: 5px;
-            overflow: hidden;
+            overflow: auto;
+            margin: 3px 3px 0 3px;
+        }
+    }
 
-            .BoxLabel {
+    .BoxKnown {
+        //border: 1px solid rgba(55,55,55,1);
+        background: lightgray;
+        display: grid;
+        grid-template-rows: auto auto auto 1fr;
+        overflow: hidden;
+        margin: 3px 3px 3px 0;
+
+        .BoxTitleBar {
+            //border: 1px solid rgba(55,55,55,1);
+            background: $colorComponentToolbar;
+            display: grid;
+            grid-template-columns: 1fr auto;
+
+            .BoxTitle {
                 display: grid;
-                align-content: end;
+                align-content: center;
+                margin: 0 0 0 5px;
+                color: black;
+            }
+
+        }
+
+        .BoxSelect {
+            display: grid;
+            margin: 3px 3px 0 3px;
+        }
+
+        .BoxToolbar {
+            background: rgba(255, 255, 255, 1);
+            margin: 3px 3px 0 3px;
+            display: grid;
+            grid-template-columns: auto 1fr;
+
+            .BoxButtons {
+                display: grid;
+                align-content: center;
                 margin-left: 5px;
+                grid-template-columns: auto auto;
             }
 
-            .BoxSelect {
+            .BoxSearch {
+                margin: 3px 2px 3px 3px;
+            }
+        }
+
+        .BoxTreeAndTable {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            overflow: hidden;
+            background: white;
+            margin: 3px;
+
+            .BoxList {
                 display: grid;
-            }
-
-            .BoxToolbar {
                 background: rgba(255, 255, 255, 1);
-                padding: 5px;
+                overflow: auto;
+                margin: 5px;
             }
 
-            .BoxTreeAndTable {
+            .BoxTree {
                 display: grid;
                 grid-template-rows: 1fr auto auto;
-                overflow: auto;
+                background: rgba(255, 255, 255, 1);
+                overflow: hidden;
+                margin: 5px;
 
-                .BoxTree {
-                    background: green;
-                    display: grid;
+                .BoxTree2 {
+                    overflow: auto;
                 }
 
                 .HLine {
@@ -81,156 +143,70 @@
                     height: 200px;
                 }
             }
-        }
 
-        .BoxButtons {
-            display: grid;
-            //background: rgba(55,175, 255, 0.2);
+        }
+    }
+
+    .BoxExport {
+        //border: 1px solid rgba(55,55,55,1);
+        background: lightgray;
+        display: grid;
+        grid-template-rows: auto auto auto 1fr;
+        overflow: hidden;
+        margin: 3px 3px 3px 0;
+
+        .BoxTitleBar {
             //border: 1px solid rgba(55,55,55,1);
-            justify-content: center;
-            align-content: center;
+            background: $colorComponentToolbar;
+            display: grid;
+            grid-template-columns: 1fr auto;
 
-            Button {
-                margin-top: 10px;
-
-                &:first-child {
-                    margin-top: 0;
-                }
+            .BoxTitle {
+                display: grid;
+                align-content: center;
+                margin: 0 0 0 5px;
+                color: black;
             }
+
         }
 
-        .BoxUnknown {
+        .BoxSelect {
             display: grid;
-            grid-template-rows: auto 1fr;
-            grid-gap: 5px;
-            overflow: hidden;
+            margin: 3px 3px 0 3px;
+        }
 
-            .BoxLabel {
+        .BoxToolbar {
+            background: rgba(255, 255, 255, 1);
+            margin: 3px 3px 0 3px;
+            display: grid;
+            grid-template-columns: auto 1fr;
+
+            .BoxButtons {
                 display: grid;
-                align-content: end;
+                align-content: center;
                 margin-left: 5px;
+                grid-template-columns: auto auto auto;
+                grid-gap: 3px;
             }
 
-            .BoxSelect {
-                display: grid;
-            }
-
-            .BoxToolbar {
-                background: rgba(255, 255, 255, 1);
-                display: grid;
-                grid-template-columns: auto auto 1fr;
-                padding: 5px;
-
-                .BoxTabs {
-                    display: grid;
-                    justify-content: end;
-                }
-            }
-
-            .BoxTreeAndTable {
-                display: grid;
-                overflow: hidden;
-
-                .BoxList {
-                    display: grid;
-                    background: rgba(255, 255, 255, 1);
-                    overflow: auto;
-                }
-
-                .BoxTree {
-                    display: grid;
-                    grid-template-rows: 1fr auto auto;
-                    background: rgba(255, 255, 255, 1);
-                    overflow: hidden;
-
-                    .BoxTree2 {
-                        overflow: auto;
-                    }
-
-                    .HLine {
-                        display: grid;
-                        height: 5px;
-                    }
-
-                    .BoxTable {
-                        background: yellow;
-                        display: grid;
-                        height: 200px;
-                    }
-                }
-
+            .BoxSearch {
+                margin: 3px 2px 3px 3px;
             }
         }
-    }
 
-    .BoxSqlGenerated {
-        z-index: 99;
-        position: fixed;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-
-        .BoxWindow {
-            border: 1px solid black;
+        .BoxTree {
             display: grid;
-            grid-template-rows: auto 1fr auto;
-            background: rgba(155, 155, 155, 1);
-            margin: 60px 10px 40px 10px;
             overflow: hidden;
+            background: white;
+            margin: 3px;
 
-            .BoxWindowHeader {
-                background: rgb(25, 105, 185);
+            .BoxTreeInstance {
                 display: grid;
-                grid-template-columns: auto 1fr auto;
-
-                .BoxHidden {
-                    visibility: hidden;
-                }
-
-                .BoxButton {
-                }
-
-                .BoxTitle {
-                    display: grid;
-                    justify-content: center;
-                    align-content: center;
-                }
-            }
-
-            .BoxWindowBody {
-                background: rgba(75, 75, 75, 1);
-                display: grid;
-                grid-template-rows: 5px 1fr 5px;
-                grid-template-columns: 5px 1fr 5px;
+                background: white;
                 overflow: hidden;
-
-                .BoxSql {
-                    display: grid;
-                    overflow: auto;
-
-                    .sql {
-                        font: {
-                            size: 16px;
-                            weight: bold;
-                        }
-                    }
-                }
+                margin: 5px;
             }
 
-            .BoxWindowFooter {
-                display: grid;
-                grid-template-columns: 1fr auto auto;
-                grid-gap: 5px;
-                padding: 5px 10px;
-
-                .BoxMessage {
-                    display: grid;
-                    align-content: center;
-                }
-            }
         }
     }
-
 }
