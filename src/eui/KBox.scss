@@ -1,0 +1,21 @@
+
+.euiKBox {
+  //border: 5px solid green;
+  display: grid;
+  overflow: hidden;
+  //background: white;
+  margin: 5px;
+
+  .BoxTreeInstance {
+    display: grid;
+    background: white;
+    overflow: hidden;
+    margin: 15px;
+  }
+}
+
+.euiCanvas {
+  position: absolute;
+  //width: 300px;
+  //height: 200px;
+}

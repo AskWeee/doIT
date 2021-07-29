@@ -172,11 +172,11 @@ $colorComponentToolbar: rgb(175,225,255);
 
         .BoxSelect {
             display: grid;
-            margin: 3px 3px 0 3px;
+            margin: 5px 5px 0 5px;
         }
 
         .BoxToolbar {
-            background: rgba(255, 255, 255, 1);
+            //background: rgba(255, 255, 255, 1);
             margin: 3px 3px 0 3px;
             display: grid;
             grid-template-columns: auto 1fr;
@@ -204,8 +204,17 @@ $colorComponentToolbar: rgb(175,225,255);
                 display: grid;
                 background: white;
                 overflow: hidden;
-                margin: 5px;
+                margin: 50px !important;
             }
+
+            //.euiKBox {
+            //    .BoxTreeInstance {
+            //        display: grid;
+            //        background: white;
+            //        overflow: hidden;
+            //        margin: 50px !important;
+            //    }
+            //}
 
         }
     }

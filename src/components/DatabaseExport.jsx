@@ -1,17 +1,19 @@
-import React, {Fragment} from 'react'
+import React from 'react'
 import './DatabaseExport.scss'
 import GCtx from "../GCtx";
 import lodash from "lodash";
 import axios from "axios";
 import moment from 'moment';
-import {Button, Select, Tree, Input, Checkbox} from 'antd'
-import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, PlusSquareOutlined} from '@ant-design/icons'
-import TadTableColumn from '../entity/TadTableColumn'
-import Mock from 'mockjs'
+import JSZip from "jszip";
+import fs from "file-saver";
+import {Button, Select, Tree, Input, Checkbox} from 'antd';
+import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, PlusSquareOutlined} from '@ant-design/icons';
+import TadTableColumn from '../entity/TadTableColumn';
 import TadTableIndex from "../entity/TadTableIndex";
 import TadTablePartition from "../entity/TadTablePartition";
 import TadTableRelation from "../entity/TadTableRelation";
 import TadTableIndexColumn from "../entity/TadTableIndexColumn";
+import KBoxClass from "../eui/KBoxClass";
 
 export default class DatabaseExport extends React.Component {
     static contextType = GCtx;
@@ -1250,7 +1252,7 @@ export default class DatabaseExport extends React.Component {
 
         let nodeDbUser;
 
-        for(let i = 0; i < treeDataTablesExport.length; i++) {
+        for (let i = 0; i < treeDataTablesExport.length; i++) {
             if (treeDataTablesExport[i].key === this.gCurrent.dbUserId) {
                 nodeDbUser = treeDataTablesExport[i];
                 break
@@ -1288,7 +1290,7 @@ export default class DatabaseExport extends React.Component {
 
         let nodeDbUser;
 
-        for(let i = 0; i < treeDataTablesExport.length; i++) {
+        for (let i = 0; i < treeDataTablesExport.length; i++) {
             if (treeDataTablesExport[i].key === this.gCurrent.dbUserId) {
                 nodeDbUser = treeDataTablesExport[i];
                 break
@@ -1320,17 +1322,22 @@ export default class DatabaseExport extends React.Component {
         })
     }
 
-    download(filename, text) {
+    download(filename, type, content) {
         let element = document.createElement('a');
-        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+
+        if (type === "text") {
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
+        } else if (type === "bolb") {
+            element.setAttribute('href', URL.createObjectURL(content));
+        }
         element.setAttribute('download', filename);
 
         element.style.display = 'none';
-        document.body.appendChild(element);
-
+        // if firefox
+        // document.body.appendChild(element);
         element.click();
-
-        document.body.removeChild(element);
+        // if firefox
+        // document.body.removeChild(element);
     }
 
     onButtonExportClicked(e) {
@@ -1341,22 +1348,30 @@ export default class DatabaseExport extends React.Component {
         treeDataTablesExport.forEach((nodeDbUser) => {
             let dbUserId = nodeDbUser.key;
             let dbUser = this.gMap.dbUsers.get(dbUserId);
-           nodeDbUser.children.forEach((nodeTable) => {
-               let tableId = parseInt(nodeTable.key.split("_")[1]);
-               let table = this.gMap.tables.get(tableId);
-               table.schema = dbUser.user_name;
+            nodeDbUser.children.forEach((nodeTable) => {
+                let tableId = parseInt(nodeTable.key.split("_")[1]);
+                let table = this.gMap.tables.get(tableId);
+                table.schema = dbUser.user_name;
 
-               strSql += this.getTableSql(table) + "\n";
-           }) ;
+                strSql += this.getTableSql(table) + "\n";
+            });
 
         });
 
-        console.log(strSql);
-        this.download("table.sql.txt", strSql);
+        let zip = new JSZip();
+        zip.file("doIT-建库脚本-1_sql.txt", strSql);
+        zip.file("doIT-建库脚本-2_sql.txt", strSql);
+        zip.generateAsync({type: "blob"})
+            .then((content) => {
+                fs.saveAs(content, "doIT-建库脚本.zip");
+                // this.download("doIT-建库脚本.zip", content);
+            });
     }
 
     //todo >>>>> render
     render() {
+        // const BoxTest = KBox(<div>test</div>);
+
         const optionsDbType = [
             {label: "请选择目标数据库类型", value: -99999},
             {label: "Oracle", value: "oracle"},
@@ -1409,7 +1424,7 @@ export default class DatabaseExport extends React.Component {
                         <div className="BoxTitle">待导出库表信息：</div>
                     </div>
                     <div className="BoxSelect">
-                        <Select options={optionsDbType} onChange={this.onSelectDbTypesChanged}/>
+                        <Select options={optionsDbType} onChange={this.onSelectDbTypesChanged} size="small"/>
                     </div>
                     <div className="BoxToolbar">
                         <div className="BoxButtons">
@@ -1421,11 +1436,13 @@ export default class DatabaseExport extends React.Component {
                             <Input.Search placeholder="Search" size="small" enterButton onSearch={this.onInputSearchSchemasSearched}/>
                         </div>
                     </div>
-                    <div className="BoxTree">
+                    {/*<div className="BoxTree">*/}
+                    <KBoxClass>
                         <div className={"BoxTreeInstance"}>
                             <Tree className={"TreeExport"} treeData={this.state.treeDataTablesExport} onSelect={this.onTreeTablesExportSelected} checkable onCheck={this.onTreeTablesExportChecked} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
                         </div>
-                    </div>
+                    </KBoxClass>
+                    {/*</div>*/}
                 </div>
             </div>
         )
