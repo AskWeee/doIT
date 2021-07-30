@@ -1386,20 +1386,24 @@ export default class DatabaseExport extends React.Component {
                     <div className={"BoxTitleBar"}>
                         <div className="BoxTitle">产品信息：</div>
                     </div>
-                    <div className="BoxTree">
-                        <Tree treeData={this.state.treeDataProducts} onSelect={this.onTreeProductsSelected} checkable onCheck={this.onTreeProductsChecked} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true}/>
-                    </div>
+                    <KBoxClass className="euiKBox">
+                        <div className="BoxTreeInstance">
+                            <Tree treeData={this.state.treeDataProducts} onSelect={this.onTreeProductsSelected} checkable onCheck={this.onTreeProductsChecked} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true}/>
+                        </div>
+                    </KBoxClass>
                 </div>
                 <div className={"BoxKnown"}>
                     <div className={"BoxTitleBar"}>
                         <div className="BoxTitle">库表信息：</div>
                     </div>
                     <div className="BoxSelect">
-                        <Select onChange={this.onSelectDbUsersChanged} defaultValue={this.state.dbUserSelected} options={this.state.dbUsersSelectOptions}/>
+                        <Select onChange={this.onSelectDbUsersChanged} defaultValue={this.state.dbUserSelected} options={this.state.dbUsersSelectOptions} size="small"/>
                     </div>
                     <div className="BoxToolbar">
                         <div className="BoxButtons">
-                            <Checkbox>全选</Checkbox>
+                            {/*<div className="BoxCheckbox">*/}
+                            <Checkbox style={{color: "white"}}>全选</Checkbox>
+                            {/*</div>*/}
                             <Button onClick={this.onButtonAddClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>待导出</Button>
                         </div>
                         <div className={"BoxSearch"}>
@@ -1407,16 +1411,25 @@ export default class DatabaseExport extends React.Component {
                         </div>
                     </div>
                     <div className="BoxTreeAndTable">
-                        <div className={"BoxList"}>
-                            {this.state.treeDataLettersKnown.length ? (
-                                <Tree treeData={this.state.treeDataLettersKnown} onSelect={this.onTreeLettersKnownSelected} defaultSelectedKeys={this.state.lettersKnownSelectedKeys} checkable className={"TreeLetters"} blockNode={true} showLine={{showLeafIcon: false}} showIcon={false}/>
-                            ) : (<div>&nbsp;</div>)}
-                        </div>
-                        <div className={"BoxTree"}>
-                            <div className={"BoxTree2"}>
-                                <Tree className={"TreeKnown"} treeData={this.state.treeDataTablesKnown} onSelect={this.onTreeTablesKnownSelected} checkable onCheck={this.onTreeTablesKnownChecked} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
+                        <KBoxClass className="euiKBox" size={"small"}>
+                            <div className="BoxTreeInstance">
+                                {this.state.treeDataLettersKnown.length ? (
+                                    <Tree treeData={this.state.treeDataLettersKnown} onSelect={this.onTreeLettersKnownSelected} defaultSelectedKeys={this.state.lettersKnownSelectedKeys} checkable className={"TreeLetters"} blockNode={true} />
+                                ) : (<div>&nbsp;</div>)}
                             </div>
-                        </div>
+                        </KBoxClass>
+                        <KBoxClass className="euiKBox">
+                            {/*<div className={"BoxTree"}>*/}
+                            <div className="BoxTreeInstance">
+                                <Tree className={"TreeKnown"} treeData={this.state.treeDataTablesKnown} onSelect={this.onTreeTablesKnownSelected} checkable onCheck={this.onTreeTablesKnownChecked}
+                                       blockNode={true} showLine={true}/>
+                                {/*showLine={true}*/}
+                                {/*switcherIcon={<CaretDownOutlined/>}*/}
+                                {/*showIcon={true} icon={<PlusSquareOutlined/>}*/}
+                                {/*showLine={{showLeafIcon: false}} showIcon={false}*/}
+                            </div>
+                            {/*</div>*/}
+                        </KBoxClass>
                     </div>
                 </div>
                 <div className={"BoxExport"}>
@@ -1428,7 +1441,7 @@ export default class DatabaseExport extends React.Component {
                     </div>
                     <div className="BoxToolbar">
                         <div className="BoxButtons">
-                            <Checkbox>全选</Checkbox>
+                            <Checkbox style={{color: "white"}}>全选</Checkbox>
                             <Button onClick={this.onButtonDeleteClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>移除</Button>
                             <Button onClick={this.onButtonExportClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>导出</Button>
                         </div>
@@ -1437,9 +1450,9 @@ export default class DatabaseExport extends React.Component {
                         </div>
                     </div>
                     {/*<div className="BoxTree">*/}
-                    <KBoxClass>
+                    <KBoxClass className="euiKBox">
                         <div className={"BoxTreeInstance"}>
-                            <Tree className={"TreeExport"} treeData={this.state.treeDataTablesExport} onSelect={this.onTreeTablesExportSelected} checkable onCheck={this.onTreeTablesExportChecked} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
+                            <Tree className={"TreeExport"} treeData={this.state.treeDataTablesExport} onSelect={this.onTreeTablesExportSelected} checkable onCheck={this.onTreeTablesExportChecked} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true}/>
                         </div>
                     </KBoxClass>
                     {/*</div>*/}

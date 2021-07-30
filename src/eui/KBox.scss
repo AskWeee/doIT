@@ -4,12 +4,16 @@
   display: grid;
   overflow: hidden;
   //background: white;
-  margin: 5px;
+  margin: 5px 0 5px 5px;
+
+  &:last-child {
+    margin: 5px;
+  }
 
   .BoxTreeInstance {
     display: grid;
     background: white;
-    overflow: hidden;
+    overflow: auto;
     margin: 15px;
   }
 }

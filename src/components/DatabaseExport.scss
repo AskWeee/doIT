@@ -1,5 +1,6 @@
 $tabs-border-color: rgb(225,225,225);
-$colorComponentToolbar: rgb(175,225,255);
+$colorComponentToolbar: rgb(75,175,255);
+$colorComponentBackground: rgba(55,155,255,1);
 
 .BoxHidden {
     width: 0 !important;
@@ -24,15 +25,15 @@ $colorComponentToolbar: rgb(175,225,255);
 
 .DatabaseExport {
     display: grid;
-    grid-template-columns: auto auto 1fr;
-    background: darkgray;
+    grid-template-columns: 300px 500px 1fr;
+    background: rgb(15,35,75);
     border: 1px solid rgba(55, 55, 55, 1);
     margin: 5px;
     overflow: hidden;
 
     .BoxProducts {
-        //border: 1px solid rgba(55,55,55,1);
-        background: lightgray;
+        border: 1px solid $colorComponentBackground;
+        //background: lightgray;
         display: grid;
         grid-template-rows: auto 1fr;
         overflow: hidden;
@@ -49,6 +50,8 @@ $colorComponentToolbar: rgb(175,225,255);
                 align-content: center;
                 margin: 0 0 0 5px;
                 color: black;
+                padding: 3px;
+                font-weight: bold;
             }
         }
 
@@ -62,8 +65,8 @@ $colorComponentToolbar: rgb(175,225,255);
     }
 
     .BoxKnown {
-        //border: 1px solid rgba(55,55,55,1);
-        background: lightgray;
+        border: 1px solid $colorComponentBackground;
+        //background: lightgray;
         display: grid;
         grid-template-rows: auto auto auto 1fr;
         overflow: hidden;
@@ -80,17 +83,19 @@ $colorComponentToolbar: rgb(175,225,255);
                 align-content: center;
                 margin: 0 0 0 5px;
                 color: black;
+                padding: 3px;
+                font-weight: bold;
             }
 
         }
 
         .BoxSelect {
             display: grid;
-            margin: 3px 3px 0 3px;
+            margin: 5px 5px 0 5px;
         }
 
         .BoxToolbar {
-            background: rgba(255, 255, 255, 1);
+            //background: rgba(255, 255, 255, 1);
             margin: 3px 3px 0 3px;
             display: grid;
             grid-template-columns: auto 1fr;
@@ -102,6 +107,14 @@ $colorComponentToolbar: rgb(175,225,255);
                 grid-template-columns: auto auto;
             }
 
+            //.BoxCheckbox {
+            //    display: grid;
+            //    align-content: center;
+            //    background: red;
+            //    margin: 0 3px 0 0;
+            //    color: white;
+            //}
+
             .BoxSearch {
                 margin: 3px 2px 3px 3px;
             }
@@ -109,16 +122,21 @@ $colorComponentToolbar: rgb(175,225,255);
 
         .BoxTreeAndTable {
             display: grid;
-            grid-template-columns: 80px 1fr;
+            grid-template-columns: 120px 1fr;
             overflow: hidden;
-            background: white;
-            margin: 3px;
+            //background: white;
+            //margin: 3px;
 
             .BoxList {
                 display: grid;
                 background: rgba(255, 255, 255, 1);
                 overflow: auto;
                 margin: 5px;
+            }
+
+            .ant-tree-switcher {
+                width: 0;
+                margin-left: 3px;
             }
 
             .BoxTree {
@@ -148,8 +166,8 @@ $colorComponentToolbar: rgb(175,225,255);
     }
 
     .BoxExport {
-        //border: 1px solid rgba(55,55,55,1);
-        background: lightgray;
+        border: 1px solid $colorComponentBackground;
+        //background: lightgray;
         display: grid;
         grid-template-rows: auto auto auto 1fr;
         overflow: hidden;
@@ -166,6 +184,8 @@ $colorComponentToolbar: rgb(175,225,255);
                 align-content: center;
                 margin: 0 0 0 5px;
                 color: black;
+                padding: 3px;
+                font-weight: bold;
             }
 
         }
