@@ -97,16 +97,19 @@ class App extends React.Component {
         let subMenus = [];
         let children = this.context.mapMenus.get(s.id).children;
 
+        //console.log(children);
         for (let [key, value] of children) {
             subMenus.push({id: key, label: value.label, desc: value.desc});
         }
 
         for (let item of subMenus) {
-            let nDivider = 0;
-            if (item.id === "menu_divider") {
-                nDivider++;
+            //let nDivider = 0;
+            //console.log(item.key);
+            if (item.id.startsWith("menu_divider")) {
+                //nDivider++;
                 jsxSubMenu.push(<div className={"clsMenuDivider"}
-                                     key={"menu_divider+" + nDivider}
+                    //key={"menu_divider_" + nDivider}
+                                     key={item.id}
                                      onMouseEnter={this.onSubMenuMouseEnter}
                                      onMouseOut={this.onSubMenuMouseOut}>&nbsp;</div>)
             } else {
@@ -147,6 +150,9 @@ class App extends React.Component {
                 break
             case 'menu_database_export':
                 this.ComContent.showComponentDatabaseExport();
+                break
+            case 'menu_database_workspace':
+                this.ComContent.showComponentDatabaseWorkspace();
                 break
             case 'menu_database_config':
                 this.ComContent.showComponentDatabaseConfig();

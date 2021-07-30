@@ -2,7 +2,7 @@ import React from "react";
 
 const GCtx = React.createContext({
     logs: [],
-    user: {id: 1, name: 'KKK', online: true, host: "10.31.3.6" },
+    user: {id: 1, name: 'KKK', online: true, host: "10.31.3.6"},
     users: [
         {id: 1, name: "KKK", online: true, host: "10.31.3.6"},
         {id: 1, name: "KKK", online: true, host: "10.31.3.3"},
@@ -19,25 +19,24 @@ const GCtx = React.createContext({
     isSubMenuEntered: false,
     menus: [
         {
-            key: 'menu_database', id: 'menu_database', label: '数据库管理', desc: '数据库管理', ref: null, children: [
-                {key: 'menu_database_import', id: 'menu_database_import', label: '库表结构及数据导入', desc: '库表结构及数据导入', ref: null},
-                {key: 'menu_database_maintain', id: 'menu_database_maintain', label: '库表结构及数据维护', desc: '库表结构及数据维护', ref: null},
-                {key: 'menu_database_compare',id: 'menu_database_compare', label: '库表结构及数据对比', desc: '库表结构及数据对比', ref: null},
+            id: 'menu_database', label: '数据库管理', desc: '数据库管理', ref: null, children: [
+                {id: 'menu_database_import', label: '库表结构及数据导入', desc: '库表结构及数据导入', ref: null},
+                {id: 'menu_database_maintain', label: '库表结构及数据维护', desc: '库表结构及数据维护', ref: null},
+                {id: 'menu_database_compare', label: '库表结构及数据对比', desc: '库表结构及数据对比', ref: null},
                 {key: 'menu_database_export',id: 'menu_database_export', label: '库表结构及数据导出', desc: '库表结构及数据导出', ref: null},
-                {key: 'menu_divider',id: 'menu_divider', label: '', desc: '', ref: null},
-                {key: 'menu_database_config',id: 'menu_database_config', label: '基础信息配置管理', desc: '基础信息配置管理', ref: null},
-                // {id: 'menu_database_data', label: '库表基础数据维护', desc: '库表基础数据维护', ref: null},
-                // {id: 'menu_database_relation', label: '库表及字段关系维护', desc: '库表及字段关系维护', ref: null},
-                // {id: 'menu_database_data_compare', label: '库表基础数据对比', desc: '库表基础数据对比', ref: null},
+                {id: 'menu_divider_1', label: '', desc: '', ref: null},
+                {id: 'menu_database_workspace', label: '数据库工作台', desc: '数据库工作台', ref: null},
+                {id: 'menu_divider_2', label: '', desc: '', ref: null},
+                {id: 'menu_database_config', label: '基础信息配置管理', desc: '基础信息配置管理', ref: null},
             ]
         },
         {
-            key: 'menu_service', id: 'menu_service', label: '服务管理', desc: '', ref: null, children: [
-                {key: 'menu_service_project',id: 'menu_service_project', label: '指标项目应用管理', desc: '', ref: null},
-                {key: 'menu_service_performance',id: 'menu_service_performance', label: '性能指标服务管理', desc: '', ref: null},
-                {key: 'menu_service_fault',id: 'menu_service_fault', label: '故障指标服务管理', desc: '', ref: null},
-                {key: 'menu_service_resource',id: 'menu_service_resource', label: '资源指标服务管理', desc: '', ref: null},
-                {key: 'menu_service_view',id: 'menu_service_view', label: '视图指标服务管理', desc: '', ref: null}
+            id: 'menu_service', label: '服务管理', desc: '', ref: null, children: [
+                {id: 'menu_service_project', label: '指标项目应用管理', desc: '', ref: null},
+                {id: 'menu_service_performance', label: '性能指标服务管理', desc: '', ref: null},
+                {id: 'menu_service_fault', label: '故障指标服务管理', desc: '', ref: null},
+                {id: 'menu_service_resource', label: '资源指标服务管理', desc: '', ref: null},
+                {id: 'menu_service_view', label: '视图指标服务管理', desc: '', ref: null}
             ]
         },
         {
