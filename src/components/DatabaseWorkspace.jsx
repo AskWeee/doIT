@@ -4,33 +4,49 @@ import GCtx from "../GCtx";
 import lodash from "lodash";
 import axios from "axios";
 import moment from 'moment';
+import Mock from 'mockjs'
 import {Button, Select, Tree, Table, Input, Tabs, Checkbox} from 'antd'
 import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, PlusSquareOutlined} from '@ant-design/icons'
+import {Graph, Addon, Shape} from "@antv/x6";
+import KColumnTitle from "./KColumnTitle";
+import TadTable from "../entity/TadTable";
 import TadTableColumn from '../entity/TadTableColumn'
-import Mock from 'mockjs'
 import TadTableIndex from "../entity/TadTableIndex";
+import TadTableIndexColumn from "../entity/TadTableIndexColumn";
 import TadTablePartition from "../entity/TadTablePartition";
 import TadTableRelation from "../entity/TadTableRelation";
-import KColumnTitle from "./KColumnTitle";
-import TadTableIndexColumn from "../entity/TadTableIndexColumn";
-import TadTable from "../entity/TadTable";
 
 const {TabPane} = Tabs;
+const {Stencil} = Addon;
+const {Rect, Circle} = Shape
 
 export default class DatabaseWorkspace extends React.Component {
     static contextType = GCtx;
+
+    graph = null;
+    stencil = null;
+    container = null;
+    stencilContainer = null;
+    refContainer = (container) => {
+        this.container = container
+    }
+
+    refStencil = (container) => {
+        this.stencilContainer = container
+    }
 
     gUi = {};
     gMap = {};
     gData = {};
     gCurrent = {
-        selectDynamicColumnDataType: React.createRef()
+        selectDynamicColumnDataType: React.createRef(),
+        boxTableColumns: React.createRef(),
     };
-    refBoxDetail = React.createRef();
     gDynamic = {};
 
-    gTableUnknownSelected = [];
-    gTableKnownSelected = [];
+
+    // gTableUnknownSelected = [];
+    // gTableKnownSelected = [];
 
     constructor(props) {
         super(props);
@@ -398,9 +414,17 @@ export default class DatabaseWorkspace extends React.Component {
         this.gCurrent.dbUserId = -1;
 
         if (this.state.isErDiagram) {
+            // this.graph = new Graph({
+            //     container: document.getElementById('x6Container'),
+            //     width: 400,
+            //     height: 400,
+            // });
+            //
+            // this.x6Test();
+            this.x6Init();
         } else {
             this.setState({
-                tablePropertiesScrollY: this.refBoxDetail.current.scrollHeight - 40,
+                tablePropertiesScrollY: this.gRef.boxTableColumns.current.scrollHeight - 40,
             })
 
         }
@@ -441,6 +465,378 @@ export default class DatabaseWorkspace extends React.Component {
 
         this.setState({
             treeDataProducts: this.gUi.treeProductsData,
+        })
+    }
+
+    x6Test() {
+        let data = {
+            // 节点
+            nodes: [
+                {
+                    id: 'node1', // String，可选，节点的唯一标识
+                    x: 40,       // Number，必选，节点位置的 x 值
+                    y: 40,       // Number，必选，节点位置的 y 值
+                    width: 80,   // Number，可选，节点大小的 width 值
+                    height: 40,  // Number，可选，节点大小的 height 值
+                    label: 'hello', // String，节点标签
+                },
+                {
+                    id: 'node2', // String，节点的唯一标识
+                    x: 160,      // Number，必选，节点位置的 x 值
+                    y: 180,      // Number，必选，节点位置的 y 值
+                    width: 80,   // Number，可选，节点大小的 width 值
+                    height: 40,  // Number，可选，节点大小的 height 值
+                    label: 'world', // String，节点标签
+                },
+            ],
+            // 边
+            edges: [
+                {
+                    source: 'node1', // String，必须，起始节点 id
+                    target: 'node2', // String，必须，目标节点 id
+                },
+            ],
+        };
+
+        this.graph.fromJSON(data);
+    }
+
+    selectReset() {
+        //   this.graph.drawBackground({ color: '#fff' })
+        const nodes = this.graph.getNodes()
+        const edges = this.graph.getEdges()
+
+        nodes.forEach(node => {
+            node.attr('body/stroke', '#000')
+        })
+
+        edges.forEach(edge => {
+            edge.attr('line/stroke', 'black')
+            edge.prop('labels/0', {
+                attrs: {
+                    body: {
+                        stroke: 'black'
+                    }
+                }
+            })
+        })
+    }
+
+    x6Init() {
+        this.graph = new Graph({
+            container: this.container,
+            autoResize: true,
+            selecting: {
+                enabled: true,
+                className: 'my-selecting',
+                showNodeSelectionBox: true,
+            },
+            grid: true,
+            snapline: {
+                enabled: true,
+                sharp: true,
+            },
+            scroller: {
+                enabled: true,
+                pageVisible: false,
+                pageBreak: false,
+                pannable: true,
+            },
+            connecting: {
+                allowPort: true, //是否允许边链接到链接桩
+                allowEdge: false, //是否允许边链接到另一个边
+                allowNode: false, //是否允许边链接到节点（非节点上的链接桩)
+                allowLoop: false, //是否允许创建循环连线，即边的起始节点和终止节点为同一节点
+                allowMulti: false, //是否允许在相同的起始节点和终止之间创建多条边
+                allowBlank: false, //是否允许连接到画布空白位置的点
+                // 自动吸附
+                snap: {
+                    radius: 20
+                }
+            },
+
+            //节点双击事件
+        })
+
+        this.graph.on('node:click', ({e, x, y, node, view}) => {
+            // console.log(node)
+            this.selectReset()
+            node.attr('body/stroke', 'orange')
+        })
+        //边点击事件
+        this.graph.on('edge:click', ({e, x, y, edge, view}) => {
+            // console.log(edge)
+            this.selectReset()
+            edge.attr('line/stroke', 'orange')
+            edge.prop('labels/0', {
+                attrs: {
+                    body: {
+                        stroke: 'orange'
+                    }
+                }
+            })
+        });
+
+        this.graph.on('node:dblclick', ({e, x, y, node, view}) => {
+            alert('节点ID:' + node.id)
+            console.log(node)
+        });
+        //边双击事件
+        this.graph.on('edge:dblclick', ({e, x, y, edge, view}) => {
+            console.log(edge)
+            alert(
+                `边ID:${edge.id}, 起始节点: ${edge.source.cell},目标节点: ${edge.target.cell}`
+            )
+        });
+
+        // const source = this.graph.addNode({
+        //     x: 130,
+        //     y: 30,
+        //     width: 100,
+        //     height: 40,
+        //     attrs: {
+        //         label: {
+        //             text: 'Hello',
+        //             fill: '#6a6c8a',
+        //         },
+        //         body: {
+        //             stroke: '#31d0c6',
+        //         },
+        //     },
+        // })
+        //
+        // const target = this.graph.addNode({
+        //     x: 320,
+        //     y: 240,
+        //     width: 100,
+        //     height: 40,
+        //     attrs: {
+        //         label: {
+        //             text: 'World',
+        //             fill: '#6a6c8a',
+        //         },
+        //         body: {
+        //             stroke: '#31d0c6',
+        //         },
+        //     },
+        // })
+        //
+        // this.graph.addEdge({source, target})
+
+        this.graph.centerContent();
+
+        this.stencil = new Stencil({
+            title: '组件库',
+            target: this.graph,
+            search(cell, keyword) {
+                return cell.shape.indexOf(keyword) !== -1
+            },
+            placeholder: '搜索',
+            notFoundText: 'Not Found',
+            collapsable: true,
+            stencilGraphWidth: 200,
+            stencilGraphHeight: 180,
+            groups: [
+                {
+                    name: 'group1',
+                    title: '数据库对象',
+                },
+                {
+                    name: 'group2',
+                    title: '电信业务对象',
+                    collapsable: false,
+                },
+            ],
+            getDropNode: (node) => {
+                let n = node.clone();
+                // 需要设置下面两个地方
+                let idNew = "customId_" + n.id;
+                n.id = idNew
+                n.prop("id", idNew);
+                n.prop("title", "TAD_TABLE_NEW");
+                n.prop("ports", {
+                    groups: {
+                        // 输入链接桩群组定义
+                        left: {
+                            position: 'left',
+                            attrs: {
+                                circle: {
+                                    r: 4,
+                                    magnet: true,
+                                    stroke: '#31d0c6',
+                                    strokeWidth: 2,
+                                    fill: '#fff'
+                                }
+                            }
+                        },
+                        right: {
+                            position: 'right',
+                            attrs: {
+                                circle: {
+                                    r: 4,
+                                    magnet: true,
+                                    stroke: '#31d0c6',
+                                    strokeWidth: 2,
+                                    fill: '#fff'
+                                }
+                            }
+                        },
+                        top: {
+                            position: 'top',
+                            attrs: {
+                                circle: {
+                                    r: 4,
+                                    magnet: true,
+                                    stroke: '#31d0c6',
+                                    strokeWidth: 2,
+                                    fill: '#fff'
+                                }
+                            }
+                        },
+                        bottom: {
+                            position: 'bottom',
+                            attrs: {
+                                circle: {
+                                    r: 4,
+                                    magnet: true,
+                                    stroke: '#31d0c6',
+                                    strokeWidth: 2,
+                                    fill: '#fff'
+                                }
+                            }
+                        }
+                    },
+                    items: [
+                        {
+                            id: 'port1-1',
+                            group: 'left'
+                        },
+                        {
+                            id: 'port1-2',
+                            group: 'left',
+                            attrs: {
+                                circle: {
+                                    stroke: '#e9352f'
+                                }
+                            }
+                        },
+                        {
+                            id: 'port2-1',
+                            group: 'right',
+                            attrs: {
+                                circle: {
+                                    stroke: '#e9352f'
+                                }
+                            }
+                        },
+                        {
+                            id: 'port2-2',
+                            group: 'right'
+                        },
+                        {
+                            id: 'port3-1',
+                            group: 'top',
+                            attrs: {
+                                circle: {
+                                    stroke: '#e9352f'
+                                }
+                            }
+                        },
+                        {
+                            id: 'port3-2',
+                            group: 'top'
+                        },
+                        {
+                            id: 'port4-1',
+                            group: 'bottom'
+                        },
+                        {
+                            id: 'port4-2',
+                            group: 'bottom',
+                            attrs: {
+                                circle: {
+                                    stroke: '#e9352f'
+                                }
+                            }
+                        }
+                    ]
+                });
+                console.log(n);
+                return n;
+            },
+
+        })
+
+        //this.stencilContainer.appendChild(this.stencil.container);
+        document.getElementById('x6Stencil').appendChild(this.stencil.container);
+        ;
+
+        const r1 = new Rect({
+            width: 100,
+            height: 40,
+            attrs: {
+                rect: {fill: '#31D0C6', stroke: '#4B4A67', strokeWidth: 6},
+                text: {text: 'Table', fill: 'white'},
+            },
+        })
+
+        const c = new Circle({
+            width: 60,
+            height: 60,
+            attrs: {
+                circle: {fill: '#FE854F', strokeWidth: 6, stroke: '#4B4A67'},
+                text: {text: 'ellipse', fill: 'white'},
+            },
+        })
+
+        const c2 = new Circle({
+            width: 60,
+            height: 60,
+            attrs: {
+                circle: {fill: '#4B4A67', 'stroke-width': 6, stroke: '#FE854F'},
+                text: {text: 'ellipse', fill: 'white'},
+            },
+        })
+
+        const r2 = new Rect({
+            width: 100,
+            height: 40,
+            attrs: {
+                rect: {fill: '#4B4A67', stroke: '#31D0C6', strokeWidth: 6},
+                text: {text: '话务网网元', fill: 'white'},
+            },
+        })
+
+        const r3 = new Rect({
+            width: 70,
+            height: 40,
+            attrs: {
+                rect: {fill: '#31D0C6', stroke: '#4B4A67', strokeWidth: 6},
+                text: {text: 'rect', fill: 'white'},
+            },
+        })
+
+        const c3 = new Circle({
+            width: 60,
+            height: 60,
+            attrs: {
+                circle: {fill: '#FE854F', strokeWidth: 6, stroke: '#4B4A67'},
+                text: {text: 'ellipse', fill: 'white'},
+            },
+        })
+
+        this.stencil.load([r1], 'group1')
+        this.stencil.load([r2], 'group2')
+
+        let dnd = new Addon.Dnd({
+            getDropNode(node) {
+                console.log(node);
+                let n = node.clone();
+                // 需要设置下面两个地方
+                n.id = "customId";
+                n.prop("id", "customId");
+                return n;
+            }
         })
     }
 
@@ -1659,12 +2055,12 @@ export default class DatabaseWorkspace extends React.Component {
 
     onTableUnknownChecked(checkedKeys, info) {
 
-        this.gTableUnknownSelected = info.checkedNodes;
+        // this.gTableUnknownSelected = info.checkedNodes;
     };
 
     onTableKnownChecked(checkedKeys, info) {
 
-        this.gTableKnownSelected = info.checkedNodes;
+        // this.gTableKnownSelected = info.checkedNodes;
     };
 
     //todo <<<<< now >>>>> on button 添加表 clicked
@@ -3207,10 +3603,10 @@ export default class DatabaseWorkspace extends React.Component {
                             <Button icon={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? <CaretLeftOutlined/> : <CaretRightOutlined/>} size={"small"} type={"ghost"}/>
                         </div>
                         <div className="BoxContent">
-                            <div className="BoxComponents">
+                            <div id={"x6Stencil"} ref={this.refStencil} className="BoxComponents">
 
                             </div>
-                            <div className="BoxCanvas">
+                            <div id={"x6Graph"} ref={this.refContainer} className="BoxCanvas">
 
                             </div>
                         </div>
@@ -3235,7 +3631,7 @@ export default class DatabaseWorkspace extends React.Component {
                                                 <Button onClick={this.onButtonAlterColumnCancelClicked} disabled={!this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>放弃</Button>
                                                 <Button onClick={this.onButtonDeleteColumnClicked} disabled={this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>删除</Button>
                                             </div>
-                                            <div ref={this.refBoxDetail} className={"BoxDetail"}>
+                                            <div ref={this.gRef.boxTableColumns} className={"BoxDetail"}>
                                                 <Table
                                                     dataSource={this.state.dsColumns}
                                                     columns={columnsColumn}

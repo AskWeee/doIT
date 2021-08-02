@@ -284,6 +284,10 @@ $colorComponentToolbar: rgb(175,225,255);
         margin: 3px 3px 3px 0;
         grid-template-rows: auto 1fr;
 
+        //.my-selecting {
+        //    border: 5px dashed red;
+        //}
+
         .BoxTitleBar {
             //border: 1px solid rgba(55,55,55,1);
             background: $colorComponentToolbar;
@@ -301,7 +305,7 @@ $colorComponentToolbar: rgb(175,225,255);
 
         .BoxContent {
             display: grid;
-            grid-template-columns: 120px 1fr;
+            grid-template-columns: 200px 1fr;
             grid-gap: 3px;
             margin: 3px;
 
@@ -310,6 +314,9 @@ $colorComponentToolbar: rgb(175,225,255);
                 background: lighten(lightgray, 10%);
                 border: 1px solid lighten(lightgray, 20%);
 
+                .x6-widget-stencil {
+                    position: relative;
+                }
             }
         }
 
@@ -317,6 +324,10 @@ $colorComponentToolbar: rgb(175,225,255);
             display: grid;
             background: lighten(lightgray, 10%);
             border: 1px solid lighten(lightgray, 20%);
+
+            //.x6-graph-scroller {
+            //    display: grid;
+            //}
 
         }
     }
