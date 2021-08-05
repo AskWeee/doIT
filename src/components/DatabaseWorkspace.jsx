@@ -4,7 +4,6 @@ import GCtx from "../GCtx";
 import lodash from "lodash";
 import axios from "axios";
 import moment from 'moment';
-import Mock from 'mockjs'
 import {Button, Select, Tree, Table, Input, Tabs, Checkbox} from 'antd'
 import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, PlusSquareOutlined} from '@ant-design/icons'
 import {Graph, Addon, Shape} from "@antv/x6";
@@ -15,25 +14,19 @@ import TadTableIndex from "../entity/TadTableIndex";
 import TadTableIndexColumn from "../entity/TadTableIndexColumn";
 import TadTablePartition from "../entity/TadTablePartition";
 import TadTableRelation from "../entity/TadTableRelation";
+import EditableCellTool from "./EditableCellTool";
 
 const {TabPane} = Tabs;
 const {Stencil} = Addon;
-const {Rect, Circle} = Shape
+const {Rect} = Shape
 
 export default class DatabaseWorkspace extends React.Component {
     static contextType = GCtx;
 
-    graph = null;
-    stencil = null;
-    container = null;
-    stencilContainer = null;
-    refContainer = (container) => {
-        this.container = container
-    }
-
-    refStencil = (container) => {
-        this.stencilContainer = container
-    }
+    x6Graph = null;
+    x6Stencil = null;
+    x6GraphContainer = null;
+    x6StencilContainer = null;
 
     gUi = {};
     gMap = {};
@@ -43,10 +36,11 @@ export default class DatabaseWorkspace extends React.Component {
         boxTableColumns: React.createRef(),
     };
     gDynamic = {};
-
-
-    // gTableUnknownSelected = [];
-    // gTableKnownSelected = [];
+    gRef = {
+        x6GraphContainerBox: React.createRef(),
+        x6GraphContainer: React.createRef(),
+        x6StencilContainer: React.createRef(),
+    }
 
     constructor(props) {
         super(props);
@@ -54,6 +48,8 @@ export default class DatabaseWorkspace extends React.Component {
         //todo >>>>> state
         this.state = {
             isErDiagram: true,
+            tabNavSelected: "tabNavTwo",
+
             dbUsersSelectOptions: [{value: -1, label: "请选择产品线数据库用户"}],
             dbUserSelected: -1,
             treeDataProducts: [],
@@ -193,7 +189,6 @@ export default class DatabaseWorkspace extends React.Component {
         this.doNewGetTableColumns = this.doNewGetTableColumns.bind(this);
         this.doNewGetTypes = this.doNewGetTypes.bind(this);
         this.doGetTablesByLetter = this.doGetTablesByLetter.bind(this);
-        this.doMock = this.doMock.bind(this);
         this.doGetTablePropertyIndexColumns = this.doGetTablePropertyIndexColumns.bind(this);
 
         this.uiUpdateTable = this.uiUpdateTable.bind(this);
@@ -281,130 +276,18 @@ export default class DatabaseWorkspace extends React.Component {
         this.doNewGetAll();
     }
 
-    doMock() {
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_product_relations", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "product_rel_id": 1,
-                "product_line_id": 1,
-                "product_id": 1,
-                "product_manager_id": 1
-            }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_product_lines", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "product_line_id": 1,
-                "product_line_name": "OSS",
-                "product_line_desc": "",
-            }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_products", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "product_id": 1,
-                "product_name": "OLC",
-                "product_desc": "",
-            }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_users", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "uer_id": 1,
-                "product_line_id": 1,
-                "user_name": "nrmdb",
-                "user_desc": "",
-            }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_modules", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "module_id": 1,
-                "product_id": 1,
-                "module_name": "USER",
-                "module_leader": "K",
-                "module_desc": "",
-            }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_tables", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "table_id": 1,
-                "db_user_id": 1,
-                "module_id": 1,
-                "table_name": "tad_dict",
-                "table_desc": ""
-            }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_columns", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "column_id": 1,
-                "table_id": 1,
-                "column_name": "id",
-                "column_type_id": 2,
-                "column_desc": "",
-            },
-                {
-                    "column_id": 2,
-                    "table_id": 1,
-                    "column_name": "type",
-                    "column_type_id": 3,
-                    "column_desc": "",
-                },
-                {
-                    "column_id": 3,
-                    "table_id": 1,
-                    "column_name": "name",
-                    "column_type_id": 3,
-                    "column_desc": "",
-                }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_product_managers", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "product_manager_id": 1,
-                "product_manager_name": "TESTER",
-                "tel_no": "",
-                "email_addr": "",
-                "work_addr": "",
-            }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_types", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "id": 1,
-                "type": "table_type",
-                "name": "DICT",
-            },
-                {
-                    "id": 2,
-                    "type": "data_type",
-                    "name": "number",
-                }, {
-                    "id": 3,
-                    "type": "table_type",
-                    "name": "string",
-                }]
-        });
-        Mock.mock("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_product_versions", {
-            code: "200-200",
-            success: true,
-            "data": [{
-                "version_id": 1,
-                "product_id": 1,
-                "version_name": "3.0",
-            }]
-        });
+    componentDidUpdate(prevProps, prevState, snapshot) {
+        if (this.state.isErDiagram) {
+            console.log(this.state.styleLayout);
+            console.log(this.gRef.x6GraphContainerBox.current.offsetWidth, this.gRef.x6GraphContainerBox.current.offsetHeight);
+            if (this.state.styleLayout === "NNN") {
+                this.x6Graph.resize(400, 500);
+            } else if (this.state.styleLayout === "SNN") {
+                this.x6Graph.resize(600, 500);
+            } else if (this.state.styleLayout === "SSN") {
+                this.x6Graph.resize(this.gRef.x6GraphContainerBox.current.offsetWidth, this.gRef.x6GraphContainerBox.current.offsetHeight);
+            }
+        }
     }
 
     doInit() {
@@ -414,23 +297,16 @@ export default class DatabaseWorkspace extends React.Component {
         this.gCurrent.dbUserId = -1;
 
         if (this.state.isErDiagram) {
-            // this.graph = new Graph({
-            //     container: document.getElementById('x6Container'),
-            //     width: 400,
-            //     height: 400,
-            // });
-            //
-            // this.x6Test();
             this.x6Init();
         } else {
             this.setState({
                 tablePropertiesScrollY: this.gRef.boxTableColumns.current.scrollHeight - 40,
             })
-
         }
 
         let dataTreeProducts = [];
-        this.gMap.productLines.forEach((valuePl, key) => {
+
+        this.gMap.productLines.forEach((valuePl) => {
             let plId = valuePl.product_line_id;
             let nodeProductLine = {
                 key: plId,
@@ -460,9 +336,7 @@ export default class DatabaseWorkspace extends React.Component {
                 })
             })
         });
-
         this.gUi.treeProductsData = dataTreeProducts;
-
         this.setState({
             treeDataProducts: this.gUi.treeProductsData,
         })
@@ -498,13 +372,12 @@ export default class DatabaseWorkspace extends React.Component {
             ],
         };
 
-        this.graph.fromJSON(data);
+        this.x6Graph.fromJSON(data);
     }
 
-    selectReset() {
-        //   this.graph.drawBackground({ color: '#fff' })
-        const nodes = this.graph.getNodes()
-        const edges = this.graph.getEdges()
+    x6ElementsStyleReset() {
+        const nodes = this.x6Graph.getNodes();
+        const edges = this.x6Graph.getEdges();
 
         nodes.forEach(node => {
             node.attr('body/stroke', '#000')
@@ -522,10 +395,13 @@ export default class DatabaseWorkspace extends React.Component {
         })
     }
 
+    //todo <<<<< now >>>> x6 init
     x6Init() {
-        this.graph = new Graph({
-            container: this.container,
-            autoResize: true,
+        this.x6GraphContainer = this.gRef.x6GraphContainer.current;
+        this.x6StencilContainer = this.gRef.x6StencilContainer.current;
+        this.x6Graph = new Graph({
+            container: this.x6GraphContainer,
+            // autoResize: true,
             selecting: {
                 enabled: true,
                 className: 'my-selecting',
@@ -557,219 +433,178 @@ export default class DatabaseWorkspace extends React.Component {
 
             //节点双击事件
         })
-
-        this.graph.on('node:click', ({e, x, y, node, view}) => {
-            // console.log(node)
-            this.selectReset()
-            node.attr('body/stroke', 'orange')
-        })
-        //边点击事件
-        this.graph.on('edge:click', ({e, x, y, edge, view}) => {
-            // console.log(edge)
-            this.selectReset()
-            edge.attr('line/stroke', 'orange')
-            edge.prop('labels/0', {
-                attrs: {
-                    body: {
-                        stroke: 'orange'
-                    }
-                }
-            })
-        });
-
-        this.graph.on('node:dblclick', ({e, x, y, node, view}) => {
-            alert('节点ID:' + node.id)
-            console.log(node)
-        });
-        //边双击事件
-        this.graph.on('edge:dblclick', ({e, x, y, edge, view}) => {
-            console.log(edge)
-            alert(
-                `边ID:${edge.id}, 起始节点: ${edge.source.cell},目标节点: ${edge.target.cell}`
-            )
-        });
-
-        // const source = this.graph.addNode({
-        //     x: 130,
-        //     y: 30,
-        //     width: 100,
-        //     height: 40,
-        //     attrs: {
-        //         label: {
-        //             text: 'Hello',
-        //             fill: '#6a6c8a',
-        //         },
-        //         body: {
-        //             stroke: '#31d0c6',
-        //         },
-        //     },
-        // })
-        //
-        // const target = this.graph.addNode({
-        //     x: 320,
-        //     y: 240,
-        //     width: 100,
-        //     height: 40,
-        //     attrs: {
-        //         label: {
-        //             text: 'World',
-        //             fill: '#6a6c8a',
-        //         },
-        //         body: {
-        //             stroke: '#31d0c6',
-        //         },
-        //     },
-        // })
-        //
-        // this.graph.addEdge({source, target})
-
-        this.graph.centerContent();
-
-        this.stencil = new Stencil({
+        this.x6Stencil = new Stencil({
             title: '组件库',
-            target: this.graph,
-            search(cell, keyword) {
-                return cell.shape.indexOf(keyword) !== -1
-            },
-            placeholder: '搜索',
-            notFoundText: 'Not Found',
+            target: this.x6Graph,
+            // search(cell, keyword) {
+            //     return cell.shape.indexOf(keyword) !== -1
+            // },
+            // placeholder: '搜索',
+            // notFoundText: 'Not Found',
             collapsable: true,
             stencilGraphWidth: 200,
-            stencilGraphHeight: 180,
+            stencilGraphHeight: 100,
             groups: [
                 {
                     name: 'group1',
                     title: '数据库对象',
+                    collapsable: false,
                 },
                 {
                     name: 'group2',
                     title: '电信业务对象',
-                    collapsable: false,
                 },
             ],
             getDropNode: (node) => {
                 let n = node.clone();
-                // 需要设置下面两个地方
-                let idNew = "customId_" + n.id;
-                n.id = idNew
-                n.prop("id", idNew);
+                n.tag = {
+                    type: "Table"
+                };
                 n.prop("title", "TAD_TABLE_NEW");
-                n.prop("ports", {
-                    groups: {
-                        // 输入链接桩群组定义
-                        left: {
-                            position: 'left',
-                            attrs: {
-                                circle: {
-                                    r: 4,
-                                    magnet: true,
-                                    stroke: '#31d0c6',
-                                    strokeWidth: 2,
-                                    fill: '#fff'
-                                }
-                            }
+                n.addTools([
+                    {
+                        name: 'button',
+                        args: {
+                            markup: [
+                                {
+                                    tagName: 'circle',
+                                    selector: 'button',
+                                    attrs: {
+                                        r: 14,
+                                        stroke: '#fe854f',
+                                        'stroke-width': 3,
+                                        fill: 'white',
+                                        cursor: 'pointer',
+                                    },
+                                },
+                                {
+                                    tagName: 'text',
+                                    textContent: 'Btn A',
+                                    selector: 'icon',
+                                    attrs: {
+                                        fill: '#fe854f',
+                                        'font-size': 8,
+                                        'text-anchor': 'middle',
+                                        'pointer-events': 'none',
+                                        y: '0.3em',
+                                    },
+                                },
+                            ],
+                            x: '100%',
+                            y: '100%',
+                            offset: {x: -18, y: -18},
+                            onClick:  (view) => {
+                                // const node = view.cell
+                                // const fill = Color.randomHex()
+                                // node.attr({
+                                //     body: {
+                                //         fill,
+                                //     },
+                                //     label: {
+                                //         fill: Color.invert(fill, true),
+                                //     },
+                                // })
+                                const child1 = this.x6Graph.addNode({
+                                    x: 110,
+                                    y: 80,
+                                    width: 100,
+                                    height: 50,
+                                    label: 'Child\n(inside)',
+                                    zIndex: 10,
+                                    attrs: {
+                                        body: {
+                                            stroke: 'none',
+                                            fill: '#3199FF',
+                                        },
+                                        label: {
+                                            fill: '#fff',
+                                            fontSize: 12,
+                                        },
+                                    },
+                                })
+                                child1.addPort({
+                                    id: 'port3',
+                                    attrs: {
+                                        circle: {
+                                            r: 6,
+                                            magnet: true,
+                                            stroke: '#31d0c6',
+                                            fill: '#fff',
+                                            strokeWidth: 2,
+                                        },
+                                    },
+                                })
+                                view.cell.addChild(child1);
+                            },
                         },
-                        right: {
-                            position: 'right',
-                            attrs: {
-                                circle: {
-                                    r: 4,
-                                    magnet: true,
-                                    stroke: '#31d0c6',
-                                    strokeWidth: 2,
-                                    fill: '#fff'
-                                }
-                            }
-                        },
-                        top: {
-                            position: 'top',
-                            attrs: {
-                                circle: {
-                                    r: 4,
-                                    magnet: true,
-                                    stroke: '#31d0c6',
-                                    strokeWidth: 2,
-                                    fill: '#fff'
-                                }
-                            }
-                        },
-                        bottom: {
-                            position: 'bottom',
-                            attrs: {
-                                circle: {
-                                    r: 4,
-                                    magnet: true,
-                                    stroke: '#31d0c6',
-                                    strokeWidth: 2,
-                                    fill: '#fff'
-                                }
-                            }
-                        }
                     },
-                    items: [
-                        {
-                            id: 'port1-1',
-                            group: 'left'
+                    {
+                        name: 'button-remove',
+                        args: {
+                            x: 30,
+                            y: 30,
+                            offset: {x: 10, y: 10},
                         },
-                        {
-                            id: 'port1-2',
-                            group: 'left',
-                            attrs: {
-                                circle: {
-                                    stroke: '#e9352f'
-                                }
-                            }
-                        },
-                        {
-                            id: 'port2-1',
-                            group: 'right',
-                            attrs: {
-                                circle: {
-                                    stroke: '#e9352f'
-                                }
-                            }
-                        },
-                        {
-                            id: 'port2-2',
-                            group: 'right'
-                        },
-                        {
-                            id: 'port3-1',
-                            group: 'top',
-                            attrs: {
-                                circle: {
-                                    stroke: '#e9352f'
-                                }
-                            }
-                        },
-                        {
-                            id: 'port3-2',
-                            group: 'top'
-                        },
-                        {
-                            id: 'port4-1',
-                            group: 'bottom'
-                        },
-                        {
-                            id: 'port4-2',
-                            group: 'bottom',
-                            attrs: {
-                                circle: {
-                                    stroke: '#e9352f'
-                                }
-                            }
-                        }
-                    ]
-                });
+                    },
+                ])
                 console.log(n);
                 return n;
             },
 
         })
 
-        //this.stencilContainer.appendChild(this.stencil.container);
-        document.getElementById('x6Stencil').appendChild(this.stencil.container);
-        ;
+        this.x6Graph.on('node:click', ({node}) => {
+            this.x6ElementsStyleReset();
+            node.attr('body/stroke', 'orange');
+        })
+
+        this.x6Graph.on('edge:click', ({edge}) => {
+            this.x6ElementsStyleReset();
+            edge.attr('line/stroke', 'orange');
+            edge.prop('labels/0', {
+                attrs: {
+                    body: {
+                        stroke: 'orange'
+                    }
+                }
+            });
+        });
+
+        // this.x6Graph.on('node:dblclick', ({e, x, y, node, view}) => {
+        //     alert('节点ID:' + node.id)
+        //     console.log(node)
+        // });
+
+        EditableCellTool.config({
+            tagName: 'div',
+            isSVGElement: false,
+        });
+
+        Graph.registerNodeTool('editableCell', EditableCellTool, true);
+
+        this.x6Graph.on("node:dblclick", ({cell, e}) => {
+            const p = this.x6Graph.clientToGraph(e.clientX, e.clientY)
+            cell.addTools([
+                {
+                    name: 'editableCell',
+                    args: {
+                        x: p.x,
+                        y: p.y,
+                    },
+                },
+            ])
+        });
+
+        this.x6Graph.on('edge:dblclick', ({edge}) => {
+            console.log(edge)
+            alert(
+                `边ID:${edge.id}, 起始节点: ${edge.source.cell},目标节点: ${edge.target.cell}`
+            )
+        });
+
+        this.x6Graph.centerContent();
+
+        this.x6StencilContainer.appendChild(this.x6Stencil.container);
 
         const r1 = new Rect({
             width: 100,
@@ -777,24 +612,6 @@ export default class DatabaseWorkspace extends React.Component {
             attrs: {
                 rect: {fill: '#31D0C6', stroke: '#4B4A67', strokeWidth: 6},
                 text: {text: 'Table', fill: 'white'},
-            },
-        })
-
-        const c = new Circle({
-            width: 60,
-            height: 60,
-            attrs: {
-                circle: {fill: '#FE854F', strokeWidth: 6, stroke: '#4B4A67'},
-                text: {text: 'ellipse', fill: 'white'},
-            },
-        })
-
-        const c2 = new Circle({
-            width: 60,
-            height: 60,
-            attrs: {
-                circle: {fill: '#4B4A67', 'stroke-width': 6, stroke: '#FE854F'},
-                text: {text: 'ellipse', fill: 'white'},
             },
         })
 
@@ -807,37 +624,8 @@ export default class DatabaseWorkspace extends React.Component {
             },
         })
 
-        const r3 = new Rect({
-            width: 70,
-            height: 40,
-            attrs: {
-                rect: {fill: '#31D0C6', stroke: '#4B4A67', strokeWidth: 6},
-                text: {text: 'rect', fill: 'white'},
-            },
-        })
-
-        const c3 = new Circle({
-            width: 60,
-            height: 60,
-            attrs: {
-                circle: {fill: '#FE854F', strokeWidth: 6, stroke: '#4B4A67'},
-                text: {text: 'ellipse', fill: 'white'},
-            },
-        })
-
-        this.stencil.load([r1], 'group1')
-        this.stencil.load([r2], 'group2')
-
-        let dnd = new Addon.Dnd({
-            getDropNode(node) {
-                console.log(node);
-                let n = node.clone();
-                // 需要设置下面两个地方
-                n.id = "customId";
-                n.prop("id", "customId");
-                return n;
-            }
-        })
+        this.x6Stencil.load([r1], 'group1')
+        this.x6Stencil.load([r2], 'group2')
     }
 
     restAddTable(params) {
@@ -1306,7 +1094,7 @@ export default class DatabaseWorkspace extends React.Component {
         });
     }
 
-    //todo >>>>> ui update table
+    // >>>>> ui update table
     uiUpdateTable(table, what) {
         let treeDataTablesKnown = lodash.cloneDeep(this.state.treeDataTablesKnown);
 
@@ -1347,7 +1135,7 @@ export default class DatabaseWorkspace extends React.Component {
         }
     }
 
-    //todo >>>>> ds update table
+    // >>>>> ds update table
     dsUpdateTable(table, what) {
         switch (what) {
             case "add":
@@ -1420,7 +1208,7 @@ export default class DatabaseWorkspace extends React.Component {
         });
     }
 
-    //todo >>>>> ui update table column
+    // >>>>> ui update table column
     uiUpdateTableColumn(column, what) {
         let dsColumns = lodash.cloneDeep(this.state.dsColumns);
 
@@ -1461,7 +1249,7 @@ export default class DatabaseWorkspace extends React.Component {
         }
     }
 
-    //todo >>>>> ds update table column
+    // >>>>> ds update table column
     dsUpdateTableColumn(column, what) {
         switch (what) {
             case "add":
@@ -1668,7 +1456,6 @@ export default class DatabaseWorkspace extends React.Component {
     }
 
     showModuleTables() {
-        //todo::一个big bug, wow, 数据来源可能不对，需要好好查证一下！！！
         if ((this.gCurrent.productsNodeSelectedType === "module") && (this.gCurrent.dbUserId !== -1)) {
             let setLetters = new Set();
             let mapTablesByLetter = new Map();
@@ -1677,7 +1464,7 @@ export default class DatabaseWorkspace extends React.Component {
                 let uId = itemTable.db_user_id;
                 let mId = itemTable.module_id;
                 if ((mId === this.gCurrent.moduleId) && (uId === this.gCurrent.dbUserId)) {
-                    let tId = itemTable.table_id;
+                    //let tId = itemTable.table_id;
                     let firstLetter = itemTable.table_name[0].toUpperCase();
 
                     //itemTable.columns = [];
@@ -1764,7 +1551,7 @@ export default class DatabaseWorkspace extends React.Component {
         return myResult;
     }
 
-    //todo >>>>> on tree 表名首字母 selected
+    // >>>>> on tree 表名首字母 selected
     onTreeLettersKnownSelected(selectedKeys, info) {
         if (info.selected) {
             this.gCurrent.letterSelected = selectedKeys[0];
@@ -1778,7 +1565,7 @@ export default class DatabaseWorkspace extends React.Component {
         }
     }
 
-    //todo >>>>> on Tree 产品 selected
+    // >>>>> on Tree 产品 selected
     onTreeProductsSelected(selectedKeys, info) {
         if (info.selected) {
             let ids = selectedKeys[0].toString().split("_");
@@ -1886,7 +1673,7 @@ export default class DatabaseWorkspace extends React.Component {
 
     };
 
-    //todo >>>>> on Tree 表 selected
+    // >>>>> on Tree 表 selected
     onTreeTablesKnownSelected(selectedKeys, info) {
         // if (selectedKeys[0] === undefined) return;
         // if (info.node.tag.nodeType !== "table") return;
@@ -1975,15 +1762,15 @@ export default class DatabaseWorkspace extends React.Component {
                     });
                 }
 
-                let partitionSql = "";
+                // let partitionSql = "";
                 if (partitions.data.data.length > 0) {
                     switch (myPartition.partition_type) {
                         case "range":
-                            partitionSql += 'PARTITION BY ' + myPartition.partition_type.toUpperCase() + '(' + myPartition.partition_column + ') (\n';
+                            // partitionSql += 'PARTITION BY ' + myPartition.partition_type.toUpperCase() + '(' + myPartition.partition_column + ') (\n';
                             partitions.data.data.forEach((item) => {
                                 myPartition.partitionNames.push(item.partition_name);
                                 myPartition.partitionHighValues.push(item.high_value);
-                                partitionSql += '\tPARTITION "' + item.partition_name + '" VALUES LESS THAN (' + item.high_value + '),\n';
+                                // partitionSql += '\tPARTITION "' + item.partition_name + '" VALUES LESS THAN (' + item.high_value + '),\n';
                             })
                             break
                         case "list":
@@ -1994,8 +1781,8 @@ export default class DatabaseWorkspace extends React.Component {
                             break
                     }
                     dsPartitions.push(myPartition);
-                    partitionSql = partitionSql.substr(0, partitionSql.length - 2);
-                    partitionSql += '\n);\n\n';
+                    // partitionSql = partitionSql.substr(0, partitionSql.length - 2);
+                    // partitionSql += '\n);\n\n';
                 }
 
                 relations.data.data.forEach((item) => {
@@ -2035,7 +1822,7 @@ export default class DatabaseWorkspace extends React.Component {
 
     };
 
-    onSelectDbUsersChanged(value, option) {
+    onSelectDbUsersChanged(value) {
 
         this.gCurrent.dbUserId = value;
         if (this.gCurrent.productsNodeSelectedType === "product") {
@@ -2063,8 +1850,8 @@ export default class DatabaseWorkspace extends React.Component {
         // this.gTableKnownSelected = info.checkedNodes;
     };
 
-    //todo <<<<< now >>>>> on button 添加表 clicked
-    onButtonAddTableClicked(e) {
+    // >>>>> on button 添加表 clicked
+    onButtonAddTableClicked() {
         let myTable = new TadTable();
 
         if (this.gCurrent.letterSelected === undefined) {
@@ -2087,7 +1874,7 @@ export default class DatabaseWorkspace extends React.Component {
         this.gDynamic.tableName = e.target.value;
     }
 
-    onButtonTableNameEditingConfirmClicked(e) {
+    onButtonTableNameEditingConfirmClicked() {
         let table = new TadTable();
 
         table.table_id = this.gCurrent.tableId;
@@ -2101,7 +1888,7 @@ export default class DatabaseWorkspace extends React.Component {
         })
     }
 
-    onButtonTableNameEditingCancelClicked(e) {
+    onButtonTableNameEditingCancelClicked() {
         let treeDataTablesKnown = lodash.cloneDeep(this.state.treeDataTablesKnown);
         let title = this.gMap.tables.get(this.gCurrent.tableId).table_name;
 
@@ -2146,7 +1933,7 @@ export default class DatabaseWorkspace extends React.Component {
         this.gDynamic.columnNullableFlag = e.target.checked ? "yes" : "no";
     }
 
-    onButtonColumnEditingConfirmClicked(e) {
+    onButtonColumnEditingConfirmClicked() {
         // let table = new TadTable();
         //
         // table.table_id = this.gCurrent.tableId;
@@ -2160,7 +1947,7 @@ export default class DatabaseWorkspace extends React.Component {
         })
     }
 
-    onButtonColumnEditingCancelClicked(e) {
+    onButtonColumnEditingCancelClicked() {
         // let treeDataTablesKnown = lodash.cloneDeep(this.state.treeDataTablesKnown);
         // let title = this.gMap.tables.get(this.gCurrent.tableId).table_name;
         //
@@ -2174,14 +1961,20 @@ export default class DatabaseWorkspace extends React.Component {
     }
 
     onButtonListTreeClicked(e) {
+        let btnId = e.target.id === "" ? e.target.parentElement.id : e.target.id;
+
         this.setState({
-            isErDiagram: false
+            isErDiagram: false,
+            tabNavSelected: btnId,
         })
     }
 
     onButtonErDiagramClicked(e) {
+        let btnId = e.target.id === "" ? e.target.parentElement.id : e.target.id;
+
         this.setState({
-            isErDiagram: true
+            isErDiagram: true,
+            tabNavSelected: btnId,
         })
     }
 
@@ -2194,7 +1987,7 @@ export default class DatabaseWorkspace extends React.Component {
         }
     }
 
-    //todo <<<<< now >>>>> set table name editable
+    // >>>>> set table name editable
     setTableNameEditable(treeNodes, id) {
         for (let i = 0; i < treeNodes.length; i++) {
             if (treeNodes[i].key === id) {
@@ -2207,7 +2000,7 @@ export default class DatabaseWorkspace extends React.Component {
         }
     }
 
-    onButtonRenameTableClicked(e) {
+    onButtonRenameTableClicked() {
         if (this.gCurrent.tableId !== undefined) {
             let treeDataTablesKnown = lodash.cloneDeep(this.state.treeDataTablesKnown);
             this.setTableNameEditable(treeDataTablesKnown, this.gCurrent.tableId);
@@ -2224,7 +2017,7 @@ export default class DatabaseWorkspace extends React.Component {
 
     }
 
-    //todo <<<<< now >>>>> on button 添加表字段 clicked
+    // >>>>> on button 添加表字段 clicked
     onButtonAddColumnClicked() {
         let myTableColumn = new TadTableColumn();
         myTableColumn.table_id = this.gCurrent.tableId;
@@ -2233,7 +2026,7 @@ export default class DatabaseWorkspace extends React.Component {
         this.doAddTableColumn(myTableColumn);
     }
 
-    //todo >>>>> on Button 修改字段属性 clicked
+    // >>>>> on Button 修改字段属性 clicked
     onButtonAlterColumnClicked() {
 
         this.setState({
@@ -2323,7 +2116,7 @@ export default class DatabaseWorkspace extends React.Component {
 
     }
 
-    //todo <<<<< now >>>>> on button 添加表索引 clicked
+    // >>>>> on button 添加表索引 clicked
     onButtonAddIndexClicked() {
         // let tableId = this.gCurrent.tableId;
         // let indexId = null;
@@ -2641,7 +2434,7 @@ export default class DatabaseWorkspace extends React.Component {
 
     }
 
-    onButtonProductsChangeComponentSizeClicked(e) {
+    onButtonProductsChangeComponentSizeClicked() {
         let styleLayout = "NNN";
 
         if (this.state.styleLayout === "NNN")
@@ -2656,7 +2449,7 @@ export default class DatabaseWorkspace extends React.Component {
         })
     }
 
-    onButtonTablesChangeComponentSizeClicked(e) {
+    onButtonTablesChangeComponentSizeClicked() {
         let styleLayout = "NNN";
 
         if (this.state.styleLayout === "NNN")
@@ -2668,7 +2461,7 @@ export default class DatabaseWorkspace extends React.Component {
 
         this.setState({
             styleLayout: styleLayout
-        })
+        });
     }
 
     onButtonAddRecordClicked() {
@@ -3095,7 +2888,7 @@ export default class DatabaseWorkspace extends React.Component {
         const getDataType = (dataType) => {
             let myResult = null;
             for (let i = 0; i < optionsDataType.length; i++) {
-                if (optionsDataType[i].value == dataType) {
+                if (optionsDataType[i].value === dataType) {
                     myResult = optionsDataType[i].label;
                     break
                 }
@@ -3103,11 +2896,10 @@ export default class DatabaseWorkspace extends React.Component {
 
             return myResult
         }
-
         const getYesOrNo = (flag) => {
             let myResult = null;
             for (let i = 0; i < optionsYesOrNo.length; i++) {
-                if (optionsYesOrNo[i].value == flag) {
+                if (optionsYesOrNo[i].value === flag) {
                     myResult = optionsYesOrNo[i].label;
                     break
                 }
@@ -3123,7 +2915,7 @@ export default class DatabaseWorkspace extends React.Component {
                 key: 'column_name',
                 className: 'clsColumnColumnName',
                 width: 300,
-                render: (text, record, index) => {
+                render: (text, record) => {
                     return (
                         (this.state.tableColumnEditingKey === record.key) ? (
                             <div className="clsProjectKpiUiTitleEditor">
@@ -3144,7 +2936,7 @@ export default class DatabaseWorkspace extends React.Component {
                 align: 'center',
                 className: 'clsColumnColumnName',
                 width: 100,
-                render: (text, record, index) => {
+                render: (text, record) => {
                     return (
                         (this.state.tableColumnEditingKey === record.key) ? (
                             <div className="TableColumnDataTypeEditor">
@@ -3165,7 +2957,7 @@ export default class DatabaseWorkspace extends React.Component {
                 align: 'right',
                 className: 'clsColumnColumnName',
                 width: 100,
-                render: (text, record, index) => {
+                render: (text, record) => {
                     return (
                         (this.state.tableColumnEditingKey === record.key) ? (
                             <div className="clsProjectKpiUiTitleEditor">
@@ -3186,11 +2978,11 @@ export default class DatabaseWorkspace extends React.Component {
                 align: 'center',
                 className: 'clsColumnColumnName',
                 width: 60,
-                render: (text, record, index) => {
+                render: (text, record) => {
                     return (
                         (this.state.tableColumnEditingKey === record.key) ? (
                             <div className="clsProjectKpiUiTitleEditor">
-                                <Checkbox defaultChecked={(record.primary_flag === null) ? false : (record.primary_flag === "yes" ? true : false)} onChange={this.onCheckboxColumnPrimaryFlagChanged}>是</Checkbox>
+                                <Checkbox defaultChecked={(record.primary_flag === null) ? false : (record.primary_flag === "yes")} onChange={this.onCheckboxColumnPrimaryFlagChanged}>是</Checkbox>
                             </div>
                         ) : (
                             <div className="clsProjectKpiUiTitle">
@@ -3207,11 +2999,11 @@ export default class DatabaseWorkspace extends React.Component {
                 align: 'center',
                 className: 'clsColumnColumnName',
                 width: 60,
-                render: (text, record, index) => {
+                render: (text, record) => {
                     return (
                         (this.state.tableColumnEditingKey === record.key) ? (
                             <div className="clsProjectKpiUiTitleEditor">
-                                <Checkbox defaultChecked={(record.nullable_flag === null) ? false : (record.nullable_flag === "yes" ? true : false)} onChange={this.onCheckboxColumnNullableFlagChanged}>是</Checkbox>
+                                <Checkbox defaultChecked={(record.nullable_flag === null) ? false : (record.nullable_flag === "yes")} onChange={this.onCheckboxColumnNullableFlagChanged}>是</Checkbox>
                             </div>
                         ) : (
                             <div className="clsProjectKpiUiTitle">
@@ -3228,7 +3020,7 @@ export default class DatabaseWorkspace extends React.Component {
                 align: 'center',
                 className: 'clsColumnColumnName',
                 width: 200,
-                render: (text, record, index) => {
+                render: (text, record) => {
                     return (
                         (this.state.tableColumnEditingKey === record.key) ? (
                             <div className="clsProjectKpiUiTitleEditor">
@@ -3249,7 +3041,7 @@ export default class DatabaseWorkspace extends React.Component {
                 align: 'center',
                 className: 'clsColumnColumnName',
                 width: 100,
-                render: (text, record, index) => {
+                render: (text, record) => {
                     return (
                         (this.state.tableColumnEditingKey === record.key) ? (
                             <div className="clsProjectKpiUiTitleEditor">
@@ -3270,7 +3062,7 @@ export default class DatabaseWorkspace extends React.Component {
                 align: 'center',
                 className: 'clsColumnColumnName',
                 width: 100,
-                render: (text, record, index) => {
+                render: (text, record) => {
                     return (
                         (this.state.tableColumnEditingKey === record.key) ? (
                             <div className="clsProjectKpiUiTitleEditor">
@@ -3289,7 +3081,7 @@ export default class DatabaseWorkspace extends React.Component {
                 dataIndex: 'column_desc',
                 key: 'column_desc',
                 className: 'clsColumnColumnName',
-                render: (text, record, index) => {
+                render: (text, record) => {
                     return (
                         (this.state.tableColumnEditingKey === record.key) ? (
                             <div className="clsProjectKpiUiTitleEditor">
@@ -3310,7 +3102,7 @@ export default class DatabaseWorkspace extends React.Component {
                 dataIndex: 'index_name',
                 key: 'index_name',
                 width: 300,
-                render: (text, record, index) => {
+                render: (text, record) => {
                     return (
                         <Fragment>
                             {this.state.isEditingKeyIndex !== record.key && (
@@ -3346,12 +3138,12 @@ export default class DatabaseWorkspace extends React.Component {
                 title: <KColumnTitle content='索引字段' className={'clsColumnTitle'}/>,
                 dataIndex: 'index_columns',
                 key: 'index_columns',
-                render: (text, record, index) => {
+                render: (text, record) => {
                     return (
                         <Fragment>
                             {this.state.isEditingKeyIndex !== record.key && (
                                 <div className={"clsIndexColumns"}>
-                                    {record.columns.map((item, index) => {
+                                    {record.columns.map((item) => {
                                         return <div className={"clsIndexColumn"}>
                                             <div>{item.columnName}</div>
                                             <div>({item.descend})</div>
@@ -3361,7 +3153,7 @@ export default class DatabaseWorkspace extends React.Component {
                             )}
                             {this.state.isEditingKeyIndex === record.key && (
                                 <div className={"clsIndexColumns"} style={{display: this.state.isShownButtonAddIndex}}>
-                                    {record.columns.map((item, index) => {
+                                    {record.columns.map((item) => {
                                         return <div className={"clsIndexColumn"}>
                                             <div>{item.columnName}</div>
                                             <div>({item.descend})</div>
@@ -3401,12 +3193,12 @@ export default class DatabaseWorkspace extends React.Component {
                 dataIndex: 'partitionNames',
                 key: 'partitionNames',
                 width: 200,
-                render: (text, record, index) => {
+                render: (text, record) => {
                     return (
                         <Fragment>
                             {this.state.isEditingKeyPartition !== record.key && (
                                 <div className={"clsPartitionNames"}>
-                                    {record.partitionNames.map((item, index) => {
+                                    {record.partitionNames.map((item) => {
                                         return <div className={"clsPartitionName"}>
                                             <div>{item}</div>
                                         </div>
@@ -3416,7 +3208,7 @@ export default class DatabaseWorkspace extends React.Component {
                             {this.state.isEditingKeyPartition === record.key && (
                                 <div className={"clsPartitionNames"}
                                      style={{display: this.state.isShownButtonAddPartition}}>
-                                    {record.partitionNames.map((item, index) => {
+                                    {record.partitionNames.map((item) => {
                                         return <div className={"clsPartitionName"}>
                                             <div>{item}</div>
                                         </div>
@@ -3440,12 +3232,12 @@ export default class DatabaseWorkspace extends React.Component {
                 dataIndex: 'partitionHighValues',
                 key: 'partitionHighValues',
                 width: 800,
-                render: (text, record, index) => {
+                render: (text, record) => {
                     return (
                         <Fragment>
                             {this.state.isEditingKeyPartition !== record.key && (
                                 <div className={"clsPartitionHighValues"}>
-                                    {record.partitionHighValues.map((item, index) => {
+                                    {record.partitionHighValues.map((item) => {
                                         return <div className={"clsPartitionHighValue"}>
                                             <div>{item}</div>
                                         </div>
@@ -3455,7 +3247,7 @@ export default class DatabaseWorkspace extends React.Component {
                             {this.state.isEditingKeyPartition === record.key && (
                                 <div className={"clsPartitionHighValues"}
                                      style={{display: this.state.isShownButtonAddPartition}}>
-                                    {record.partitionHighValues.map((item, index) => {
+                                    {record.partitionHighValues.map((item) => {
                                         return <div className={"clsPartitionHighValue"}>
                                             <div>{item}</div>
                                         </div>
@@ -3515,7 +3307,7 @@ export default class DatabaseWorkspace extends React.Component {
         ];
 
         return (
-            <div className={this.state.styleLayout === "NNN" ? "DatabaseWorkspace BoxNormal" : this.state.styleLayout === "SNN" ? "DatabaseWorkspace BoxSmall" : this.state.styleLayout === "SSN" ? "DatabaseWorkspace BoxSmallSmall" : "DatabaseMaintain BoxNormal"}>
+            <div className={this.state.styleLayout === "NNN" ? "DatabaseWorkspace" : this.state.styleLayout === "SNN" ? "DatabaseWorkspace BoxSmall" : this.state.styleLayout === "SSN" ? "DatabaseWorkspace BoxSmallSmall" : "DatabaseMaintain"}>
                 <div className={"BoxProductsInfo"}>
                     <div className={"BoxTitleBar"}>
                         <div className={this.state.styleLayout === "NNN" ? "BoxTitle" : "BoxTitle BoxHidden"}>产品信息：</div>
@@ -3537,7 +3329,7 @@ export default class DatabaseWorkspace extends React.Component {
                     <div className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxTabs" : "BoxTabs BoxHidden"}>
                         <div className="Tabs">
                             <div className="TabPanes">
-                                <div className="TabPane">
+                                <div className={this.state.tabNavSelected === "tabNavOne" ? "TabPane" : "TabPane BoxHidden"}>
                                     <div className="BoxToolbar">
                                         <div className={"BoxSearch"}>
                                             <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
@@ -3551,9 +3343,7 @@ export default class DatabaseWorkspace extends React.Component {
                                     </div>
                                     <div className="BoxListTree">
                                         <div className={"BoxList"}>
-                                            {this.state.treeDataLettersKnown.length ? (
-                                                <Tree treeData={this.state.treeDataLettersKnown} onSelect={this.onTreeLettersKnownSelected} defaultSelectedKeys={this.state.lettersKnownSelectedKeys} className={"TreeLetters"} blockNode={true} showLine={{showLeafIcon: false}} showIcon={false}/>
-                                            ) : (<div>&nbsp;</div>)}
+                                            <Tree treeData={this.state.treeDataLettersKnown} onSelect={this.onTreeLettersKnownSelected} defaultSelectedKeys={this.state.lettersKnownSelectedKeys} className={"TreeLetters"} blockNode={true} showLine={{showLeafIcon: false}} showIcon={false}/>
                                         </div>
                                         <div className={"BoxTree"}>
                                             <div className={"BoxTree2"}>
@@ -3562,250 +3352,256 @@ export default class DatabaseWorkspace extends React.Component {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="TabPane BoxHidden2">
+                                <div className={this.state.tabNavSelected === "tabNavTwo" ? "TabPane" : "TabPane BoxHidden"}>
                                     <div className="BoxToolbar">
                                         <div className={"BoxSearch"}>
                                             <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
                                         </div>
-                                        <Button onClick={this.onButtonAddTableClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新增</Button>
-                                        <Button onClick={this.onButtonRenameTableClicked} disabled={this.state.isTableNameEditing} size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>修改</Button>
-                                        {/*<Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditConfirmClicked}>确认</Button>*/}
-                                        {/*<Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditCancelClicked}>放弃</Button>*/}
-                                        <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>删除</Button>
-                                        {/*<Checkbox>分组显示</Checkbox>*/}
+                                        <Button onClick={this.onButtonAddTableClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>加入ER图</Button>
                                     </div>
-                                    <div className="BoxListTree">
-                                        <div className={"BoxList"}>
-                                            {this.state.treeDataLettersKnown.length ? (
+                                    <div className={"BoxUpDown"}>
+                                        <div className="BoxLeftRight">
+                                            <div className={"BoxList"}>
                                                 <Tree treeData={this.state.treeDataLettersKnown} onSelect={this.onTreeLettersKnownSelected} defaultSelectedKeys={this.state.lettersKnownSelectedKeys} className={"TreeLetters"} blockNode={true} showLine={{showLeafIcon: false}} showIcon={false}/>
-                                            ) : (<div>&nbsp;</div>)}
+                                            </div>
+                                            <div className={"BoxTree"}>
+                                                <div className={"BoxTreeInstance"}>
+                                                    <Tree className={"TreeKnown"} treeData={this.state.treeDataTablesKnown} onSelect={this.onTreeTablesKnownSelected} selectable={!this.state.isTableNameEditing} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className={"BoxTree"}>
-                                            <div className={"BoxTree2"}>
-                                                <Tree className={"TreeKnown"} treeData={this.state.treeDataTablesKnown} onSelect={this.onTreeTablesKnownSelected} selectable={!this.state.isTableNameEditing} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
+                                        <div className="BoxToolbarErDiagram">
+                                            <div className={"BoxSearch"}>
+                                                <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
+                                            </div>
+                                            <Button onClick={this.onButtonAddTableClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新增</Button>
+                                            <Button onClick={this.onButtonRenameTableClicked} disabled={this.state.isTableNameEditing} size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>修改</Button>
+                                            {/*<Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditConfirmClicked}>确认</Button>*/}
+                                            {/*<Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditCancelClicked}>放弃</Button>*/}
+                                            <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>删除</Button>
+                                            {/*<Checkbox>分组显示</Checkbox>*/}
+                                        </div>
+                                        <div className={"BoxTreeErDiagram"}>
+                                            <div className={"BoxTree"}>
+                                                <div className={"BoxTreeInstance"}>
+                                                    <Tree className={"TreeKnown"} treeData={this.state.treeDataTablesKnown} onSelect={this.onTreeTablesKnownSelected} selectable={!this.state.isTableNameEditing} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-
                             </div>
                             <div className="TabNavs">
-                                <Button className="TabNavNormal" onClick={this.onButtonListTreeClicked}>树图</Button>
-                                <Button className="TabNavSelected" onClick={this.onButtonErDiagramClicked}>ER图</Button>
+                                <Button id="tabNavOne" className={this.state.tabNavSelected === "tabNavOne" ? "TabNavSelected" : "TabNavNormal"} onClick={this.onButtonListTreeClicked}>树图</Button>
+                                <Button id="tabNavTwo" className={this.state.tabNavSelected === "tabNavTwo" ? "TabNavSelected" : "TabNavNormal"} onClick={this.onButtonErDiagramClicked}>ER图</Button>
                             </div>
                         </div>
                     </div>
                 </div>
-                {(this.state.isErDiagram) ? (
-                    <div className="BoxErDiagram">
-                        <div className="BoxTitleBar">
-                            <div className="BoxTitle">产品信息：</div>
-                            <Button icon={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? <CaretLeftOutlined/> : <CaretRightOutlined/>} size={"small"} type={"ghost"}/>
-                        </div>
-                        <div className="BoxContent">
-                            <div id={"x6Stencil"} ref={this.refStencil} className="BoxComponents">
-
-                            </div>
-                            <div id={"x6Graph"} ref={this.refContainer} className="BoxCanvas">
-
-                            </div>
+                <div className={this.state.isErDiagram ? "BoxErDiagram" : "BoxHidden"}>
+                    <div className="BoxTitleBar">
+                        <div className="BoxTitle">产品信息：</div>
+                        <Button icon={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? <CaretLeftOutlined/> : <CaretRightOutlined/>} size={"small"} type={"ghost"}/>
+                    </div>
+                    <div className="BoxContent">
+                        <div ref={this.gRef.x6StencilContainer} className="BoxComponents"/>
+                        <div ref={this.gRef.x6GraphContainerBox} className="BoxCanvas">
+                            <div ref={this.gRef.x6GraphContainer} className="BoxCanvasInstance"/>
                         </div>
                     </div>
-                ) : (
-                    <div className={"BoxPropertiesBorder"}>
-                        <div className={"BoxProperties"}>
-                            <div className={"BoxTableProperties"}>
-                                <Input placeholder="请输该表用途的简单描述"/>
-                                <Select/>
-                                <Select/>
-                            </div>
-                            <div className={"BoxOtherProperties"}>
-                                <Tabs defaultActiveKey="tablePaneColumns" type="card" tabBarGutter={5} animated={false} onChange={this.onTabsTablePropertiesChanged}>
-                                    <TabPane tab="表字段" key="tablePaneColumns">
-                                        <div className={"BoxTableColumnProperties"}>
-                                            <div className={"BoxToolbar"}>
-                                                <div className={"BoxLabel"}>&nbsp;</div>
-                                                <Button onClick={this.onButtonAddColumnClicked} disabled={this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新增</Button>
-                                                <Button onClick={this.onButtonAlterColumnClicked} disabled={this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>修改</Button>
-                                                <Button onClick={this.onButtonAlterColumnConfirmClicked} disabled={!this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>确认</Button>
-                                                <Button onClick={this.onButtonAlterColumnCancelClicked} disabled={!this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>放弃</Button>
-                                                <Button onClick={this.onButtonDeleteColumnClicked} disabled={this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>删除</Button>
-                                            </div>
-                                            <div ref={this.gRef.boxTableColumns} className={"BoxDetail"}>
-                                                <Table
-                                                    dataSource={this.state.dsColumns}
-                                                    columns={columnsColumn}
-                                                    scroll={{
-                                                        x: this.state.tablePropertiesScrollX,
-                                                        y: this.state.tablePropertiesScrollY
-                                                    }}
-                                                    bordered={true}
-                                                    size={"small"}
-                                                    pagination={{
-                                                        pageSize: this.state.pageSizeColumns,
-                                                        position: ["none", "none"]
-                                                    }}
-                                                    rowSelection={(this.state.tableColumnEditingKey === null) && {type: "radio", ...this.onRowColumnSelected}}
-                                                    // rowSelection={{
-                                                    //     type: "radio",
-                                                    //     ...this.onRowColumnSelected
-                                                    // }}
-                                                />
-                                            </div>
+                </div>
+                <div className={!this.state.isErDiagram ? "BoxPropertiesBorder" : "BoxHidden"}>
+                    <div className={"BoxProperties"}>
+                        <div className={"BoxTableProperties"}>
+                            <Input placeholder="请输该表用途的简单描述"/>
+                            <Select/>
+                            <Select/>
+                        </div>
+                        <div className={"BoxOtherProperties"}>
+                            <Tabs defaultActiveKey="tablePaneColumns" type="card" tabBarGutter={5} animated={false} onChange={this.onTabsTablePropertiesChanged}>
+                                <TabPane tab="表字段" key="tablePaneColumns">
+                                    <div className={"BoxTableColumnProperties"}>
+                                        <div className={"BoxToolbar"}>
+                                            <div className={"BoxLabel"}>&nbsp;</div>
+                                            <Button onClick={this.onButtonAddColumnClicked} disabled={this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新增</Button>
+                                            <Button onClick={this.onButtonAlterColumnClicked} disabled={this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>修改</Button>
+                                            <Button onClick={this.onButtonAlterColumnConfirmClicked} disabled={!this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>确认</Button>
+                                            <Button onClick={this.onButtonAlterColumnCancelClicked} disabled={!this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>放弃</Button>
+                                            <Button onClick={this.onButtonDeleteColumnClicked} disabled={this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>删除</Button>
                                         </div>
-                                    </TabPane>
-                                    <TabPane tab="表索引" key="tablePaneIndexes">
-                                        <div className={"BoxTableIndexProperties"}>
-                                            <div className={"BoxToolbar"}>
-                                                <div className={"BoxLabel"}>&nbsp;</div>
-                                                <Button onClick={this.onButtonAddIndexClicked} style={{display: this.state.isShownButtonAddIndex}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新增</Button>
-                                                <Button onClick={this.onButtonAlterIndexClicked} disabled={this.state.isShownButtonAlterIndexConfirm === "block"} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>修改</Button>
-                                                <Button onClick={this.onButtonDeleteIndexClicked} style={{display: this.state.isShownButtonDeleteIndex}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>删除</Button>
-                                                <Button onClick={this.onButtonAlterIndexConfirmClicked} style={{display: this.state.isShownButtonAlterIndexConfirm}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>确认</Button>
-                                                <Button onClick={this.onButtonAlterIndexCancelClicked} style={{display: this.state.isShownButtonAlterIndexCancel}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>放弃</Button>
-                                            </div>
-                                            <div className={"BoxDetail"}>
-                                                <Table
-                                                    dataSource={this.state.dsIndexes}
-                                                    columns={columnsIndex}
-                                                    scroll={{y: this.state.tablePropertiesScrollY}}
-                                                    bordered={true}
-                                                    size={"small"}
-                                                    pagination={{
-                                                        pageSize: this.state.pageSizeIndexes,
-                                                        position: ["none", "none"]
-                                                    }}
-                                                    rowSelection={{
-                                                        type: "radio",
-                                                        ...this.onRowIndexSelected
-                                                    }}/>
-                                            </div>
+                                        <div ref={this.gRef.boxTableColumns} className={"BoxDetail"}>
+                                            <Table
+                                                dataSource={this.state.dsColumns}
+                                                columns={columnsColumn}
+                                                scroll={{
+                                                    x: this.state.tablePropertiesScrollX,
+                                                    y: this.state.tablePropertiesScrollY
+                                                }}
+                                                bordered={true}
+                                                size={"small"}
+                                                pagination={{
+                                                    pageSize: this.state.pageSizeColumns,
+                                                    position: ["none", "none"]
+                                                }}
+                                                rowSelection={(this.state.tableColumnEditingKey === null) && {type: "radio", ...this.onRowColumnSelected}}
+                                                // rowSelection={{
+                                                //     type: "radio",
+                                                //     ...this.onRowColumnSelected
+                                                // }}
+                                            />
                                         </div>
-                                    </TabPane>
-                                    <TabPane tab="表分区" key="tablePanePartitions">
-                                        <div className={"BoxTablePartitionProperties"}>
-                                            <div className={"BoxToolbar"}>
-                                                <div className={"BoxLabel"}>&nbsp;</div>
-                                                <Button
-                                                    onClick={this.onButtonAddPartitionClicked}
-                                                    style={{display: this.state.isShownButtonAddPartition}}>新增</Button>
-                                                <Button
-                                                    onClick={this.onButtonAlterPartitionClicked}
-                                                    disabled={this.state.isShownButtonAlterPartitionConfirm === "block"}>修改</Button>
-                                                <Button
-                                                    onClick={this.onButtonDeletePartitionClicked}
-                                                    style={{display: this.state.isShownButtonDeletePartition}}>删除</Button>
-                                                <Button
-                                                    onClick={this.onButtonAlterPartitionConfirmClicked}
-                                                    style={{display: this.state.isShownButtonAlterPartitionConfirm}}>确认</Button>
-                                                <Button
-                                                    onClick={this.onButtonAlterPartitionCancelClicked}
-                                                    style={{display: this.state.isShownButtonAlterPartitionCancel}}>放弃</Button>
-                                            </div>
-                                            <div className={"BoxDetail"}>
-                                                <Table
-                                                    dataSource={this.state.dsPartitions}
-                                                    columns={columnsPartition}
-                                                    scroll={{x: 1920, y: this.state.tablePropertiesScrollY}}
-                                                    bordered={true}
-                                                    size={"small"}
-                                                    pagination={{
-                                                        pageSize: this.state.pageSizePartitions,
-                                                        position: ["none", "none"]
-                                                    }}
-                                                    rowSelection={{
-                                                        type: "radio",
-                                                        ...this.onRowPartitionSelected
-                                                    }}/>
-                                            </div>
+                                    </div>
+                                </TabPane>
+                                <TabPane tab="表索引" key="tablePaneIndexes">
+                                    <div className={"BoxTableIndexProperties"}>
+                                        <div className={"BoxToolbar"}>
+                                            <div className={"BoxLabel"}>&nbsp;</div>
+                                            <Button onClick={this.onButtonAddIndexClicked} style={{display: this.state.isShownButtonAddIndex}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新增</Button>
+                                            <Button onClick={this.onButtonAlterIndexClicked} disabled={this.state.isShownButtonAlterIndexConfirm === "block"} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>修改</Button>
+                                            <Button onClick={this.onButtonDeleteIndexClicked} style={{display: this.state.isShownButtonDeleteIndex}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>删除</Button>
+                                            <Button onClick={this.onButtonAlterIndexConfirmClicked} style={{display: this.state.isShownButtonAlterIndexConfirm}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>确认</Button>
+                                            <Button onClick={this.onButtonAlterIndexCancelClicked} style={{display: this.state.isShownButtonAlterIndexCancel}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>放弃</Button>
                                         </div>
-                                    </TabPane>
-                                    <TabPane tab="表关联" key="tablePaneRelations">
-                                        <div className={"BoxTableRelationProperties"}>
-                                            <div className={"BoxToolbar"}>
-                                                <div className={"BoxLabel"}>&nbsp;</div>
-                                                <Button onClick={this.onButtonAddRelationClicked}
-                                                        style={{display: this.state.isShownButtonAddRelation}}>新增</Button>
-                                                <Button
-                                                    onClick={this.onButtonAlterRelationClicked}
-                                                    disabled={this.state.isShownButtonAlterRelationConfirm === "block"}>修改</Button>
-                                                <Button onClick={this.onButtonDeleteRelationClicked}
-                                                        style={{display: this.state.isShownButtonDeleteRelation}}>删除</Button>
-                                                <Button onClick={this.onButtonAlterRelationConfirmClicked}
-                                                        style={{display: this.state.isShownButtonAlterRelationConfirm}}>确认</Button>
-                                                <Button onClick={this.onButtonAlterRelationCancelClicked}
-                                                        style={{display: this.state.isShownButtonAlterRelationCancel}}>放弃</Button>
-                                            </div>
-                                            <div className={"BoxDetail"}>
-                                                <Table
-                                                    dataSource={this.state.dsRelations}
-                                                    columns={columnsRelation}
-                                                    scroll={{y: 400}}
-                                                    bordered={true}
-                                                    size={"small"}
-                                                    pagination={{
-                                                        pageSize: this.state.pageSizeRelations,
-                                                        position: ["none", "none"]
-                                                    }}
-                                                    rowSelection={{
-                                                        type: "radio",
-                                                        ...this.onRowRelationSelected
-                                                    }}/>
-                                            </div>
+                                        <div className={"BoxDetail"}>
+                                            <Table
+                                                dataSource={this.state.dsIndexes}
+                                                columns={columnsIndex}
+                                                scroll={{y: this.state.tablePropertiesScrollY}}
+                                                bordered={true}
+                                                size={"small"}
+                                                pagination={{
+                                                    pageSize: this.state.pageSizeIndexes,
+                                                    position: ["none", "none"]
+                                                }}
+                                                rowSelection={{
+                                                    type: "radio",
+                                                    ...this.onRowIndexSelected
+                                                }}/>
                                         </div>
-                                    </TabPane>
-                                    <TabPane tab="表数据" key="tablePaneData">
-                                        <div className={"BoxTableRelationProperties"}>
-                                            <div className={"BoxToolbar"}>
-                                                <div className={"BoxLabel"}>&nbsp;</div>
-                                                <Button onClick={this.onButtonAddIndexClicked}
-                                                        style={{display: this.state.isShownButtonAddRecord}}>新增</Button>
-                                                <Button
-                                                    onClick={this.onButtonAlterIndexClicked}
-                                                    disabled={this.state.isShownButtonAlterRecordConfirm === "block"}>修改</Button>
-                                                <Button onClick={this.onButtonDeleteIndexClicked}
-                                                        style={{display: this.state.isShownButtonDeleteRecord}}>删除</Button>
-                                                <Button onClick={this.onButtonAlterIndexConfirmClicked}
-                                                        style={{display: this.state.isShownButtonAlterRecordConfirm}}>确认</Button>
-                                                <Button onClick={this.onButtonAlterIndexCancelClicked}
-                                                        style={{display: this.state.isShownButtonAlterRecordCancel}}>放弃</Button>
-                                            </div>
-                                            <div className={"BoxDetail"}>
-                                                <Table
-                                                    dataSource={this.state.dsRecords}
-                                                    columns={this.state.columnsRecord}
-                                                    scroll={{y: 400}}
-                                                    bordered={true}
-                                                    size={"small"}
-                                                    pagination={{
-                                                        pageSize: this.state.pageSizeRecords,
-                                                        position: ["none", "none"]
-                                                    }}
-                                                    rowSelection={{
-                                                        type: "radio",
-                                                        ...this.onRowRecordSelected
-                                                    }}/>
-                                            </div>
+                                    </div>
+                                </TabPane>
+                                <TabPane tab="表分区" key="tablePanePartitions">
+                                    <div className={"BoxTablePartitionProperties"}>
+                                        <div className={"BoxToolbar"}>
+                                            <div className={"BoxLabel"}>&nbsp;</div>
+                                            <Button
+                                                onClick={this.onButtonAddPartitionClicked}
+                                                style={{display: this.state.isShownButtonAddPartition}}>新增</Button>
+                                            <Button
+                                                onClick={this.onButtonAlterPartitionClicked}
+                                                disabled={this.state.isShownButtonAlterPartitionConfirm === "block"}>修改</Button>
+                                            <Button
+                                                onClick={this.onButtonDeletePartitionClicked}
+                                                style={{display: this.state.isShownButtonDeletePartition}}>删除</Button>
+                                            <Button
+                                                onClick={this.onButtonAlterPartitionConfirmClicked}
+                                                style={{display: this.state.isShownButtonAlterPartitionConfirm}}>确认</Button>
+                                            <Button
+                                                onClick={this.onButtonAlterPartitionCancelClicked}
+                                                style={{display: this.state.isShownButtonAlterPartitionCancel}}>放弃</Button>
                                         </div>
-                                    </TabPane>
-                                    <TabPane tab="表SQL" key="tablePaneSql">
-                                        <div className={"BoxTableSqlProperties"}>
-                                            <div className={"BoxDetail"}>
-                                                <pre>{this.state.tableSql}</pre>
-                                                {/*<div>*/}
-                                                {/*    {this.state.domTableSql.map((item, index) => {*/}
-                                                {/*        return item*/}
-                                                {/*    })}*/}
-                                                {/*</div>*/}
-                                            </div>
+                                        <div className={"BoxDetail"}>
+                                            <Table
+                                                dataSource={this.state.dsPartitions}
+                                                columns={columnsPartition}
+                                                scroll={{x: 1920, y: this.state.tablePropertiesScrollY}}
+                                                bordered={true}
+                                                size={"small"}
+                                                pagination={{
+                                                    pageSize: this.state.pageSizePartitions,
+                                                    position: ["none", "none"]
+                                                }}
+                                                rowSelection={{
+                                                    type: "radio",
+                                                    ...this.onRowPartitionSelected
+                                                }}/>
                                         </div>
-                                    </TabPane>
-                                </Tabs>
-                            </div>
+                                    </div>
+                                </TabPane>
+                                <TabPane tab="表关联" key="tablePaneRelations">
+                                    <div className={"BoxTableRelationProperties"}>
+                                        <div className={"BoxToolbar"}>
+                                            <div className={"BoxLabel"}>&nbsp;</div>
+                                            <Button onClick={this.onButtonAddRelationClicked}
+                                                    style={{display: this.state.isShownButtonAddRelation}}>新增</Button>
+                                            <Button
+                                                onClick={this.onButtonAlterRelationClicked}
+                                                disabled={this.state.isShownButtonAlterRelationConfirm === "block"}>修改</Button>
+                                            <Button onClick={this.onButtonDeleteRelationClicked}
+                                                    style={{display: this.state.isShownButtonDeleteRelation}}>删除</Button>
+                                            <Button onClick={this.onButtonAlterRelationConfirmClicked}
+                                                    style={{display: this.state.isShownButtonAlterRelationConfirm}}>确认</Button>
+                                            <Button onClick={this.onButtonAlterRelationCancelClicked}
+                                                    style={{display: this.state.isShownButtonAlterRelationCancel}}>放弃</Button>
+                                        </div>
+                                        <div className={"BoxDetail"}>
+                                            <Table
+                                                dataSource={this.state.dsRelations}
+                                                columns={columnsRelation}
+                                                scroll={{y: 400}}
+                                                bordered={true}
+                                                size={"small"}
+                                                pagination={{
+                                                    pageSize: this.state.pageSizeRelations,
+                                                    position: ["none", "none"]
+                                                }}
+                                                rowSelection={{
+                                                    type: "radio",
+                                                    ...this.onRowRelationSelected
+                                                }}/>
+                                        </div>
+                                    </div>
+                                </TabPane>
+                                <TabPane tab="表数据" key="tablePaneData">
+                                    <div className={"BoxTableRelationProperties"}>
+                                        <div className={"BoxToolbar"}>
+                                            <div className={"BoxLabel"}>&nbsp;</div>
+                                            <Button onClick={this.onButtonAddIndexClicked}
+                                                    style={{display: this.state.isShownButtonAddRecord}}>新增</Button>
+                                            <Button
+                                                onClick={this.onButtonAlterIndexClicked}
+                                                disabled={this.state.isShownButtonAlterRecordConfirm === "block"}>修改</Button>
+                                            <Button onClick={this.onButtonDeleteIndexClicked}
+                                                    style={{display: this.state.isShownButtonDeleteRecord}}>删除</Button>
+                                            <Button onClick={this.onButtonAlterIndexConfirmClicked}
+                                                    style={{display: this.state.isShownButtonAlterRecordConfirm}}>确认</Button>
+                                            <Button onClick={this.onButtonAlterIndexCancelClicked}
+                                                    style={{display: this.state.isShownButtonAlterRecordCancel}}>放弃</Button>
+                                        </div>
+                                        <div className={"BoxDetail"}>
+                                            <Table
+                                                dataSource={this.state.dsRecords}
+                                                columns={this.state.columnsRecord}
+                                                scroll={{y: 400}}
+                                                bordered={true}
+                                                size={"small"}
+                                                pagination={{
+                                                    pageSize: this.state.pageSizeRecords,
+                                                    position: ["none", "none"]
+                                                }}
+                                                rowSelection={{
+                                                    type: "radio",
+                                                    ...this.onRowRecordSelected
+                                                }}/>
+                                        </div>
+                                    </div>
+                                </TabPane>
+                                <TabPane tab="表SQL" key="tablePaneSql">
+                                    <div className={"BoxTableSqlProperties"}>
+                                        <div className={"BoxDetail"}>
+                                            <pre>{this.state.tableSql}</pre>
+                                            {/*<div>*/}
+                                            {/*    {this.state.domTableSql.map((item, index) => {*/}
+                                            {/*        return item*/}
+                                            {/*    })}*/}
+                                            {/*</div>*/}
+                                        </div>
+                                    </div>
+                                </TabPane>
+                            </Tabs>
                         </div>
                     </div>
-                )
-                }
+                </div>
             </div>
         )
     }
