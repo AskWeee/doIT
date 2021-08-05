@@ -6,7 +6,7 @@ import axios from "axios";
 import moment from 'moment';
 import {Button, Select, Tree, Table, Input, Tabs, Checkbox} from 'antd'
 import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, PlusSquareOutlined} from '@ant-design/icons'
-import {Graph, Addon, Shape} from "@antv/x6";
+import {Graph, Addon, Shape, Platform} from "@antv/x6";
 import KColumnTitle from "./KColumnTitle";
 import TadTable from "../entity/TadTable";
 import TadTableColumn from '../entity/TadTableColumn'
@@ -29,13 +29,16 @@ export default class DatabaseWorkspace extends React.Component {
     x6StencilContainer = null;
 
     gUi = {};
-    gMap = {};
+    gMap = {
+    };
     gData = {};
     gCurrent = {
         selectDynamicColumnDataType: React.createRef(),
         boxTableColumns: React.createRef(),
     };
-    gDynamic = {};
+    gDynamic = {
+        entities: new Map(),
+    };
     gRef = {
         x6GraphContainerBox: React.createRef(),
         x6GraphContainer: React.createRef(),
@@ -164,6 +167,9 @@ export default class DatabaseWorkspace extends React.Component {
         this.restUpdateTableIndexColumn = this.restUpdateTableIndexColumn.bind(this);
         this.restDeleteTableIndexColumn = this.restDeleteTableIndexColumn.bind(this);
 
+        this.x6Update = this.x6Update.bind(this);
+        this.x6AddEntityTable = this.x6AddEntityTable.bind(this);
+
         this.doAddTable = this.doAddTable.bind(this);
         this.doUpdateTable = this.doUpdateTable.bind(this);
         this.doDeleteTable = this.doDeleteTable.bind(this);
@@ -207,6 +213,7 @@ export default class DatabaseWorkspace extends React.Component {
 
         this.onTreeProductsSelected = this.onTreeProductsSelected.bind(this);
         this.onTreeTablesKnownSelected = this.onTreeTablesKnownSelected.bind(this);
+        this.onTreeErDiagramSelected = this.onTreeErDiagramSelected.bind(this);
 
         this.showProductDbUsers = this.showProductDbUsers.bind(this);
         this.showProductTables = this.showProductTables.bind(this);
@@ -278,8 +285,8 @@ export default class DatabaseWorkspace extends React.Component {
 
     componentDidUpdate(prevProps, prevState, snapshot) {
         if (this.state.isErDiagram) {
-            console.log(this.state.styleLayout);
-            console.log(this.gRef.x6GraphContainerBox.current.offsetWidth, this.gRef.x6GraphContainerBox.current.offsetHeight);
+            // console.log(this.state.styleLayout);
+            // console.log(this.gRef.x6GraphContainerBox.current.offsetWidth, this.gRef.x6GraphContainerBox.current.offsetHeight);
             if (this.state.styleLayout === "NNN") {
                 this.x6Graph.resize(400, 500);
             } else if (this.state.styleLayout === "SNN") {
@@ -397,6 +404,23 @@ export default class DatabaseWorkspace extends React.Component {
 
     //todo <<<<< now >>>> x6 init
     x6Init() {
+        Graph.registerConnector(
+            'algo-edge',
+            (source, target) => {
+                const offset = 4
+                const control = 80
+                const v1 = { x: source.x, y: source.y + offset + control }
+                const v2 = { x: target.x, y: target.y - offset - control }
+
+                return `
+                    M ${source.x} ${source.y}
+                    L ${source.x} ${source.y + offset}
+                    C ${v1.x} ${v1.y} ${v2.x} ${v2.y} ${target.x} ${target.y - offset}
+                    L ${target.x} ${target.y}
+                `;
+            },
+            true,
+        )
         this.x6GraphContainer = this.gRef.x6GraphContainer.current;
         this.x6StencilContainer = this.gRef.x6StencilContainer.current;
         this.x6Graph = new Graph({
@@ -419,20 +443,104 @@ export default class DatabaseWorkspace extends React.Component {
                 pannable: true,
             },
             connecting: {
-                allowPort: true, //是否允许边链接到链接桩
-                allowEdge: false, //是否允许边链接到另一个边
-                allowNode: false, //是否允许边链接到节点（非节点上的链接桩)
-                allowLoop: false, //是否允许创建循环连线，即边的起始节点和终止节点为同一节点
-                allowMulti: false, //是否允许在相同的起始节点和终止之间创建多条边
-                allowBlank: false, //是否允许连接到画布空白位置的点
-                // 自动吸附
-                snap: {
-                    radius: 20
-                }
+                snap: true,
+                allowBlank: false,
+                allowLoop: false,
+                highlight: true,
+                createEdge: (source, target) => {
+                    let edge =  this.x6Graph.createEdge({
+                        source,
+                        target,
+                        router: {
+                            name: 'manhattan',
+                            args: {
+                                startDirections: ['right'],
+                                endDirections: ['left'],
+                            },
+                        },
+                        attrs: {
+                            line: {
+                                stroke: '#722ed1',
+                            },
+                        },
+                    });
+
+                    this.gDynamic.edge = edge;
+
+                    return edge;
+                },
+                // connector: 'algo-edge',
+                // sourceAnchor: {
+                //     name: 'bottom',
+                //     args: {
+                //         dx: Platform.IS_SAFARI ? 5 : 0,
+                //     },
+                // },
+                // targetAnchor: {
+                //     name: 'center',
+                //     args: {
+                //         dx: Platform.IS_SAFARI ? 5 : 0,
+                //     },
+                // },
+                // connectionPoint: 'anchor',
+                // connector: 'algo-edge',
+                // createEdge: () => {
+                //     return this.x6Graph.createEdge({
+                //         attrs: {
+                //             line: {
+                //                 strokeDasharray: '5 5',
+                //                 stroke: '#808080',
+                //                 strokeWidth: 1,
+                //                 targetMarker: {
+                //                     name: 'block',
+                //                     args: {
+                //                         size: '6',
+                //                     },
+                //                 },
+                //             },
+                //         },
+                //     })
+                // },
+                // validateMagnet({ magnet }) {
+                //     return magnet.getAttribute('port-group') !== 'in'
+                // },
+                // validateConnection({ sourceView, targetView, sourceMagnet, targetMagnet }) {
+                //     // 只能从输出链接桩创建连接
+                //     if (!sourceMagnet || sourceMagnet.getAttribute('port-group') === 'in') {
+                //         return false
+                //     }
+                //
+                //     // 只能连接到输入链接桩
+                //     if (!targetMagnet || targetMagnet.getAttribute('port-group') !== 'in') {
+                //         return false
+                //     }
+                //
+                //     // 判断目标链接桩是否可连接
+                //     const portId = targetMagnet.getAttribute('port')!
+                //     const node = targetView.cell as Node
+                //     const port = node.getPort(portId)
+                //     if (port && port.connected) {
+                //         return false
+                //     }
+                //
+                //     return true
+                // },
             },
+            // connecting: {
+            //     allowPort: true, //是否允许边链接到链接桩
+            //     allowEdge: false, //是否允许边链接到另一个边
+            //     allowNode: false, //是否允许边链接到节点（非节点上的链接桩)
+            //     allowLoop: false, //是否允许创建循环连线，即边的起始节点和终止节点为同一节点
+            //     allowMulti: false, //是否允许在相同的起始节点和终止之间创建多条边
+            //     allowBlank: false, //是否允许连接到画布空白位置的点
+            //     // 自动吸附
+            //     snap: {
+            //         radius: 20
+            //     }
+            // },
 
             //节点双击事件
-        })
+        });
         this.x6Stencil = new Stencil({
             title: '组件库',
             target: this.x6Graph,
@@ -554,20 +662,25 @@ export default class DatabaseWorkspace extends React.Component {
         })
 
         this.x6Graph.on('node:click', ({node}) => {
-            this.x6ElementsStyleReset();
-            node.attr('body/stroke', 'orange');
+            console.log(node.data);
+            node.toFront();
+            node.getChildren()?.forEach((item)=>{
+                item.toFront();
+            });
+            // this.x6ElementsStyleReset();
+            // node.attr('body/stroke', 'orange');
         })
 
         this.x6Graph.on('edge:click', ({edge}) => {
-            this.x6ElementsStyleReset();
-            edge.attr('line/stroke', 'orange');
-            edge.prop('labels/0', {
-                attrs: {
-                    body: {
-                        stroke: 'orange'
-                    }
-                }
-            });
+            // this.x6ElementsStyleReset();
+            // edge.attr('line/stroke', 'orange');
+            // edge.prop('labels/0', {
+            //     attrs: {
+            //         body: {
+            //             stroke: 'orange'
+            //         }
+            //     }
+            // });
         });
 
         // this.x6Graph.on('node:dblclick', ({e, x, y, node, view}) => {
@@ -626,6 +739,145 @@ export default class DatabaseWorkspace extends React.Component {
 
         this.x6Stencil.load([r1], 'group1')
         this.x6Stencil.load([r2], 'group2')
+    }
+
+    x6Update() {
+        let edgeView = this.x6Graph.findViewByCell(this.gDynamic.edge);
+
+        if ((edgeView !== null) && (edgeView !== undefined)) {
+            edgeView.update()
+        }
+    }
+    //todo <<<<< now >>>>> x6 add Entity Table
+    x6AddEntityTable(table) {
+        let x = 50;
+        let y = 50;
+        let hTitle = 30;
+        let wc = 120;
+        let hc = 30;
+        let wt = wc + 20;
+        let ht = hc + 20;
+
+        let enTable = this.x6Graph.addNode({
+            x: x,
+            y: y,
+            width: wt,
+            height: ht,
+            label: table.table_name,
+            // zIndex: 10,
+            attrs: {
+                body: {
+                    stroke: "#0F0F0F",
+                    strokeWidth: 1,
+                    fill: '#AFAFAF',
+                },
+                label: {
+                    fill: '#000000',
+                    fontSize: 14,
+                    fontWeight: "bold",
+                    refX: 0.5,
+                    refY: 5,
+                    textAnchor: 'middle',
+                    textVerticalAnchor: 'top',
+                },
+            },
+        })
+        enTable.on('change:position', this.x6Update);
+
+        let n = 0;
+        table.columns.forEach((item)=> {
+            let myColumn = this.gMap.columns.get(item);
+
+            let enColumn = this.x6Graph.addNode({
+                x: x,
+                y: y + n * (hc + 2) ,
+                width: wc,
+                height: hc,
+                label: myColumn.column_name,
+                // zIndex: 10,
+                attrs: {
+                    body: {
+                        stroke: "#2F2F2F",
+                        strokeWidth: 1,
+                        fill: '#8F8F8F',
+                    },
+                    label: {
+                        fill: '#fff',
+                        fontSize: 12,
+                    },
+                },
+                ports: {
+                    groups: {
+                        groupLeft: {
+                            position: {
+                                name: "left",
+                                // args: {
+                                //     x: 0,
+                                //     y: "25%",
+                                // }
+                            }
+                        },
+                        groupRight: {
+                            position: {
+                                name: "right",
+                                // args: {
+                                //     x: "75%",
+                                //     y: 10,
+                                // }
+                            }
+                        }
+                    },
+                },
+            });
+
+
+            console.log(myColumn);
+            if ((myColumn.data_type === "int") || (myColumn.data_type === "number")) {
+                enColumn.addPort({
+                    id: 'portLeft',
+                    group: "groupLeft",
+                    attrs: {
+                        circle: {
+                            r: 5,
+                            magnet: true,
+                            stroke: '#AFDEFF',
+                            fill: '#FFF',
+                            strokeWidth: 1,
+                        },
+                    },
+                });
+
+                enColumn.addPort({
+                    id: 'portRight',
+                    group: "groupRight",
+                    attrs: {
+                        circle: {
+                            r: 5,
+                            magnet: true,
+                            stroke: '#AFDEFF',
+                            fill: '#FFF',
+                            strokeWidth: 1,
+                        },
+                    },
+                });
+            }
+
+            enColumn.data = {
+                nodeType: "TableColumn",
+                nodeId: item,
+            }
+
+            enTable.addChild(enColumn);
+            n++;
+        });
+
+        enTable.fit({ padding: { top: hTitle + 10, bottom: 10, left: 10, right: 10 } });
+        enTable.data = {
+            nodeType: "Table",
+            nodeId: table.table_id
+        }
+
+        return enTable;
     }
 
     restAddTable(params) {
@@ -1821,6 +2073,24 @@ export default class DatabaseWorkspace extends React.Component {
         }
 
     };
+
+    //todo <<<<< now >>>>> on Tree ErDiagram selected
+    onTreeErDiagramSelected(selectedKeys, info) {
+        if (info.selected && info.node.tag.nodeType === "table") {
+            console.log(selectedKeys, this.gMap);
+
+            let tId = selectedKeys[0];
+            if (!this.gDynamic.entities.has(tId)) {
+                let myTable = lodash.cloneDeep(this.gMap.tables.get(tId));
+                let enTable = this.x6AddEntityTable(myTable);
+                this.gDynamic.entities.set(myTable.table_id, enTable);
+            }
+        } else {
+
+        }
+    };
+
+
 
     onSelectDbUsersChanged(value) {
 
@@ -3379,12 +3649,11 @@ export default class DatabaseWorkspace extends React.Component {
                                             {/*<Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditConfirmClicked}>确认</Button>*/}
                                             {/*<Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditCancelClicked}>放弃</Button>*/}
                                             <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>删除</Button>
-                                            {/*<Checkbox>分组显示</Checkbox>*/}
                                         </div>
                                         <div className={"BoxTreeErDiagram"}>
                                             <div className={"BoxTree"}>
                                                 <div className={"BoxTreeInstance"}>
-                                                    <Tree className={"TreeKnown"} treeData={this.state.treeDataTablesKnown} onSelect={this.onTreeTablesKnownSelected} selectable={!this.state.isTableNameEditing} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
+                                                    <Tree className={"TreeKnown"} treeData={this.state.treeDataTablesKnown} onSelect={this.onTreeErDiagramSelected} selectable={!this.state.isTableNameEditing} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
                                                 </div>
                                             </div>
                                         </div>

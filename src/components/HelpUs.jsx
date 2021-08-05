@@ -504,8 +504,6 @@ export default class HelpUs extends React.PureComponent {
                         <div className="BoxButtons">
                             <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonAddReqClicked}>新建需求</Button>
                             <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonAddBugClicked}>上报BUG</Button>
-                            <Button size={"small"} type={"primary"} icon={<CopyOutlined/>} onClick={this.onButtonRenameClicked} disabled={this.state.isTreeOlcEventsEditing}>重命名</Button>
-                            <Button size={"small"} type={"primary"} icon={<MinusSquareOutlined/>} onClick={this.onButtonDeleteClicked}>删除</Button>
                         </div>
                     </div>
                     <div ref={this.gRef.boxTreeOlcEvents} className={"BoxTreeInstance"}>
