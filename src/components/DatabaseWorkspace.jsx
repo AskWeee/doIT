@@ -29,8 +29,7 @@ export default class DatabaseWorkspace extends React.Component {
     x6StencilContainer = null;
 
     gUi = {};
-    gMap = {
-    };
+    gMap = {};
     gData = {};
     gCurrent = {
         selectDynamicColumnDataType: React.createRef(),
@@ -167,6 +166,7 @@ export default class DatabaseWorkspace extends React.Component {
         this.restUpdateTableIndexColumn = this.restUpdateTableIndexColumn.bind(this);
         this.restDeleteTableIndexColumn = this.restDeleteTableIndexColumn.bind(this);
 
+        this.x6Move = this.x6Move.bind(this);
         this.x6Update = this.x6Update.bind(this);
         this.x6AddEntityTable = this.x6AddEntityTable.bind(this);
 
@@ -404,13 +404,17 @@ export default class DatabaseWorkspace extends React.Component {
 
     //todo <<<<< now >>>> x6 init
     x6Init() {
-        Graph.registerConnector(
-            'algo-edge',
+        EditableCellTool.config({
+            tagName: 'div',
+            isSVGElement: false,
+        });
+
+        Graph.registerConnector('algo-edge',
             (source, target) => {
                 const offset = 4
                 const control = 80
-                const v1 = { x: source.x, y: source.y + offset + control }
-                const v2 = { x: target.x, y: target.y - offset - control }
+                const v1 = {x: source.x, y: source.y + offset + control}
+                const v2 = {x: target.x, y: target.y - offset - control}
 
                 return `
                     M ${source.x} ${source.y}
@@ -420,7 +424,10 @@ export default class DatabaseWorkspace extends React.Component {
                 `;
             },
             true,
-        )
+        );
+
+        Graph.registerNodeTool('editableCell', EditableCellTool, true);
+
         this.x6GraphContainer = this.gRef.x6GraphContainer.current;
         this.x6StencilContainer = this.gRef.x6StencilContainer.current;
         this.x6Graph = new Graph({
@@ -430,6 +437,7 @@ export default class DatabaseWorkspace extends React.Component {
                 enabled: true,
                 className: 'my-selecting',
                 showNodeSelectionBox: true,
+                // movable: false,
             },
             grid: true,
             snapline: {
@@ -448,7 +456,7 @@ export default class DatabaseWorkspace extends React.Component {
                 allowLoop: false,
                 highlight: true,
                 createEdge: (source, target) => {
-                    let edge =  this.x6Graph.createEdge({
+                    let edge = this.x6Graph.createEdge({
                         source,
                         target,
                         router: {
@@ -469,77 +477,11 @@ export default class DatabaseWorkspace extends React.Component {
 
                     return edge;
                 },
-                // connector: 'algo-edge',
-                // sourceAnchor: {
-                //     name: 'bottom',
-                //     args: {
-                //         dx: Platform.IS_SAFARI ? 5 : 0,
-                //     },
-                // },
-                // targetAnchor: {
-                //     name: 'center',
-                //     args: {
-                //         dx: Platform.IS_SAFARI ? 5 : 0,
-                //     },
-                // },
-                // connectionPoint: 'anchor',
-                // connector: 'algo-edge',
-                // createEdge: () => {
-                //     return this.x6Graph.createEdge({
-                //         attrs: {
-                //             line: {
-                //                 strokeDasharray: '5 5',
-                //                 stroke: '#808080',
-                //                 strokeWidth: 1,
-                //                 targetMarker: {
-                //                     name: 'block',
-                //                     args: {
-                //                         size: '6',
-                //                     },
-                //                 },
-                //             },
-                //         },
-                //     })
-                // },
-                // validateMagnet({ magnet }) {
-                //     return magnet.getAttribute('port-group') !== 'in'
-                // },
-                // validateConnection({ sourceView, targetView, sourceMagnet, targetMagnet }) {
-                //     // 只能从输出链接桩创建连接
-                //     if (!sourceMagnet || sourceMagnet.getAttribute('port-group') === 'in') {
-                //         return false
-                //     }
-                //
-                //     // 只能连接到输入链接桩
-                //     if (!targetMagnet || targetMagnet.getAttribute('port-group') !== 'in') {
-                //         return false
-                //     }
-                //
-                //     // 判断目标链接桩是否可连接
-                //     const portId = targetMagnet.getAttribute('port')!
-                //     const node = targetView.cell as Node
-                //     const port = node.getPort(portId)
-                //     if (port && port.connected) {
-                //         return false
-                //     }
-                //
-                //     return true
-                // },
-            },
-            // connecting: {
-            //     allowPort: true, //是否允许边链接到链接桩
-            //     allowEdge: false, //是否允许边链接到另一个边
-            //     allowNode: false, //是否允许边链接到节点（非节点上的链接桩)
-            //     allowLoop: false, //是否允许创建循环连线，即边的起始节点和终止节点为同一节点
-            //     allowMulti: false, //是否允许在相同的起始节点和终止之间创建多条边
-            //     allowBlank: false, //是否允许连接到画布空白位置的点
-            //     // 自动吸附
-            //     snap: {
-            //         radius: 20
-            //     }
-            // },
 
-            //节点双击事件
+            },
+            translating: {
+                restrict: this.x6Move,
+            },
         });
         this.x6Stencil = new Stencil({
             title: '组件库',
@@ -601,7 +543,7 @@ export default class DatabaseWorkspace extends React.Component {
                             x: '100%',
                             y: '100%',
                             offset: {x: -18, y: -18},
-                            onClick:  (view) => {
+                            onClick: (view) => {
                                 // const node = view.cell
                                 // const fill = Color.randomHex()
                                 // node.attr({
@@ -662,14 +604,29 @@ export default class DatabaseWorkspace extends React.Component {
         })
 
         this.x6Graph.on('node:click', ({node}) => {
-            console.log(node.data);
-            node.toFront();
-            node.getChildren()?.forEach((item)=>{
-                item.toFront();
-            });
-            // this.x6ElementsStyleReset();
-            // node.attr('body/stroke', 'orange');
-        })
+            this.gDynamic.node = node;
+
+            if (node.data.nodeType === "Table") {
+                node.toFront({deep: true});
+            } else if (node.data.nodeType === "TableColumn") {
+                console.log(node.data);
+            }
+        });
+
+        this.x6Graph.on('node:mouseenter', ({node}) => {
+            this.gDynamic.node = node;
+
+            if (node.data.nodeType === "Table") {
+                node.toFront({deep: true});
+            } else if (node.data.nodeType === "TableColumn") {
+                //console.log(node.data);
+            }
+        });
+
+        // this.x6Graph.on('node:moving', ({ e, x, y, node, view }) => {
+        //     console.log(e, x, y, node, view);
+        //     //e.stopPropagation();
+        // });
 
         this.x6Graph.on('edge:click', ({edge}) => {
             // this.x6ElementsStyleReset();
@@ -682,18 +639,6 @@ export default class DatabaseWorkspace extends React.Component {
             //     }
             // });
         });
-
-        // this.x6Graph.on('node:dblclick', ({e, x, y, node, view}) => {
-        //     alert('节点ID:' + node.id)
-        //     console.log(node)
-        // });
-
-        EditableCellTool.config({
-            tagName: 'div',
-            isSVGElement: false,
-        });
-
-        Graph.registerNodeTool('editableCell', EditableCellTool, true);
 
         this.x6Graph.on("node:dblclick", ({cell, e}) => {
             const p = this.x6Graph.clientToGraph(e.clientX, e.clientY)
@@ -741,6 +686,26 @@ export default class DatabaseWorkspace extends React.Component {
         this.x6Stencil.load([r2], 'group2')
     }
 
+    x6Move() {
+        let view = this.x6Graph.findViewByCell(this.gDynamic.node);
+
+        if ((view !== null) && (view !== undefined)) {
+            if (this.gDynamic.node.data.nodeType === "TableColumn") {
+                return view.cell.getBBox();
+            }
+
+            // const cell = view.cell
+            // if (cell.isNode()) {
+            //     const parent = cell.getParent()
+            //     if (parent) {
+            //         //return parent.getBBox()
+            //         return cell.getBBox();
+            //     }
+            // }
+            return null
+        }
+    }
+
     x6Update() {
         let edgeView = this.x6Graph.findViewByCell(this.gDynamic.edge);
 
@@ -748,6 +713,7 @@ export default class DatabaseWorkspace extends React.Component {
             edgeView.update()
         }
     }
+
     //todo <<<<< now >>>>> x6 add Entity Table
     x6AddEntityTable(table) {
         let x = 50;
@@ -785,12 +751,12 @@ export default class DatabaseWorkspace extends React.Component {
         enTable.on('change:position', this.x6Update);
 
         let n = 0;
-        table.columns.forEach((item)=> {
+        table.columns.forEach((item) => {
             let myColumn = this.gMap.columns.get(item);
 
             let enColumn = this.x6Graph.addNode({
                 x: x,
-                y: y + n * (hc + 2) ,
+                y: y + n * (hc + 2),
                 width: wc,
                 height: hc,
                 label: myColumn.column_name,
@@ -830,8 +796,12 @@ export default class DatabaseWorkspace extends React.Component {
                 },
             });
 
+            // enColumn.on("change:position", (args) => {
+            //     console.log("change:position=", args);
+            //     return null
+            // })
 
-            console.log(myColumn);
+            // console.log(myColumn);
             if ((myColumn.data_type === "int") || (myColumn.data_type === "number")) {
                 enColumn.addPort({
                     id: 'portLeft',
@@ -871,7 +841,7 @@ export default class DatabaseWorkspace extends React.Component {
             n++;
         });
 
-        enTable.fit({ padding: { top: hTitle + 10, bottom: 10, left: 10, right: 10 } });
+        enTable.fit({padding: {top: hTitle + 10, bottom: 10, left: 10, right: 10}});
         enTable.data = {
             nodeType: "Table",
             nodeId: table.table_id
@@ -2089,7 +2059,6 @@ export default class DatabaseWorkspace extends React.Component {
 
         }
     };
-
 
 
     onSelectDbUsersChanged(value) {
