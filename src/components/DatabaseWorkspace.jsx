@@ -433,12 +433,12 @@ export default class DatabaseWorkspace extends React.Component {
         this.x6Graph = new Graph({
             container: this.x6GraphContainer,
             // autoResize: true,
-            selecting: {
-                enabled: true,
-                className: 'my-selecting',
-                showNodeSelectionBox: true,
-                // movable: false,
-            },
+            // selecting: {
+            //     enabled: true,
+            //     className: 'my-selecting',
+            //     showNodeSelectionBox: true,
+            //     // movable: false,
+            // },
             grid: true,
             snapline: {
                 enabled: true,
@@ -455,7 +455,24 @@ export default class DatabaseWorkspace extends React.Component {
                 allowBlank: false,
                 allowLoop: false,
                 highlight: true,
+                validateMagnet: ({cell, magnet}) => {
+                    let count = 0;
+                    let connectionCount = magnet.getAttribute("connection-count");
+                    let max = connectionCount ? parseInt(connectionCount, 10) : Number.MAX_SAFE_INTEGER
+                    const outgoingEdges = this.x6Graph.getOutgoingEdges(cell)
+                    if (outgoingEdges) {
+                        outgoingEdges.forEach((edge) => {
+                            const edgeView = this.x6Graph.findViewByCell(edge);
+                            if (edgeView.sourceMagnet === magnet) {
+                                count += 1
+                            }
+                        })
+                    }
+
+                    return count < max
+                },
                 createEdge: (source, target) => {
+                    console.log(source, target);
                     let edge = this.x6Graph.createEdge({
                         source,
                         target,
@@ -603,8 +620,49 @@ export default class DatabaseWorkspace extends React.Component {
 
         })
 
+        this.x6Graph.on('blank:click', () => {
+            if (this.gCurrent.node !== null && this.gCurrent.node !== undefined) {
+
+                // let view = this.x6Graph.findViewByCell(this.gCurrent.node);
+                this.gCurrent.node.attr('body', {
+                    fill: '#AFAFAF',
+                    stroke: '#ffa940',
+                })
+            }
+            this.gCurrent.node = null;
+        });
+
+        this.x6Graph.on('cell:removed', ({ cell, index, options }) => {
+
+            console.log("cell removed = ", cell);
+            // e.stopPropagation()
+            // view.cell.remove()
+        });
+
+        this.x6Graph.on('cell:added', ({ cell, index, options }) => {
+            console.log("cell added = ", cell)
+        });
+
+        // this.x6Graph.on('cell:changed', ({ cell, options }) => {
+        //     console.log("cell changed = ", cell);
+        // });
+
         this.x6Graph.on('node:click', ({node}) => {
             this.gDynamic.node = node;
+
+            if (this.gCurrent.node !== null && this.gCurrent.node !== undefined) {
+
+                // let view = this.x6Graph.findViewByCell(this.gCurrent.node);
+                this.gCurrent.node.attr('body', {
+                    fill: '#AFAFAF',
+                    stroke: '#ffa940',
+                })
+            }
+            this.gCurrent.node = node;
+            node.attr('body', {
+                fill: '#ffd591',
+                stroke: '#ffa940',
+            })
 
             if (node.data.nodeType === "Table") {
                 node.toFront({deep: true});
@@ -617,16 +675,27 @@ export default class DatabaseWorkspace extends React.Component {
             this.gDynamic.node = node;
 
             if (node.data.nodeType === "Table") {
+                node.addTools([
+                    {
+                        name: 'button-remove',
+                        args: { x: "100%", y:0, offset: { x: -10, y: 10 } },
+                    },
+                ]);
                 node.toFront({deep: true});
             } else if (node.data.nodeType === "TableColumn") {
-                //console.log(node.data);
+                node.addTools([
+                    {
+                        name: 'button-remove',
+                        args: { x: "100%", y: "50%", offset: { x: -20, y: 0 } },
+                    },
+                ]);
             }
+
         });
 
-        // this.x6Graph.on('node:moving', ({ e, x, y, node, view }) => {
-        //     console.log(e, x, y, node, view);
-        //     //e.stopPropagation();
-        // });
+        this.x6Graph.on('node:mouseleave', ({ cell }) => {
+            cell.removeTools()
+        })
 
         this.x6Graph.on('edge:click', ({edge}) => {
             // this.x6ElementsStyleReset();
@@ -639,6 +708,36 @@ export default class DatabaseWorkspace extends React.Component {
             //     }
             // });
         });
+
+        this.x6Graph.on('edge:mouseenter', ({ cell }) => {
+            cell.addTools([
+                {
+                    name: 'button-remove',
+                    args: { distance: -40 },
+                },
+                {
+                    name: 'source-arrowhead',
+                },
+                {
+                    name: 'target-arrowhead',
+                    args: {
+                        attrs: {
+                            fill: 'red',
+                        },
+                    },
+                },
+            ])
+
+            cell.attr('line/strokeWidth', '3');
+
+            cell.toFront({deep: true});
+
+        });
+
+        this.x6Graph.on('edge:mouseleave', ({ cell }) => {
+            cell.removeTools()
+            cell.attr('line/strokeWidth', '1');
+        })
 
         this.x6Graph.on("node:dblclick", ({cell, e}) => {
             const p = this.x6Graph.clientToGraph(e.clientX, e.clientY)
@@ -733,9 +832,11 @@ export default class DatabaseWorkspace extends React.Component {
             // zIndex: 10,
             attrs: {
                 body: {
+                    connectionCount: 0,
                     stroke: "#0F0F0F",
                     strokeWidth: 1,
                     fill: '#AFAFAF',
+                    magnet: true,
                 },
                 label: {
                     fill: '#000000',
@@ -763,9 +864,16 @@ export default class DatabaseWorkspace extends React.Component {
                 // zIndex: 10,
                 attrs: {
                     body: {
+                        connectionCount: 0,
                         stroke: "#2F2F2F",
                         strokeWidth: 1,
                         fill: '#8F8F8F',
+                        magnet: true,
+                        // ref: "text",
+                        // refWidth: 16,
+                        // refHeight: 16,
+                        // refX: -8,
+                        // refY: -8,
                     },
                     label: {
                         fill: '#fff',
@@ -808,6 +916,7 @@ export default class DatabaseWorkspace extends React.Component {
                     group: "groupLeft",
                     attrs: {
                         circle: {
+                            connectionCount: 1,
                             r: 5,
                             magnet: true,
                             stroke: '#AFDEFF',
@@ -822,6 +931,7 @@ export default class DatabaseWorkspace extends React.Component {
                     group: "groupRight",
                     attrs: {
                         circle: {
+                            connectionCount: 2,
                             r: 5,
                             magnet: true,
                             stroke: '#AFDEFF',
