@@ -6,7 +6,7 @@ import axios from "axios";
 import moment from 'moment';
 import {Button, Select, Tree, Table, Input, Tabs, Checkbox} from 'antd'
 import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, PlusSquareOutlined} from '@ant-design/icons'
-import {Graph, Addon, Shape, Platform} from "@antv/x6";
+import {Graph, Addon, Shape} from "@antv/x6";
 import KColumnTitle from "./KColumnTitle";
 import TadTable from "../entity/TadTable";
 import TadTableColumn from '../entity/TadTableColumn'
@@ -25,8 +25,6 @@ export default class DatabaseWorkspace extends React.Component {
 
     x6Graph = null;
     x6Stencil = null;
-    x6GraphContainer = null;
-    x6StencilContainer = null;
 
     gUi = {};
     gMap = {};
@@ -39,9 +37,9 @@ export default class DatabaseWorkspace extends React.Component {
         entities: new Map(),
     };
     gRef = {
+        x6StencilContainerBox: React.createRef(),
         x6GraphContainerBox: React.createRef(),
         x6GraphContainer: React.createRef(),
-        x6StencilContainer: React.createRef(),
     }
 
     constructor(props) {
@@ -283,15 +281,19 @@ export default class DatabaseWorkspace extends React.Component {
         this.doNewGetAll();
     }
 
+    shouldComponentUpdate(nextProps, nextState, nextContext) {
+        if (this.state.isErDiagram) {
+            if (nextState.styleLayout !== this.state.styleLayout) {
+                this.x6Graph.resize(50, 50);
+            }
+        }
+
+        return true
+    }
+
     componentDidUpdate(prevProps, prevState, snapshot) {
         if (this.state.isErDiagram) {
-            // console.log(this.state.styleLayout);
-            // console.log(this.gRef.x6GraphContainerBox.current.offsetWidth, this.gRef.x6GraphContainerBox.current.offsetHeight);
-            if (this.state.styleLayout === "NNN") {
-                this.x6Graph.resize(400, 500);
-            } else if (this.state.styleLayout === "SNN") {
-                this.x6Graph.resize(600, 500);
-            } else if (this.state.styleLayout === "SSN") {
+            if (prevState.styleLayout !== this.state.styleLayout) {
                 this.x6Graph.resize(this.gRef.x6GraphContainerBox.current.offsetWidth, this.gRef.x6GraphContainerBox.current.offsetHeight);
             }
         }
@@ -428,21 +430,11 @@ export default class DatabaseWorkspace extends React.Component {
 
         Graph.registerNodeTool('editableCell', EditableCellTool, true);
 
-        this.x6GraphContainer = this.gRef.x6GraphContainer.current;
-        this.x6StencilContainer = this.gRef.x6StencilContainer.current;
         this.x6Graph = new Graph({
-            container: this.x6GraphContainer,
-            // autoResize: true,
-            // selecting: {
-            //     enabled: true,
-            //     className: 'my-selecting',
-            //     showNodeSelectionBox: true,
-            //     // movable: false,
-            // },
+            container: this.gRef.x6GraphContainer.current,
             grid: true,
             snapline: {
                 enabled: true,
-                sharp: true,
             },
             scroller: {
                 enabled: true,
@@ -500,26 +492,166 @@ export default class DatabaseWorkspace extends React.Component {
                 restrict: this.x6Move,
             },
         });
+
+        this.x6Graph.on('blank:click', () => {
+            if (this.gCurrent.node !== null && this.gCurrent.node !== undefined) {
+
+                // let view = this.x6Graph.findViewByCell(this.gCurrent.node);
+                this.gCurrent.node.attr('body', {
+                    fill: '#AFAFAF',
+                    stroke: '#ffa940',
+                })
+            }
+            this.gCurrent.node = null;
+        });
+
+        this.x6Graph.on('cell:removed', ({cell, index, options}) => {
+
+            console.log("cell removed = ", cell);
+            // e.stopPropagation()
+            // view.cell.remove()
+        });
+
+        this.x6Graph.on('cell:added', ({cell, index, options}) => {
+            console.log("cell added = ", cell)
+        });
+
+        this.x6Graph.on('node:click', ({node}) => {
+            this.gDynamic.node = node;
+
+            if (this.gCurrent.node !== null && this.gCurrent.node !== undefined) {
+
+                // let view = this.x6Graph.findViewByCell(this.gCurrent.node);
+                this.gCurrent.node.attr('body', {
+                    fill: '#AFAFAF',
+                    stroke: '#ffa940',
+                })
+            }
+            this.gCurrent.node = node;
+            node.attr('body', {
+                fill: '#ffd591',
+                stroke: '#ffa940',
+            })
+
+            if (node.data.nodeType === "Table") {
+                node.toFront({deep: true});
+            } else if (node.data.nodeType === "TableColumn") {
+                console.log(node.data);
+            }
+        });
+
+        this.x6Graph.on('node:mouseenter', ({node}) => {
+            this.gDynamic.node = node;
+
+            if (node.data.nodeType === "Table") {
+                node.addTools([
+                    {
+                        name: 'button-remove',
+                        args: {x: "100%", y: 0, offset: {x: -10, y: 10}},
+                    },
+                ]);
+                node.toFront({deep: true});
+            } else if (node.data.nodeType === "TableColumn") {
+                node.addTools([
+                    {
+                        name: 'button-remove',
+                        args: {x: "100%", y: "50%", offset: {x: -20, y: 0}},
+                    },
+                ]);
+            }
+
+        });
+
+        this.x6Graph.on('node:mouseleave', ({cell}) => {
+            cell.removeTools()
+        })
+
+        this.x6Graph.on('edge:click', ({edge}) => {
+            // this.x6ElementsStyleReset();
+            // edge.attr('line/stroke', 'orange');
+            // edge.prop('labels/0', {
+            //     attrs: {
+            //         body: {
+            //             stroke: 'orange'
+            //         }
+            //     }
+            // });
+        });
+
+        this.x6Graph.on('edge:mouseenter', ({cell}) => {
+            cell.addTools([
+                {
+                    name: 'button-remove',
+                    args: {distance: -40},
+                },
+                {
+                    name: 'source-arrowhead',
+                },
+                {
+                    name: 'target-arrowhead',
+                    args: {
+                        attrs: {
+                            fill: 'red',
+                        },
+                    },
+                },
+            ])
+
+            cell.attr('line/strokeWidth', '3');
+
+            cell.toFront({deep: true});
+
+        });
+
+        this.x6Graph.on('edge:mouseleave', ({cell}) => {
+            cell.removeTools()
+            cell.attr('line/strokeWidth', '1');
+        })
+
+        this.x6Graph.on("node:dblclick", ({cell, e}) => {
+            const p = this.x6Graph.clientToGraph(e.clientX, e.clientY)
+            cell.addTools([
+                {
+                    name: 'editableCell',
+                    args: {
+                        x: p.x,
+                        y: p.y,
+                    },
+                },
+            ])
+        });
+
+        this.x6Graph.on('edge:dblclick', ({edge}) => {
+            console.log(edge)
+            alert(
+                `边ID:${edge.id}, 起始节点: ${edge.source.cell},目标节点: ${edge.target.cell}`
+            )
+        });
+
+        this.x6Graph.centerContent();
+
         this.x6Stencil = new Stencil({
             title: '组件库',
             target: this.x6Graph,
-            // search(cell, keyword) {
-            //     return cell.shape.indexOf(keyword) !== -1
-            // },
-            // placeholder: '搜索',
-            // notFoundText: 'Not Found',
             collapsable: true,
-            stencilGraphWidth: 200,
-            stencilGraphHeight: 100,
+            stencilGraphWidth: 180,
+            stencilGraphHeight: 120,
+            layoutOptions: {
+                columns: 1,
+                columnWidth: 180,
+                rowHeight: 50,
+                center: true,
+                dx: 0,
+                dy: 10,
+            },
             groups: [
                 {
                     name: 'group1',
-                    title: '数据库对象',
-                    collapsable: false,
+                    title: '库表对象',
                 },
                 {
                     name: 'group2',
-                    title: '电信业务对象',
+                    title: '业务模板',
                 },
             ],
             getDropNode: (node) => {
@@ -620,169 +752,70 @@ export default class DatabaseWorkspace extends React.Component {
 
         })
 
-        this.x6Graph.on('blank:click', () => {
-            if (this.gCurrent.node !== null && this.gCurrent.node !== undefined) {
+        this.gRef.x6StencilContainerBox.current.appendChild(this.x6Stencil.container);
 
-                // let view = this.x6Graph.findViewByCell(this.gCurrent.node);
-                this.gCurrent.node.attr('body', {
-                    fill: '#AFAFAF',
-                    stroke: '#ffa940',
-                })
-            }
-            this.gCurrent.node = null;
-        });
-
-        this.x6Graph.on('cell:removed', ({ cell, index, options }) => {
-
-            console.log("cell removed = ", cell);
-            // e.stopPropagation()
-            // view.cell.remove()
-        });
-
-        this.x6Graph.on('cell:added', ({ cell, index, options }) => {
-            console.log("cell added = ", cell)
-        });
-
-        // this.x6Graph.on('cell:changed', ({ cell, options }) => {
-        //     console.log("cell changed = ", cell);
-        // });
-
-        this.x6Graph.on('node:click', ({node}) => {
-            this.gDynamic.node = node;
-
-            if (this.gCurrent.node !== null && this.gCurrent.node !== undefined) {
-
-                // let view = this.x6Graph.findViewByCell(this.gCurrent.node);
-                this.gCurrent.node.attr('body', {
-                    fill: '#AFAFAF',
-                    stroke: '#ffa940',
-                })
-            }
-            this.gCurrent.node = node;
-            node.attr('body', {
-                fill: '#ffd591',
-                stroke: '#ffa940',
-            })
-
-            if (node.data.nodeType === "Table") {
-                node.toFront({deep: true});
-            } else if (node.data.nodeType === "TableColumn") {
-                console.log(node.data);
-            }
-        });
-
-        this.x6Graph.on('node:mouseenter', ({node}) => {
-            this.gDynamic.node = node;
-
-            if (node.data.nodeType === "Table") {
-                node.addTools([
-                    {
-                        name: 'button-remove',
-                        args: { x: "100%", y:0, offset: { x: -10, y: 10 } },
-                    },
-                ]);
-                node.toFront({deep: true});
-            } else if (node.data.nodeType === "TableColumn") {
-                node.addTools([
-                    {
-                        name: 'button-remove',
-                        args: { x: "100%", y: "50%", offset: { x: -20, y: 0 } },
-                    },
-                ]);
-            }
-
-        });
-
-        this.x6Graph.on('node:mouseleave', ({ cell }) => {
-            cell.removeTools()
-        })
-
-        this.x6Graph.on('edge:click', ({edge}) => {
-            // this.x6ElementsStyleReset();
-            // edge.attr('line/stroke', 'orange');
-            // edge.prop('labels/0', {
-            //     attrs: {
-            //         body: {
-            //             stroke: 'orange'
-            //         }
-            //     }
-            // });
-        });
-
-        this.x6Graph.on('edge:mouseenter', ({ cell }) => {
-            cell.addTools([
-                {
-                    name: 'button-remove',
-                    args: { distance: -40 },
-                },
-                {
-                    name: 'source-arrowhead',
-                },
-                {
-                    name: 'target-arrowhead',
-                    args: {
-                        attrs: {
-                            fill: 'red',
-                        },
-                    },
-                },
-            ])
-
-            cell.attr('line/strokeWidth', '3');
-
-            cell.toFront({deep: true});
-
-        });
-
-        this.x6Graph.on('edge:mouseleave', ({ cell }) => {
-            cell.removeTools()
-            cell.attr('line/strokeWidth', '1');
-        })
-
-        this.x6Graph.on("node:dblclick", ({cell, e}) => {
-            const p = this.x6Graph.clientToGraph(e.clientX, e.clientY)
-            cell.addTools([
-                {
-                    name: 'editableCell',
-                    args: {
-                        x: p.x,
-                        y: p.y,
-                    },
-                },
-            ])
-        });
-
-        this.x6Graph.on('edge:dblclick', ({edge}) => {
-            console.log(edge)
-            alert(
-                `边ID:${edge.id}, 起始节点: ${edge.source.cell},目标节点: ${edge.target.cell}`
-            )
-        });
-
-        this.x6Graph.centerContent();
-
-        this.x6StencilContainer.appendChild(this.x6Stencil.container);
-
-        const r1 = new Rect({
-            width: 100,
+        const rTable = new Rect({
+            width: 120,
             height: 40,
             attrs: {
-                rect: {fill: '#31D0C6', stroke: '#4B4A67', strokeWidth: 6},
-                text: {text: 'Table', fill: 'white'},
+                body: {
+                    fill: '#7FCFFF',
+                    stroke: '#4B4A67',
+                    strokeWidth: 1,
+                },
+                text: {
+                    text: '表',
+                    fill: 'black',
+                    fontWeight: "bold",
+                },
             },
         })
 
-        const r2 = new Rect({
-            width: 100,
+        const rView = new Rect({
+            width: 120,
             height: 40,
             attrs: {
-                rect: {fill: '#4B4A67', stroke: '#31D0C6', strokeWidth: 6},
-                text: {text: '话务网网元', fill: 'white'},
+                body: {
+                    fill: '#7FCFFF',
+                    stroke: '#4B4A67',
+                    strokeWidth: 1,
+                },
+                text: {
+                    text: '视图',
+                    fill: 'black',
+                    fontWeight: "bold",
+                },
             },
         })
 
-        this.x6Stencil.load([r1], 'group1')
-        this.x6Stencil.load([r2], 'group2')
+        const rbUsers = new Rect({
+            width: 120,
+            height: 40,
+            attrs: {
+                rect: {
+                    fill: '#3FAFEF',
+                    stroke: '#4B4A67',
+                    strokeWidth: 1},
+                text: {
+                    text: '组表-用户管理', fill: 'black'},
+            },
+        })
+
+        const rbTree = new Rect({
+            width: 120,
+            height: 40,
+            attrs: {
+                rect: {
+                    fill: '#3FAFEF',
+                    stroke: '#4B4A67',
+                    strokeWidth: 1},
+                text: {
+                    text: '单表-树结构', fill: 'black'},
+            },
+        })
+
+        this.x6Stencil.load([rTable, rView], 'group1')
+        this.x6Stencil.load([rbUsers, rbTree], 'group2')
     }
 
     x6Move() {
@@ -3752,9 +3785,27 @@ export default class DatabaseWorkspace extends React.Component {
                         <Button icon={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? <CaretLeftOutlined/> : <CaretRightOutlined/>} size={"small"} type={"ghost"}/>
                     </div>
                     <div className="BoxContent">
-                        <div ref={this.gRef.x6StencilContainer} className="BoxComponents"/>
-                        <div ref={this.gRef.x6GraphContainerBox} className="BoxCanvas">
-                            <div ref={this.gRef.x6GraphContainer} className="BoxCanvasInstance"/>
+                        <div ref={this.gRef.x6StencilContainerBox} className="BoxEntities"/>
+                        <div className={"box-box-canvas"}>
+                            <div className={"box-box-canvas-toolbar"}>
+                                <div className={"box-box-canvas-toolbar-title"}>&nbsp;</div>
+                                <div className={"box-box-canvas-toolbar-buttons"}>
+                                    <Button size={"small"} type={"primary"}>保存</Button>
+                                    <Button size={"small"} type={"primary"}>导出</Button>
+                                </div>
+                            </div>
+                            <div ref={this.gRef.x6GraphContainerBox} className="box-canvas">
+                                <div ref={this.gRef.x6GraphContainer}/>
+                            </div>
+                        </div>
+                        <div className={"box-properties"}>
+                            <div className={"box-properties-title-bar"}>
+                                <div className={"box-properties-title"}>属性编辑</div>
+                            </div>
+                            <div className={"box-properties-content"}>
+                                <Input/>
+                                <Input/>
+                            </div>
                         </div>
                     </div>
                 </div>
