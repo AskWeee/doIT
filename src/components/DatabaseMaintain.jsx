@@ -1273,7 +1273,7 @@ export default class DatabaseMaintain extends React.Component {
                 let uId = itemTable.db_user_id;
                 let mId = itemTable.module_id;
                 if ((mId === this.gCurrent.moduleId) && (uId === this.gCurrent.dbUserId)) {
-                    let tId = itemTable.table_id;
+                    // let tId = itemTable.table_id;
                     let firstLetter = itemTable.table_name[0].toUpperCase();
 
                     //itemTable.columns = [];
@@ -1571,15 +1571,15 @@ export default class DatabaseMaintain extends React.Component {
                     });
                 }
 
-                let partitionSql = "";
+                // let partitionSql = "";
                 if (partitions.data.data.length > 0) {
                     switch (myPartition.partition_type) {
                         case "range":
-                            partitionSql += 'PARTITION BY ' + myPartition.partition_type.toUpperCase() + '(' + myPartition.partition_column + ') (\n';
+                            // partitionSql += 'PARTITION BY ' + myPartition.partition_type.toUpperCase() + '(' + myPartition.partition_column + ') (\n';
                             partitions.data.data.forEach((item) => {
                                 myPartition.partitionNames.push(item.partition_name);
                                 myPartition.partitionHighValues.push(item.high_value);
-                                partitionSql += '\tPARTITION "' + item.partition_name + '" VALUES LESS THAN (' + item.high_value + '),\n';
+                                // partitionSql += '\tPARTITION "' + item.partition_name + '" VALUES LESS THAN (' + item.high_value + '),\n';
                             })
                             break
                         case "list":
@@ -1590,8 +1590,8 @@ export default class DatabaseMaintain extends React.Component {
                             break
                     }
                     dsPartitions.push(myPartition);
-                    partitionSql = partitionSql.substr(0, partitionSql.length - 2);
-                    partitionSql += '\n);\n\n';
+                    // partitionSql = partitionSql.substr(0, partitionSql.length - 2);
+                    // partitionSql += '\n);\n\n';
                 }
 
                 relations.data.data.forEach((item) => {
@@ -2679,7 +2679,7 @@ export default class DatabaseMaintain extends React.Component {
         const getDataType = (dataType) => {
             let myResult = null;
             for (let i = 0; i < optionsDataType.length; i++) {
-                if (optionsDataType[i].value == dataType) {
+                if (optionsDataType[i].value === dataType) {
                     myResult = optionsDataType[i].label;
                     break
                 }
@@ -2691,7 +2691,7 @@ export default class DatabaseMaintain extends React.Component {
         const getYesOrNo = (flag) => {
             let myResult = null;
             for (let i = 0; i < optionsYesOrNo.length; i++) {
-                if (optionsYesOrNo[i].value == flag) {
+                if (optionsYesOrNo[i].value === flag) {
                     myResult = optionsYesOrNo[i].label;
                     break
                 }

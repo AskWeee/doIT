@@ -3,12 +3,10 @@ import './DatabaseImport.scss'
 import GCtx from "../GCtx";
 import axios from "axios";
 import lodash from "lodash";
-import {Button, Checkbox, Select, Table, Tree, Tabs, Input} from 'antd'
+import {Button, Select, Table, Tree, Tabs, Input} from 'antd'
 import {
     CaretDownOutlined,
     DeleteOutlined,
-    DoubleLeftOutlined,
-    DoubleRightOutlined,
     LeftOutlined,
     RightOutlined,
     CheckOutlined

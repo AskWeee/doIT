@@ -3,11 +3,10 @@ import './DatabaseExport.scss'
 import GCtx from "../GCtx";
 import lodash from "lodash";
 import axios from "axios";
-import moment from 'moment';
 import JSZip from "jszip";
 import fs from "file-saver";
 import {Button, Select, Tree, Input, Checkbox} from 'antd';
-import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, PlusSquareOutlined} from '@ant-design/icons';
+import {CaretDownOutlined, PlusSquareOutlined} from '@ant-design/icons';
 import TadTableColumn from '../entity/TadTableColumn';
 import TadTableIndex from "../entity/TadTableIndex";
 import TadTablePartition from "../entity/TadTablePartition";
@@ -209,7 +208,7 @@ export default class DatabaseExport extends React.Component {
                 let uId = itemTable.db_user_id;
                 let mId = itemTable.module_id;
                 if ((mId === this.gCurrent.moduleId) && (uId === this.gCurrent.dbUserId)) {
-                    let tId = itemTable.table_id;
+                    // let tId = itemTable.table_id;
                     let firstLetter = itemTable.table_name[0].toUpperCase();
 
                     //itemTable.columns = [];
@@ -1156,15 +1155,15 @@ export default class DatabaseExport extends React.Component {
                     });
                 }
 
-                let partitionSql = "";
+                // let partitionSql = "";
                 if (partitions.data.data.length > 0) {
                     switch (myPartition.partition_type) {
                         case "range":
-                            partitionSql += 'PARTITION BY ' + myPartition.partition_type.toUpperCase() + '(' + myPartition.partition_column + ') (\n';
+                            // partitionSql += 'PARTITION BY ' + myPartition.partition_type.toUpperCase() + '(' + myPartition.partition_column + ') (\n';
                             partitions.data.data.forEach((item) => {
                                 myPartition.partitionNames.push(item.partition_name);
                                 myPartition.partitionHighValues.push(item.high_value);
-                                partitionSql += '\tPARTITION "' + item.partition_name + '" VALUES LESS THAN (' + item.high_value + '),\n';
+                                // partitionSql += '\tPARTITION "' + item.partition_name + '" VALUES LESS THAN (' + item.high_value + '),\n';
                             })
                             break
                         case "list":
@@ -1175,8 +1174,8 @@ export default class DatabaseExport extends React.Component {
                             break
                     }
                     dsPartitions.push(myPartition);
-                    partitionSql = partitionSql.substr(0, partitionSql.length - 2);
-                    partitionSql += '\n);\n\n';
+                    // partitionSql = partitionSql.substr(0, partitionSql.length - 2);
+                    // partitionSql += '\n);\n\n';
                 }
 
                 relations.data.data.forEach((item) => {

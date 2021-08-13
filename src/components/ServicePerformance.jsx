@@ -13,7 +13,7 @@ import TadIndicatorCounter from "../entity/TadIndicatorCounter";
 import TadKpiCounter from "../entity/TadKpiCounter";
 import KpiOlogParams from "../params/KpiOlogParams";
 import {Button, Input, Select, Tree, Modal, Form, Tooltip, Checkbox} from 'antd'
-import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, CloudDownloadOutlined, CloudUploadOutlined, CopyOutlined, MinusSquareOutlined, PlusOutlined, PlusSquareOutlined, SaveOutlined, QuestionCircleOutlined, EllipsisOutlined, EditOutlined, ShoppingCartOutlined,} from '@ant-design/icons'
+import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, CloudDownloadOutlined, CloudUploadOutlined, CopyOutlined, MinusSquareOutlined, PlusSquareOutlined, SaveOutlined, QuestionCircleOutlined, EditOutlined,} from '@ant-design/icons'
 
 const {Option} = Select;
 const {TextArea} = Input;
@@ -1059,15 +1059,15 @@ export default class ServicePerformance extends React.PureComponent {
         ) => {
             let mapKpiDict = new Map();
             let mapObjectDefs = new Map();
-            let mapProducts = new Map();
+            // let mapProducts = new Map();
             let mapKpis = new Map();
             // let mapIndicators = new Map();
 
             let dsKpiDict = kpiDict.data.data;
             let dsObjectDefs = objectDefs.data.data;
             let dsVendors = vendors.data.data;
-            let dsProducts = products.data.data;
-            let dsModules = modules.data.data;
+            // let dsProducts = products.data.data;
+            // let dsModules = modules.data.data;
             let dsKpis = kpis.data.data;
             let dsSchemas = schemas.data.data;
             let dsCounters = counters.data.data;
@@ -1239,8 +1239,8 @@ export default class ServicePerformance extends React.PureComponent {
             dsKpiDict = null;
             dsObjectDefs = null;
             dsVendors = vendors;
-            dsProducts = null;
-            dsModules = null;
+            // dsProducts = null;
+            // dsModules = null;
             dsKpis = null;
             dsSchemas = null;
             dsCounters = null;
@@ -2642,7 +2642,7 @@ export default class ServicePerformance extends React.PureComponent {
                                 </div>
                                 <div className={"BoxSchemaIds"}>
 
-                                <Form.Item name="schemaIdB2" className="BoxFormItemInput">
+                                    <Form.Item name="schemaIdB2" className="BoxFormItemInput">
                                         <Select options={this.state.optionsSchemaIdB2} onChange={(e) => {
                                             this.onSelectSchemaIdChanged(e, "b2");
                                         }}/>

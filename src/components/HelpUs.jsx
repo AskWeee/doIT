@@ -7,11 +7,7 @@ import moment from 'moment';
 import {Button, Input, Select, Tree, Form} from 'antd'
 import {
     CaretDownOutlined,
-    CheckOutlined,
     CloseOutlined,
-    CloudDownloadOutlined,
-    CopyOutlined,
-    MinusSquareOutlined,
     PlusSquareOutlined,
 } from '@ant-design/icons'
 import TadOlcEvent from "../entity/TadOlcEvent";

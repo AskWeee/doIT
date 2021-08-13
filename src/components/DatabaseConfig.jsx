@@ -1,4 +1,4 @@
-import React, {Fragment} from 'react'
+import React from 'react'
 import './DatabaseConfig.scss'
 import GCtx from "../GCtx";
 import axios from "axios";

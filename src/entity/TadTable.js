@@ -14,6 +14,8 @@ export default class TadTable{
     this.modify_time = null;
     this.partition_type = null;
     this.partition_column = null;
+
+    this.columns = [];
   }
 }
 

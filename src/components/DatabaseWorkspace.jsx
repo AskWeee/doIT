@@ -464,7 +464,6 @@ export default class DatabaseWorkspace extends React.Component {
                     return count < max
                 },
                 createEdge: (source, target) => {
-                    console.log(source, target);
                     let edge = this.x6Graph.createEdge({
                         source,
                         target,
@@ -507,14 +506,39 @@ export default class DatabaseWorkspace extends React.Component {
 
         this.x6Graph.on('cell:removed', ({cell, index, options}) => {
 
-            console.log("cell removed = ", cell);
             // e.stopPropagation()
             // view.cell.remove()
         });
 
-        this.x6Graph.on('cell:added', ({cell, index, options}) => {
-            console.log("cell added = ", cell)
+        this.x6Graph.on('node:added', ({node, index, options}) => {
+            let data = lodash.cloneDeep(node.store.data);
+
+            console.log(data);
+            console.log(node.getChildren());
+            //
+            // let myTable = new TadTable();
+            // myTable.table_name = "Hello World";
+            // let nodeTable = this.x6AddEntityTable(myTable);
+            //
+            // node.addChild(nodeTable);
+            let view = this.x6Graph.findViewByCell(node);
+            // // view.cell.addChild(nodeTable);
+            view.cell.fit({padding: {top: 100 + 10, bottom: 10, left: 10, right: 10}});
+
+            //let view = this.x6Graph.findViewByCell(node);
+            //console.log(view.cell.getData());
+            // if (node.data.nodeType === "table") {
+            //     console.log(node.children);
+            // }
         });
+
+        // this.x6Graph.on('node:moving', ({ e, x, y, node, view }) => {
+        //     console.log(e, x, y, node, view);
+        // })
+
+        // this.x6Graph.on('node:change:position', ({node, current, previous, options}) => {
+        //     console.log(node.position(), current, previous);
+        // });
 
         this.x6Graph.on('node:click', ({node}) => {
             this.gDynamic.node = node;
@@ -536,7 +560,7 @@ export default class DatabaseWorkspace extends React.Component {
             if (node.data.nodeType === "Table") {
                 node.toFront({deep: true});
             } else if (node.data.nodeType === "TableColumn") {
-                console.log(node.data);
+
             }
         });
 
@@ -622,7 +646,6 @@ export default class DatabaseWorkspace extends React.Component {
         });
 
         this.x6Graph.on('edge:dblclick', ({edge}) => {
-            console.log(edge)
             alert(
                 `边ID:${edge.id}, 起始节点: ${edge.source.cell},目标节点: ${edge.target.cell}`
             )
@@ -654,102 +677,82 @@ export default class DatabaseWorkspace extends React.Component {
                     title: '业务模板',
                 },
             ],
+            // getDragNode: (node) => {
+            //     // 这里返回一个新的节点作为拖拽节点
+            //     return this.x6Graph.createNode({
+            //         width: 100,
+            //         height: 100,
+            //         shape: 'rect',
+            //         attrs: {
+            //             body: {
+            //                 fill: '#ccc'
+            //             }
+            //         }
+            //     })
+            // },
             getDropNode: (node) => {
-                let n = node.clone();
-                n.tag = {
-                    type: "Table"
-                };
-                n.prop("title", "TAD_TABLE_NEW");
-                n.addTools([
-                    {
-                        name: 'button',
-                        args: {
-                            markup: [
-                                {
-                                    tagName: 'circle',
-                                    selector: 'button',
-                                    attrs: {
-                                        r: 14,
-                                        stroke: '#fe854f',
-                                        'stroke-width': 3,
-                                        fill: 'white',
-                                        cursor: 'pointer',
-                                    },
-                                },
-                                {
-                                    tagName: 'text',
-                                    textContent: 'Btn A',
-                                    selector: 'icon',
-                                    attrs: {
-                                        fill: '#fe854f',
-                                        'font-size': 8,
-                                        'text-anchor': 'middle',
-                                        'pointer-events': 'none',
-                                        y: '0.3em',
-                                    },
-                                },
-                            ],
-                            x: '100%',
-                            y: '100%',
-                            offset: {x: -18, y: -18},
-                            onClick: (view) => {
-                                // const node = view.cell
-                                // const fill = Color.randomHex()
-                                // node.attr({
-                                //     body: {
-                                //         fill,
-                                //     },
-                                //     label: {
-                                //         fill: Color.invert(fill, true),
-                                //     },
-                                // })
-                                const child1 = this.x6Graph.addNode({
-                                    x: 110,
-                                    y: 80,
-                                    width: 100,
-                                    height: 50,
-                                    label: 'Child\n(inside)',
-                                    zIndex: 10,
-                                    attrs: {
-                                        body: {
-                                            stroke: 'none',
-                                            fill: '#3199FF',
-                                        },
-                                        label: {
-                                            fill: '#fff',
-                                            fontSize: 12,
-                                        },
-                                    },
-                                })
-                                child1.addPort({
-                                    id: 'port3',
-                                    attrs: {
-                                        circle: {
-                                            r: 6,
-                                            magnet: true,
-                                            stroke: '#31d0c6',
-                                            fill: '#fff',
-                                            strokeWidth: 2,
-                                        },
-                                    },
-                                })
-                                view.cell.addChild(child1);
-                            },
-                        },
-                    },
-                    {
-                        name: 'button-remove',
-                        args: {
-                            x: 30,
-                            y: 30,
-                            offset: {x: 10, y: 10},
-                        },
-                    },
-                ])
-                console.log(n);
-                return n;
-            },
+                // let myNode =
+                //     // node.clone();
+                //         new Shape.Rect({
+                //         x: 0,
+                //         y: 0,
+                //         width: 200,
+                //         height: 200,
+                //         attrs: {
+                //             // 指定 rect 元素的样式
+                //             body: {
+                //                 stroke: '#000', // 边框颜色
+                //                 fill: '#fff',   // 填充颜色
+                //             },
+                //             // 指定 text 元素的样式
+                //             label: {
+                //                 text: 'rect', // 文字
+                //                 fill: '#333', // 文字颜色
+                //             },
+                //         },
+                //     });
+                // myNode.data = {
+                //     nodeType: "table"
+                // }
+                //
+                // let nodeButton = new Shape.Rect({
+                //     x: 0,
+                //     y: 0,
+                //     width: 100,
+                //     height: 100,
+                //     attrs: {
+                //         // 指定 rect 元素的样式
+                //         body: {
+                //             stroke: '#f00', // 边框颜色
+                //             fill: '#fff',   // 填充颜色
+                //         },
+                //         // 指定 text 元素的样式
+                //         label: {
+                //             text: 'rect', // 文字
+                //             fill: '#333', // 文字颜色
+                //         },
+                //     },
+                // });
+                //
+                // myNode.addChild(nodeButton);
+                //
+                //
+                // return myNode
 
+                let myTable = new TadTable();
+
+                myTable.table_name = "TAD_TABLE_NEW";
+
+                return this.x6AddEntityTable(myTable);
+            },
+            validateNode: (node, options) => {
+                let pos = node.position();
+
+                node.tag.x = pos.x;
+                node.tag.y = pos.y;
+                //console.log(node);
+                //console.log(node.position(0, 0), options.droppingNode.position());
+            }
         })
 
         this.gRef.x6StencilContainerBox.current.appendChild(this.x6Stencil.container);
@@ -862,7 +865,6 @@ export default class DatabaseWorkspace extends React.Component {
             width: wt,
             height: ht,
             label: table.table_name,
-            // zIndex: 10,
             attrs: {
                 body: {
                     connectionCount: 0,
@@ -887,14 +889,12 @@ export default class DatabaseWorkspace extends React.Component {
         let n = 0;
         table.columns.forEach((item) => {
             let myColumn = this.gMap.columns.get(item);
-
             let enColumn = this.x6Graph.addNode({
                 x: x,
                 y: y + n * (hc + 2),
                 width: wc,
                 height: hc,
                 label: myColumn.column_name,
-                // zIndex: 10,
                 attrs: {
                     body: {
                         connectionCount: 0,
@@ -902,11 +902,6 @@ export default class DatabaseWorkspace extends React.Component {
                         strokeWidth: 1,
                         fill: '#8F8F8F',
                         magnet: true,
-                        // ref: "text",
-                        // refWidth: 16,
-                        // refHeight: 16,
-                        // refX: -8,
-                        // refY: -8,
                     },
                     label: {
                         fill: '#fff',
@@ -918,31 +913,17 @@ export default class DatabaseWorkspace extends React.Component {
                         groupLeft: {
                             position: {
                                 name: "left",
-                                // args: {
-                                //     x: 0,
-                                //     y: "25%",
-                                // }
                             }
                         },
                         groupRight: {
                             position: {
                                 name: "right",
-                                // args: {
-                                //     x: "75%",
-                                //     y: 10,
-                                // }
                             }
                         }
                     },
                 },
             });
 
-            // enColumn.on("change:position", (args) => {
-            //     console.log("change:position=", args);
-            //     return null
-            // })
-
-            // console.log(myColumn);
             if ((myColumn.data_type === "int") || (myColumn.data_type === "number")) {
                 enColumn.addPort({
                     id: 'portLeft',
@@ -975,7 +956,7 @@ export default class DatabaseWorkspace extends React.Component {
                 });
             }
 
-            enColumn.data = {
+            enColumn.tag = {
                 nodeType: "TableColumn",
                 nodeId: item,
             }
@@ -984,13 +965,69 @@ export default class DatabaseWorkspace extends React.Component {
             n++;
         });
 
+        let columnButton = this.x6Graph.addNode({
+            x: x,
+            y: y + n * (hc + 2),
+            width: wc,
+            height: hc,
+            label: "+",
+            attrs: {
+                body: {
+                    connectionCount: 0,
+                    stroke: "#2F2F2F",
+                    strokeWidth: 1,
+                    fill: '#8F8F8F',
+                    magnet: true,
+                },
+                label: {
+                    fill: '#fff',
+                    fontSize: 12,
+                },
+            },
+        });
+
+        columnButton.tag = {
+            nodeType: "TableColumnButtonAdd",
+            nodeId: "column_button_add",
+        }
+
+        columnButton.position(0, 0, {relative: true });
+        enTable.addChild(columnButton);
+
         enTable.fit({padding: {top: hTitle + 10, bottom: 10, left: 10, right: 10}});
-        enTable.data = {
+        // enTable.setData({
+        //     nodeType: "Table",
+        //     nodeId: table.table_id
+        // });
+        enTable.tag = {
             nodeType: "Table",
             nodeId: table.table_id
         }
 
+
+
         return enTable;
+    }
+
+    x6AddEntityTableColumn(table, column) {
+        // let nodeTable = this.x6GetTable(table);
+
+        if (column === undefined) {
+        }
+    }
+
+    x6GetTable(table) {
+        const nodes = this.x6Graph.getNodes();
+        let myNode;
+
+        for(let i = 0; i < nodes.length; i++) {
+            if (nodes[i].data.nodeType === "table") {
+                myNode = nodes[i];
+                break
+            }
+        }
+
+        return myNode
     }
 
     restAddTable(params) {
@@ -1644,7 +1681,6 @@ export default class DatabaseWorkspace extends React.Component {
 
     doAddTableIndex(params) {
         this.restAddTableIndex(params).then((result) => {
-            console.log(result);
             if (result.status === 200) {
                 if (result.data.success) {
                     this.uiUpdateTableIndex(result.data.data, "add");
@@ -1740,7 +1776,6 @@ export default class DatabaseWorkspace extends React.Component {
     }
 
     uiUpdateTableIndex(index, what) {
-        console.log(index);
         switch (what) {
             case "add":
                 let dsIndexes = lodash.cloneDeep(this.state.dsIndexes);
@@ -2190,8 +2225,6 @@ export default class DatabaseWorkspace extends React.Component {
     //todo <<<<< now >>>>> on Tree ErDiagram selected
     onTreeErDiagramSelected(selectedKeys, info) {
         if (info.selected && info.node.tag.nodeType === "table") {
-            console.log(selectedKeys, this.gMap);
-
             let tId = selectedKeys[0];
             if (!this.gDynamic.entities.has(tId)) {
                 let myTable = lodash.cloneDeep(this.gMap.tables.get(tId));
@@ -2426,7 +2459,6 @@ export default class DatabaseWorkspace extends React.Component {
 
         column.column_id = this.gCurrent.columnId;
 
-        console.log(this.gDynamic);
         if (this.gDynamic.columnName !== undefined) column.column_name = this.gDynamic.columnName;
         if (this.gDynamic.columnDataType !== undefined) column.data_type = this.gDynamic.columnDataType;
         if (this.gDynamic.columnDataLength !== undefined) column.data_length = this.gDynamic.columnDataLength;
@@ -2500,52 +2532,12 @@ export default class DatabaseWorkspace extends React.Component {
 
     // >>>>> on button 添加表索引 clicked
     onButtonAddIndexClicked() {
-        // let tableId = this.gCurrent.tableId;
-        // let indexId = null;
-
-
         let myIndex = new TadTableIndex();
+
         myIndex.table_id = this.gCurrent.tableId;
         myIndex.index_name = "NEW_TABLE_INDEX";
 
-        console.log(myIndex);
-        //     {
-        //     id: indexId,
-        //     table_id: tableId,
-        //     index_name: "新增索引",
-        //     index_type: "normal",
-        //     index_columns: "",
-        //     index_attributes: "",
-        //     index_desc: ""
-        // }
-
         this.doAddTableIndex(myIndex);
-        // axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_index",
-        //     myIndex,
-        //     {headers: {'Content-Type': 'application/json'}}
-        // ).then((response) => {
-        //     let data = response.data;
-        //
-        //     if (data.success) {
-        //         indexId = data.data.id;
-        //         let uiIndex = {
-        //             key: indexId,
-        //             index_name: "新增索引",
-        //             index_type: "normal",
-        //             index_columns: "",
-        //             index_attributes: "",
-        //             index_desc: ""
-        //         }
-        //
-        //         let dsIndexes = JSON.parse(JSON.stringify(this.state.dsIndexes));
-        //
-        //         dsIndexes.push(uiIndex);
-        //         this.setState({
-        //             pageSizeTableIndexes: this.state.pageSizeTableIndexes + 1,
-        //             dsIndexes: dsIndexes
-        //         })
-        //     }
-        // });
     }
 
     onButtonAlterIndexClicked() {
@@ -2959,7 +2951,7 @@ export default class DatabaseWorkspace extends React.Component {
     onRowColumnSelected = {
         onChange: (selectedRowKeys, selectedRows) => {
             this.gCurrent.columnId = selectedRowKeys[0];
-            console.log(this.gCurrent);
+
             let isShownButtonAlterIndexConfirm = this.state.isShownButtonAlterIndexConfirm;
             if (isShownButtonAlterIndexConfirm === "block") return false;
 
