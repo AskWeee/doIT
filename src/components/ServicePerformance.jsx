@@ -6,14 +6,16 @@ import axios from "axios";
 import lodash from "lodash";
 import moment from 'moment';
 import XLSX from 'xlsx';
+import JSZip from "jszip";
+import fs from "file-saver";
+import {Button, Input, Select, Tree, Modal, Form, Tooltip, Checkbox} from 'antd'
+import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, CloudDownloadOutlined, CloudUploadOutlined, CopyOutlined, MinusSquareOutlined, PlusSquareOutlined, SaveOutlined, QuestionCircleOutlined, EditOutlined,} from '@ant-design/icons'
 import TadKpiSchema from "../entity/TadKpiSchema";
 import TadKpi from "../entity/TadKpi";
 import TadIndicator from "../entity/TadIndicator";
 import TadIndicatorCounter from "../entity/TadIndicatorCounter";
 import TadKpiCounter from "../entity/TadKpiCounter";
 import KpiOlogParams from "../params/KpiOlogParams";
-import {Button, Input, Select, Tree, Modal, Form, Tooltip, Checkbox} from 'antd'
-import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, CloudDownloadOutlined, CloudUploadOutlined, CopyOutlined, MinusSquareOutlined, PlusSquareOutlined, SaveOutlined, QuestionCircleOutlined, EditOutlined,} from '@ant-design/icons'
 
 const {Option} = Select;
 const {TextArea} = Input;
@@ -41,7 +43,8 @@ export default class ServicePerformance extends React.PureComponent {
             // this.indicatorsChecked = [];
             this.kpisChecked = [];
             //this.counterNames = [];
-        }
+        },
+        schemasChecked: new Map(),
     };
     gUi = {};
     gDynamic = {
@@ -186,8 +189,10 @@ export default class ServicePerformance extends React.PureComponent {
         this.doFixKpiCounters = this.doFixKpiCounters.bind(this);
 
         this.onTreeKpiSchemasSelected = this.onTreeKpiSchemasSelected.bind(this);
+        this.onTreeKpiSchemasChecked = this.onTreeKpiSchemasChecked.bind(this);
         this.onTreeIndicatorsChecked = this.onTreeIndicatorsChecked.bind(this);
         this.onTreeKpisSelected = this.onTreeKpisSelected.bind(this);
+        this.onTreeKpisChecked = this.onTreeKpisChecked.bind(this);
         this.onTreeKpisDrop = this.onTreeKpisDrop.bind(this);
         this.onTreeKpiCountersSelected = this.onTreeKpiCountersSelected.bind(this);
 
@@ -1722,6 +1727,19 @@ export default class ServicePerformance extends React.PureComponent {
                 treeDataKpis: uiKpis,
                 treeDataKpiCounters: uiKpiCounters,
             });
+
+            if (this.gCurrent.schemasChecked.has(sid)) {
+                let checkedKeys = [];
+                this.gCurrent.schemasChecked.get(sid).kpis.forEach((value, key) => {
+                    checkedKeys.push(key);
+                })
+
+                //console.log(checkedKeys);
+                //this.gRef.treeKpis.current.checkedKeys = checkedKeys;
+                this.setState({
+                    checkedKeysKpis: checkedKeys
+                })
+            }
         } else {
             this.gCurrent.initForSchema();
             let emptySchema = new TadKpiSchema();
@@ -1738,9 +1756,84 @@ export default class ServicePerformance extends React.PureComponent {
         }
     };
 
+    onTreeKpiSchemasChecked(checkedKeys, info) {
+        checkedKeys.forEach((sid) => {
+            if (!this.gCurrent.schemasChecked.has(sid)) {
+                this.gCurrent.schemasChecked.set(sid, {status: "new", kpis: new Map()});
+            } else {
+                this.gCurrent.schemasChecked.get(sid).status = "added";
+            }
+        })
+
+        this.gCurrent.schemasChecked.forEach((value, key) => {
+            if (value.status === "new") {
+                value.status = "add"
+
+                console.log(this.gMap);
+                this.gMap.schemas.get(key).kpis.forEach((kid) => {
+                    value.kpis.set(kid, {status: "new"});
+                })
+            } else if (value.status === "added") {
+                value.status = "add"
+            } else {
+                value.status = "unchecked"
+            }
+        });
+
+        this.gCurrent.schemasChecked.forEach((value, key) => {
+            if (value.status === "unchecked") {
+                this.gCurrent.schemasChecked.delete(key);
+            } else {
+            }
+        });
+    }
+
     // >>>>> check KPI
     onTreeKpisChecked(checkedKeys, info) {
-        this.gCurrent.kpisChecked = checkedKeys;
+        this.setState({
+            checkedKeysKpis: checkedKeys
+        });
+
+        let sid = this.gCurrent.schema.id;
+        console.log(sid);
+        if (this.gCurrent.schemasChecked.has(sid)) {
+
+            checkedKeys.forEach((kid) => {
+                this.gCurrent.schemasChecked.get(sid).kpis.forEach((value, key) => {
+                    if (kid === key) {
+                        value.status = "added"
+                    }
+                });
+            });
+
+            this.gCurrent.schemasChecked.get(sid).kpis.forEach((value, key) => {
+                if (value.status === "new") {
+                    value.status = "add"
+                } else if (value.status === "added") {
+                    value.status = "add"
+                } else {
+                    value.status = "unchecked"
+                }
+            });
+
+            this.gCurrent.schemasChecked.get(sid).kpis.forEach((value, key) => {
+                if (value.status === "unchecked") {
+                    this.gCurrent.schemasChecked.get(sid).kpis.delete(key);
+                } else {
+                }
+            });
+
+            console.log(lodash.cloneDeep(this.gCurrent.schemasChecked));
+
+        } else {
+
+            this.gCurrent.schemasChecked.set(sid, {status: "add", kpis: new Map()});
+
+            checkedKeys.forEach((kid) => {
+                this.gCurrent.schemasChecked.get(sid).kpis.set(kid, {status: "add"})
+            });
+
+        }
     }
 
     // >>>>> click KPI
@@ -1924,8 +2017,182 @@ export default class ServicePerformance extends React.PureComponent {
         this.context.showMessage("导入指标组，开发中...");
     }
 
+    getCellWidth(value) {
+        // 判断是否为null或undefined
+        if (value == null) {
+            return 10
+        } else if (/.*[\u4e00-\u9fa5]+.*$/.test(value)) {
+            // 判断是否包含中文
+            return value.toString().length * 2.1
+        } else {
+            return value.toString().length * 1.1
+            /* 另一种方案
+            value = value.toString()
+            return value.replace(/[\u0391-\uFFE5]/g, 'aa').length
+            */
+        }
+    }
+
+    //todo <<<<< now >>>>> on button Schemas Export clicked
     onButtonSchemasExportClicked(e) {
-        this.context.showMessage("导出指标组，开发中...");
+        // this.context.showMessage("导出指标组，开发中...");
+        //
+        // let zip = new JSZip();
+        // zip.file("doIT-建库脚本-1_sql.txt", "hello");
+        // zip.file("doIT-建库脚本-2_sql.txt", "world");
+        // zip.generateAsync({type: "blob"})
+        //     .then((content) => {
+        //         fs.saveAs(content, "doIT-建库脚本.zip");
+        //         // this.download("doIT-建库脚本.zip", content);
+        //     });
+
+        // let data = [{
+        //     '姓名': 'zhangsan',
+        //     '年龄': 20,
+        //     '性别': '男'
+        // },{
+        //     '姓名': 'zhangsan',
+        //     '年龄': 20,
+        //     '性别': '男'
+        // }];
+        // let dataType = 'json';
+
+        let worksheetValues = [];
+        let worksheetNames = ['消息号与名空间的对应'];
+        let worksheetHeaders = [
+            ["消息号", "名空间", "中文名称", "对应表名", "厂家ID", "网元类型", "网元详细分类", "采集粒度", "COUNTER_TAB_NAME"],
+            ["原始指标名", "原始字段", "原始字段名称", "   ", "KPI指标名", "KPI指标", "算法", "KPI_ID", "是否告警", "数据格式", "最小值", "最大值"]
+        ];
+
+        console.log(this.gCurrent.schemasChecked);
+
+        worksheetValues[0] = [];
+        let iSchema = 1;
+        this.gCurrent.schemasChecked.forEach((value, key) => {
+            let mySchema = this.gMap.schemas.get(key);
+            let dataSchema = ["", "", "", "", "", "", "", "", ""];
+
+            dataSchema[0] = mySchema.schema_id;
+            dataSchema[1] = mySchema.schema_ns;
+            dataSchema[2] = mySchema.schema_zhname;
+            dataSchema[3] = mySchema.tab_name;
+            dataSchema[4] = mySchema.vendor_id;
+            dataSchema[5] = mySchema.object_class;
+            dataSchema[6] = mySchema.sub_class;
+            dataSchema[7] = mySchema.interval_flag;
+            dataSchema[8] = mySchema.counter_tab_name;
+
+            worksheetValues[0].push(dataSchema);
+
+            worksheetValues[iSchema] = [];
+            let sheetName = mySchema.schema_ns;
+            if ((sheetName !== null) && (sheetName !== undefined)) {
+                let i = sheetName.lastIndexOf("/");
+                if (i >= 0) {
+                    sheetName = sheetName.substr(i + 1, sheetName.length - i);
+                }
+            } else {
+                sheetName = mySchema.schema_id;
+            }
+            console.log(sheetName);
+            worksheetNames[iSchema] = iSchema.toString().padStart(2, "0") + "_" + sheetName;
+            // console.log(mySchema);
+            let cKpis = mySchema.kpis.length;
+            let cCounters = mySchema.counters.length;
+            let cMax = cKpis > cCounters ? cKpis : cCounters;
+
+            for(let i = 0; i < cMax; i++) {
+                let data = ["", "", "", "", "", "", "", "", "", "", "", ""];
+                if (i < cCounters) {
+                    let myCounter = this.gMap.counters.get(mySchema.counters[i]);
+                    // console.log("counter = ", myCounter);
+                    data[0] = myCounter.counter_zhname;
+                    data[1] = myCounter.counter_enname;
+                    data[2] = myCounter.counter_field;
+                }
+
+                if (i < cKpis) {
+                    let myKpi = this.gMap.kpis.get(mySchema.kpis[i]);
+                    // console.log("kpi = ", myKpi);
+                    data[4] = myKpi.kpi_zhname;
+                    data[5] = myKpi.kpi_enname;
+                    data[6] = myKpi.kpi_exp;
+                    data[7] = myKpi.kpi_id;
+                    data[8] = myKpi.kpi_alarm;
+                    data[9] = myKpi.kpi_format;
+                    data[10] = myKpi.kpi_min_value;
+                    data[11] = myKpi.kpi_max_value;
+                }
+
+                worksheetValues[iSchema].push(data);
+            }
+            iSchema++;
+        });
+
+        console.log(worksheetValues);
+        ///*
+        try {
+            if (!XLSX) throw 'exportTo: the plug-in "XLSX" is undefined.'
+            if (!worksheetValues || worksheetValues.length === 0) throw 'exportTo: data is null or undefined.'
+
+            let myWorkbook = XLSX.utils.book_new();
+
+            let i = 0;
+            let fitWidth = true;
+            worksheetNames.forEach((wsName) => {
+                worksheetValues[i].unshift(worksheetHeaders[i === 0 ? 0 : 1]);
+                let myWorksheet = XLSX.utils.json_to_sheet(worksheetValues[i], {skipHeader: true});
+
+                if (fitWidth) {
+                    let colWidths = [];
+                    let colNames = worksheetValues[i][0]; // Object.keys(data[0])  所有列的名称数组
+
+                    // 计算每一列的所有单元格宽度
+                    // 先遍历行
+                    worksheetValues[i].forEach((row) => {
+                        // 列序号
+                        let index = 0
+                        // 遍历列
+                        for (const key in row) {
+                            if (colWidths[index] == null) colWidths[index] = []
+
+                            switch (typeof row[key]) {
+                                case 'string':
+                                case 'number':
+                                case 'boolean':
+                                    colWidths[index].push(this.getCellWidth(row[key]))
+                                    break
+                                case 'object':
+                                case 'function':
+                                    colWidths[index].push(0)
+                                    break
+                            }
+                            index++
+                        }
+                    })
+
+                    myWorksheet['!cols'] = []
+                    // 每一列取最大值最为列宽
+                    colWidths.forEach((widths, index) => {
+                        // 计算列头的宽度
+                        widths.push(this.getCellWidth(colNames[index]))
+                        // 设置最大值为列宽
+                        myWorksheet['!cols'].push({wch: Math.max(...widths)})
+                    })
+                }
+
+                XLSX.utils.book_append_sheet(myWorkbook, myWorksheet, worksheetNames[i]);
+                i++;
+            });
+
+            let fileName = "kpis_" + moment().format("YYYYMMDDHHmmss") + '.xlsx';
+            XLSX.writeFile(myWorkbook, fileName);
+
+        } catch (error) {
+            console.error('exportTo: ', error)
+            throw error
+        }
+        //*/
     }
 
     onButtonSchemasResetClicked(e) {
@@ -2532,7 +2799,6 @@ export default class ServicePerformance extends React.PureComponent {
                                 <Input.Search placeholder="Search" enterButton onSearch={this.onInputSearchSchemasSearched}/>
                             </div>
                             <div className={"BoxButtons"}>
-                                {/*<div className="BoxTitle">筛选：</div>*/}
                                 <Select className="clsSelect" size="small" options={this.state.optionsSchemaIdA1} defaultValue={-99999} onChange={this.onSelectFilterBusinessChanged}/>
                                 <Select className="clsSelect" size="small" options={this.state.optionsSchemaIdA2} defaultValue={-99999} onChange={this.onSelectFilterTimeChanged}/>
                                 <Select className="clsSelect" size="small" options={this.state.optionsSchemaIdB1} defaultValue={-99999} onChange={this.onSelectFilterRegionChanged}/>
@@ -2540,7 +2806,12 @@ export default class ServicePerformance extends React.PureComponent {
                             </div>
 
                             <div ref={this.gRef.boxTreeSchemas} className={"BoxTreeInstance"}>
-                                <Tree ref={this.gRef.treeSchemas} treeData={this.state.treeDataKpiSchemas} onSelect={this.onTreeKpiSchemasSelected} height={this.state.treeSchemasHeight} checkable={true} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} switcherIcon={<CaretDownOutlined/>}/>
+                                <Tree ref={this.gRef.treeSchemas}
+                                      treeData={this.state.treeDataKpiSchemas}
+                                      onSelect={this.onTreeKpiSchemasSelected}
+                                      onCheck={this.onTreeKpiSchemasChecked}
+                                      height={this.state.treeSchemasHeight}
+                                      checkable={true} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true} switcherIcon={<CaretDownOutlined/>}/>
                             </div>
                         </div>
                     </div>
@@ -2582,7 +2853,13 @@ export default class ServicePerformance extends React.PureComponent {
                             </div>
                             <div className={"BoxTree"}>
                                 <div className={"BoxTreeInstance"}>
-                                    <Tree ref={this.gRef.treeKpis} treeData={this.state.treeDataKpis} onSelect={this.onTreeKpisSelected} onDrop={this.onTreeKpisDrop} checkable={true} blockNode={true} showIcon={true} showLine={{showLeafIcon: false}} switcherIcon={<CaretDownOutlined/>}/>
+                                    <Tree ref={this.gRef.treeKpis}
+                                          treeData={this.state.treeDataKpis}
+                                          onSelect={this.onTreeKpisSelected}
+                                          onCheck={this.onTreeKpisChecked}
+                                          onDrop={this.onTreeKpisDrop}
+                                          checkedKeys={this.state.checkedKeysKpis}
+                                          checkable={true} blockNode={true} showIcon={true} showLine={{showLeafIcon: false}} switcherIcon={<CaretDownOutlined/>}/>
                                 </div>
                             </div>
                         </div>

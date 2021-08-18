@@ -65,6 +65,8 @@ export default class HelpUs extends React.PureComponent {
         this.onTreeOlcEventsSelected = this.onTreeOlcEventsSelected.bind(this);
 
         this.onButtonAddReqClicked = this.onButtonAddReqClicked.bind(this);
+        this.onButtonAddDesignClicked = this.onButtonAddDesignClicked.bind(this);
+        this.onButtonAddTaskClicked = this.onButtonAddTaskClicked.bind(this);
         this.onButtonAddBugClicked = this.onButtonAddBugClicked.bind(this);
         this.onButtonRenameClicked = this.onButtonRenameClicked.bind(this);
         this.onButtonDeleteClicked = this.onButtonDeleteClicked.bind(this);
@@ -392,6 +394,30 @@ export default class HelpUs extends React.PureComponent {
         this.doAddOlcEvent(olcEvent);
     }
 
+    onButtonAddDesignClicked(e) {
+        let olcEvent = new TadOlcEvent();
+
+        olcEvent.type = "DEV";
+        olcEvent.status = "NEW";
+        olcEvent.title = "新设计 - " + moment().format("YYYYMMDDHHmmss");
+        olcEvent.customer = this.context.user.name;
+        olcEvent.time_created = moment().format("YYYY-MM-DD HH:mm:ss");
+
+        this.doAddOlcEvent(olcEvent);
+    }
+
+    onButtonAddTaskClicked(e) {
+        let olcEvent = new TadOlcEvent();
+
+        olcEvent.type = "WBS";
+        olcEvent.status = "NEW";
+        olcEvent.title = "新任务 - " + moment().format("YYYYMMDDHHmmss");
+        olcEvent.customer = this.context.user.name;
+        olcEvent.time_created = moment().format("YYYY-MM-DD HH:mm:ss");
+
+        this.doAddOlcEvent(olcEvent);
+    }
+
     onButtonAddBugClicked(e) {
         let olcEvent = new TadOlcEvent();
 
@@ -499,6 +525,8 @@ export default class HelpUs extends React.PureComponent {
                         <div className="BoxTitle">产品需求及问题列表</div>
                         <div className="BoxButtons">
                             <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonAddReqClicked}>新建需求</Button>
+                            <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonAddDesignClicked}>新建设计</Button>
+                            <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonAddTaskClicked}>新建任务</Button>
                             <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonAddBugClicked}>上报BUG</Button>
                         </div>
                     </div>

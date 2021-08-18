@@ -31,6 +31,7 @@ class Content extends React.Component {
 
         this.onTabTitleClicked = this.onTabTitleClicked.bind(this);
         this.onTabIconClicked = this.onTabIconClicked.bind(this);
+        this.getMenuItem = this.getMenuItem.bind(this);
     }
 
     showComponentDatabaseImport() {
@@ -72,8 +73,24 @@ class Content extends React.Component {
         this.showComponent("指标项目应用管理", <ServiceProject key="menu_service_project"/>)
     }
 
-    showComponentHelpUs() {
-        this.showComponent("系统需求及问题列表", <HelpUs key="menu_help_us"/>);
+    showComponentHelpUs(menuId) {
+        let menuItem = this.getMenuItem(menuId);
+
+        this.showComponent(menuItem.label, <HelpUs key={menuId}/>);
+    }
+
+    getMenuItem(menuId) {
+        let myResult;
+
+        this.context.menus.forEach((menuMain) => {
+            menuMain.children.forEach((menuItem) => {
+                if (menuItem.id === menuId) {
+                    myResult = menuItem;
+                }
+            })
+        });
+
+        return myResult
     }
 
     showComponent(title, jsxCom) {

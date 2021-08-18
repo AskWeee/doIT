@@ -62,7 +62,7 @@ const GCtx = React.createContext({
         {
             id: 'menu_help', label: '帮助', desc: '', ref: null, children: [
                 {id: 'menu_help_guide', label: '系统使用指南', desc: '', ref: null},
-                {id: 'menu_help_us', label: '系统需求及问题列表', desc: '', ref: null},
+                {id: 'menu_help_us', label: '系统自身管理', desc: '', ref: null},
                 {id: 'menu_divider', label: '', desc: '', ref: null},
                 {id: 'menu_help_about', label: '关于本系统', desc: '', ref: null}
             ]
