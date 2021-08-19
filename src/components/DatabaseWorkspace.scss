@@ -33,6 +33,29 @@ $debugBorderColor2: green;
     border: 1px solid rgba(55, 55, 55, 1);
     margin: 5px;
 
+    .box-form-item-input {
+        margin-bottom: 0;
+
+        .ant-form-item-control-input-content {
+            display: grid;
+            grid-template-columns: 1fr auto;
+
+            .input-icon {
+                display: grid;
+                justify-content: center;
+                align-content: center;
+                padding: 0 3px 0 3px;
+                background: rgb(255, 255, 255);
+                border: {
+                    width: 1px 1px 1px 0;
+                    style: solid;
+                    color: rgb(225, 225, 225);
+                }
+                border-radius: 0 3px 3px 0;
+            }
+        }
+    }
+
     .BoxProductsInfo {
         //border: 1px solid rgba(55,55,55,1);
         background: lightgray;
@@ -388,26 +411,52 @@ $debugBorderColor2: green;
             }
 
             .box-properties {
-                border: 1px solid lighten($colorBoxBackground, 30%);
                 display: grid;
-                grid-template-rows: auto 1fr;
-                background: lighten($colorBoxBackground, 15%);
 
-                .box-properties-title-bar {
+                .form-x6-properties {
                     display: grid;
-                    justify-content: center;
-                    align-content: center;
+                    border: 1px solid lighten($colorBoxBackground, 30%);
+                    grid-template-rows: auto 1fr;
+                    background: lighten($colorBoxBackground, 15%);
+                    grid-gap: 5px;
 
-                    .box-properties-title {
-                        color: black;
+                    .box-properties-title-bar {
+                        display: grid;
+                        grid-template-rows: auto auto;
+                        justify-content: center;
+                        align-content: center;
+                        grid-gap: 5px;
+
+                        .box-properties-title {
+                            display: grid;
+                            color: black;
+                            justify-content: center;
+                        }
+
+                        .box-properties-buttons {
+                            display: grid;
+                            grid-template-columns: auto auto;
+                            grid-gap: 3px;
+                        }
                     }
-                }
 
-                .box-properties-content {
-                    display: grid;
-                    grid-template-rows: auto auto 1fr;
-                    grid-gap: 3px;
-                    margin: 3px;
+                    .box-properties-content {
+                        display: grid;
+                        grid-template-rows: auto auto 1fr;
+                        grid-gap: 3px;
+                        margin: 3px;
+
+                        .box-form-items-table-column{
+                            display: grid;
+                            grid-template-rows: auto auto 1fr;
+                            grid-gap: 3px;
+                        }
+                        .form-properties {
+                            display: grid;
+                            grid-template-rows: auto auto;
+                        }
+
+                    }
                 }
             }
         }

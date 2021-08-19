@@ -4,8 +4,8 @@ import GCtx from "../GCtx";
 import lodash from "lodash";
 import axios from "axios";
 import moment from 'moment';
-import {Button, Select, Tree, Table, Input, Tabs, Checkbox} from 'antd'
-import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, PlusSquareOutlined} from '@ant-design/icons'
+import {Button, Select, Tree, Table, Input, Tabs, Checkbox, Form, Tooltip} from 'antd'
+import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, PlusSquareOutlined, QuestionCircleOutlined} from '@ant-design/icons'
 import {Graph, Addon, Shape} from "@antv/x6";
 import KColumnTitle from "./KColumnTitle";
 import TadTable from "../entity/TadTable";
@@ -18,7 +18,8 @@ import EditableCellTool from "./EditableCellTool";
 
 const {TabPane} = Tabs;
 const {Stencil} = Addon;
-const {Rect} = Shape
+const {Rect} = Shape;
+const {Option} = Select;
 
 export default class DatabaseWorkspace extends React.Component {
     static contextType = GCtx;
@@ -40,6 +41,7 @@ export default class DatabaseWorkspace extends React.Component {
         x6StencilContainerBox: React.createRef(),
         x6GraphContainerBox: React.createRef(),
         x6GraphContainer: React.createRef(),
+        formX6Properties: React.createRef(),
     }
 
     constructor(props) {
@@ -49,6 +51,7 @@ export default class DatabaseWorkspace extends React.Component {
         this.state = {
             isErDiagram: true,
             tabNavSelected: "tabNavTwo",
+            nodeType: "unknown",
 
             dbUsersSelectOptions: [{value: -1, label: "请选择产品线数据库用户"}],
             dbUserSelected: -1,
@@ -167,6 +170,8 @@ export default class DatabaseWorkspace extends React.Component {
         this.x6Move = this.x6Move.bind(this);
         this.x6Update = this.x6Update.bind(this);
         this.x6AddEntityTable = this.x6AddEntityTable.bind(this);
+        this.x6SetFormItems = this.x6SetFormItems.bind(this);
+        this.onFormX6PropertiesFinish = this.onFormX6PropertiesFinish.bind(this);
 
         this.doAddTable = this.doAddTable.bind(this);
         this.doUpdateTable = this.doUpdateTable.bind(this);
@@ -254,6 +259,8 @@ export default class DatabaseWorkspace extends React.Component {
         this.onButtonColumnEditingConfirmClicked = this.onButtonColumnEditingConfirmClicked.bind(this);
         this.onButtonColumnEditingCancelClicked = this.onButtonColumnEditingCancelClicked.bind(this);
         this.onButtonErDiagramClicked = this.onButtonErDiagramClicked.bind(this);
+        this.onButtonX6FormConfirmClicked = this.onButtonX6FormConfirmClicked.bind(this);
+        this.onButtonX6FormCancelClicked = this.onButtonX6FormCancelClicked.bind(this);
 
         this.onInputIndexNameChanged = this.onInputIndexNameChanged.bind(this);
         this.onInputPartitionNameChanged = this.onInputPartitionNameChanged.bind(this);
@@ -349,6 +356,50 @@ export default class DatabaseWorkspace extends React.Component {
         this.setState({
             treeDataProducts: this.gUi.treeProductsData,
         })
+    }
+
+    onButtonX6FormConfirmClicked() {
+
+    }
+
+    onButtonX6FormCancelClicked() {
+
+    }
+
+    onFormX6PropertiesInitialValues() {
+
+    }
+
+    onFormX6PropertiesFinish(values) {
+        console.log(values);
+
+        let nodeData = this.gCurrent.node.getData();
+
+        if (nodeData.nodeType === "table") {
+            this.gCurrent.node.attr('label/text', values.tableName);
+        } else if (nodeData.nodeType === "table_column") {
+            this.gCurrent.node.attr('label/text', values.tableColumnName);
+        }
+    }
+
+    x6SetFormItems() {
+        //if (this.gCurrent)
+        let nodeData = this.gCurrent.node.getData();
+
+        console.log(this.gCurrent.nodeAttrs);
+        if (nodeData.nodeType === "table") {
+            let tableName = this.gCurrent.nodeAttrs.label.text;
+
+            this.gRef.formX6Properties.current.setFieldsValue({
+                tableName: tableName,
+            });
+        } else if (nodeData.nodeType === "table_column") {
+            let columnName = this.gCurrent.nodeAttrs.label.text;
+
+            this.gRef.formX6Properties.current.setFieldsValue({
+                tableColumnName: columnName,
+            });
+        }
     }
 
     x6ElementsStyleReset() {
@@ -460,87 +511,52 @@ export default class DatabaseWorkspace extends React.Component {
         });
 
         this.x6Graph.on('blank:click', () => {
-            if (this.gCurrent.node !== null && this.gCurrent.node !== undefined) {
+            this.setState({
+                nodeType: "unknown"
+            });
 
-                // let view = this.x6Graph.findViewByCell(this.gCurrent.node);
-                // this.gCurrent.node.attr('body', {
-                //     fill: '#AFAFAF',
-                //     stroke: '#ffa940',
-                // })
+            // 恢复上一次选中 node 的样式
+            if (this.gCurrent.node !== null && this.gCurrent.node !== undefined) {
+                this.gCurrent.node.attr('body', {
+                    stroke: this.gCurrent.nodeAttrs.rect.stroke,
+                })
             }
             this.gCurrent.node = null;
         });
 
-        this.x6Graph.on('cell:removed', ({cell, index, options}) => {
-
-            // e.stopPropagation()
-            // view.cell.remove()
-        });
-
-        this.x6Graph.on('node:added', ({node, index, options}) => {
-            // console.log(node);
-            // let nodeData = node.getData();
-            //
-            // if (nodeData.nodeType === "new_table") {
-            //     node.setData({
-            //         nodeType: "table"
-            //     });
-            //
-            //     let myNode = this.x6Graph.createNode({
-            //         width: 80,
-            //         height: 30,
-            //         x: nodeData.x + 10,
-            //         y: nodeData.y + 30,
-            //         shape: 'rect',
-            //         attrs: {
-            //             body: {
-            //                 fill: '#ccc'
-            //             }
-            //         },
-            //     });
-            //
-            //     myNode.setData({
-            //         x: 0,
-            //         y: 0,
-            //         nodeType: "table_column",
-            //     });
-            //
-            //     node.addChild(myNode);
-            // }
-        });
-
-        // this.x6Graph.on('node:moving', ({ e, x, y, node, view }) => {
-
-        // })
-
-        // this.x6Graph.on('node:change:position', ({node, current, previous, options}) => {
-
-        // });
-
         this.x6Graph.on('node:click', ({node}) => {
             let nodeData = node.getData();
 
-            this.gDynamic.node = node;
-
-            // if (this.gCurrent.node !== null && this.gCurrent.node !== undefined) {
-            //
-            //     // let view = this.x6Graph.findViewByCell(this.gCurrent.node);
-            //     this.gCurrent.node.attr('body', {
-            //         fill: '#AFAFAF',
-            //         stroke: '#ffa940',
-            //     })
-            // }
+            // 恢复上一次选中 node 的样式
+            if (this.gCurrent.node !== null && this.gCurrent.node !== undefined) {
+                this.gCurrent.node.attr('body', {
+                    stroke: this.gCurrent.nodeAttrs.rect.stroke,
+                })
+            }
             this.gCurrent.node = node;
-            // node.attr('body', {
-            //     fill: '#ffd591',
-            //     stroke: '#ffa940',
-            // })
+            this.gCurrent.nodeAttrs = node.getAttrs();
 
+            // 设置选中 node 的样式
+            node.attr('body', {
+                stroke: '#ffa940',
+            })
+
+
+            console.log(nodeData);
             if (nodeData.nodeType === "table") {
                 node.toFront({deep: true});
+                this.setState({
+                    nodeType: "table"
+                });
             } else if (nodeData.nodeType === "table_column") {
-
+                this.setState({
+                    nodeType: "table_column"
+                });
             } else if (nodeData.nodeType === "table_button_add_column") {
+                this.setState({
+                    nodeType: "table_button_add_column"
+                });
+
                 let nodeTable = node.getParent();
                 let cc = nodeTable.getChildren().length;
                 let h = nodeTable.size().height;
@@ -581,6 +597,7 @@ export default class DatabaseWorkspace extends React.Component {
 
                 node.position(nodeTable.position().x + 10, nodeTable.position().y + h + hAdd - 40);
             }
+            this.x6SetFormItems();
         });
 
         this.x6Graph.on('node:mouseenter', ({node}) => {
@@ -595,7 +612,7 @@ export default class DatabaseWorkspace extends React.Component {
                         args: {x: "100%", y: 0, offset: {x: -10, y: 10}},
                     },
                 ]);
-                node.toFront({deep: true});
+                // node.toFront({deep: true});
             } else if (nodeData.nodeType === "table_column") {
                 node.addTools([
                     {
@@ -612,15 +629,7 @@ export default class DatabaseWorkspace extends React.Component {
         })
 
         this.x6Graph.on('edge:click', ({edge}) => {
-            // this.x6ElementsStyleReset();
-            // edge.attr('line/stroke', 'orange');
-            // edge.prop('labels/0', {
-            //     attrs: {
-            //         body: {
-            //             stroke: 'orange'
-            //         }
-            //     }
-            // });
+
         });
 
         this.x6Graph.on('edge:mouseenter', ({cell}) => {
@@ -748,7 +757,7 @@ export default class DatabaseWorkspace extends React.Component {
                 this.gDynamic.nodeShadow.attr('label/refY', '5')
                 this.gDynamic.nodeShadow.attr('label/textAnchor', 'middle')
                 this.gDynamic.nodeShadow.attr('label/textVerticalAnchor', 'top')
-                this.gDynamic.nodeShadow.attr('label/text', 'new table')
+                this.gDynamic.nodeShadow.attr('label/text', 'new_table');
 
 
                 let myNodeButtonAdd = this.x6Graph.createNode({
@@ -783,7 +792,17 @@ export default class DatabaseWorkspace extends React.Component {
                 myNodeButtonAdd.position(this.gDynamic.x + 10, this.gDynamic.y + 30);
 
                 this.gDynamic.nodeShadow.addChild(myNodeButtonAdd);
-                // this.gDynamic.nodeShadow.fit({padding: {top: 30 + 10, bottom: 10, left: 10, right: 10}});
+                this.gDynamic.nodeShadow.setData({
+                    nodeType: "table"
+                })
+
+                this.setState({
+                    nodeType: "table"
+                });
+
+                this.gCurrent.node = this.gDynamic.nodeShadow;
+                this.gCurrent.nodeAttrs = this.gDynamic.nodeShadow.getAttrs();
+                this.x6SetFormItems();
 
                 return node.clone();
             },
@@ -869,10 +888,6 @@ export default class DatabaseWorkspace extends React.Component {
 
         this.x6Stencil.load([rTable, rView], 'group1')
         this.x6Stencil.load([rbUsers, rbTree], 'group2')
-
-        // let gv = View.get(this.x6Stencil.dnd.cid);
-        // this.x6Stencil.dnd.draggingGraph.on('node:moving', ({ e, x, y, node, view }) => {
-        // });
     }
 
     x6Move() {
@@ -1014,7 +1029,6 @@ export default class DatabaseWorkspace extends React.Component {
 
             n++;
         });
-
 
 
         // let columnButton = this.x6Graph.addNode({
@@ -3840,13 +3854,47 @@ export default class DatabaseWorkspace extends React.Component {
                             </div>
                         </div>
                         <div className={"box-properties"}>
-                            <div className={"box-properties-title-bar"}>
-                                <div className={"box-properties-title"}>属性编辑</div>
-                            </div>
-                            <div className={"box-properties-content"}>
-                                <Input/>
-                                <Input/>
-                            </div>
+                            <Form ref={this.gRef.formX6Properties}
+                                  initialValues={this.onFormX6PropertiesInitialValues}
+                                  onFinish={this.onFormX6PropertiesFinish}
+                                  className={"form-x6-properties"}>
+                                <div className="box-properties-title-bar">
+                                    <div className="box-properties-title">属性编辑</div>
+                                    <div className="box-properties-buttons">
+                                        <Button htmlType="submit" disabled={false}
+                                                icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>确认</Button>
+                                        <Button onClick={this.onButtonX6FormCancelClicked} disabled={false}
+                                                icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>放弃</Button>
+                                    </div>
+                                </div>
+                                <div className={"box-properties-content"}>
+                                    <div className={this.state.nodeType === "table" ? "box-form-items-table" : "BoxHidden"}>
+                                        <Form.Item className="box-form-item-input">
+                                            <Form.Item name="tableName" noStyle><Input/></Form.Item>
+                                            <Tooltip placement="topLeft" title="请输入表名称" arrowPointAtCenter>
+                                                <div className="input-icon"><QuestionCircleOutlined/></div>
+                                            </Tooltip>
+                                        </Form.Item>
+                                    </div>
+                                    <div className={this.state.nodeType === "table_column" ? "box-form-items-table-column" : "BoxHidden"}>
+                                        <Form.Item className="box-form-item-input">
+                                            <Form.Item name="tableColumnName" noStyle><Input/></Form.Item>
+                                            <Tooltip placement="topLeft" title="请输入表字段名称" arrowPointAtCenter>
+                                                <div className="input-icon"><QuestionCircleOutlined/></div>
+                                            </Tooltip>
+                                        </Form.Item>
+                                        <Form.Item className="box-form-item-input">
+                                            {/*<Form.Item name="tableColumnDataType" noStyle><Input/></Form.Item>*/}
+                                            <Form.Item name="tableColumnDataType" noStyle>
+                                                <Select options={optionsDataType} />
+                                            </Form.Item>
+                                            <Tooltip placement="topLeft" title="请选择表字段数据类型" arrowPointAtCenter>
+                                                <div className="input-icon"><QuestionCircleOutlined/></div>
+                                            </Tooltip>
+                                        </Form.Item>
+                                    </div>
+                                </div>
+                            </Form>
                         </div>
                     </div>
                 </div>
