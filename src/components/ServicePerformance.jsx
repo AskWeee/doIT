@@ -2033,43 +2033,159 @@ export default class ServicePerformance extends React.PureComponent {
         }
     }
 
+    generateSqlCreateCounterTable(schema) {
+        let strSql = "create table " + schema.counter_tab_name + "(\n" +
+            "\t ne_id number(20, 0) not null,\n" +
+            "\t unit_id varchar2(255) not null,\n" +
+            "\t timestamp data,\n" +
+            "\t scan_start_time date not null,\n" +
+            "\t scan_stop_time date,\n" +
+            "\t province_id integer,\n" +
+            "\t region_id integer,\n" +
+            "\t city_id integer,\n" +
+            "\t sv_id number(20, 0),\n" +
+            "\t sv_cat_id integer,\n" +
+            "\t scan_date varchar2(10),\n" +
+            "\t scan_time varchar2(4),\n";
+
+        schema.counters.forEach((cid) => {
+            let counter = this.gMap.counters.get(cid);
+            strSql += "\t " + counter.counter_field + " float, \n";
+        });
+
+        let c = schema.counters.length
+        let iMax = 20;
+        if (c > 79) iMax = 99 - c;
+
+        for(let i = 1; i <= iMax; i++) {
+            strSql += "\t counter" + (c + i) + " float, \n";
+        }
+
+        strSql += "\t counter_notes varchar2(255)\n" +
+            ");\n" +
+            "create unique index ix_" + schema.counter_tab_name + " on " + schema.counter_tab_name + "( scan_start_time, ne_id, unit_id, sv_cat_id);\n\n";
+
+        return strSql;
+    }
+
+    generateSqlCreateKpiTable(schema) {
+        let strSql = "create table " + schema.tab_name + "(\n" +
+            "\t ne_id number(20, 0) not null,\n" +
+            "\t unit_id varchar2(255) not null,\n" +
+            "\t timestamp data,\n" +
+            "\t scan_start_time date not null,\n" +
+            "\t scan_stop_time date,\n" +
+            "\t sv_id number(20, 0),\n" +
+            "\t sv_cat_id integer,\n" +
+            "\t scan_date varchar2(10),\n" +
+            "\t scan_time varchar2(4),\n";
+
+        schema.kpis.forEach((kid) => {
+            let kpi = this.gMap.kpis.get(kid);
+            strSql += "\t " + kpi.kpi_field + " float,\n" +
+                "\t " + kpi.kpi_field + "_status integer,\n";
+        });
+
+        let c = schema.kpis.length
+        let iMax = 20;
+        if (c > 79) iMax = 99 - c;
+
+        for(let i = 1; i <= iMax; i++) {
+            strSql += "\t kpi" + (c + i) + " float,\n" +
+                "\t kpi" + (c + i) + "_status integer,\n";
+        }
+
+        strSql += "\t kpi_notes varchar2(255)\n" +
+            ");\n" +
+            "create unique index ix_" + schema.tab_name + " on " + schema.tab_name + "( scan_start_time, ne_id, unit_id, sv_cat_id);\n\n";
+
+        return strSql;
+    }
+
+    generateSqlInsertKpiSchema(schema) {
+        let strSql = "insert into tai_rtkpischema(schema_id, schema_ns, schema_zhname, tab_name, vendor_id, object_class, sub_class, sum_type, counter_tab_name, used_type, interval_flag, enable_flag)\n" +
+            "\t values(" +
+            "'" + schema.schema_id + "', " +
+            "'" + schema.schema_ns + "', " +
+            "'" + schema.schema_zhname + "', " +
+            "'" + schema.tab_name + "', " +
+            "'" + schema.vendor_id + "', " +
+            "'" + schema.object_class + "', " +
+            "'" + schema.sub_class + "', " +
+            "'" + schema.sum_type + "', " +
+            "'" + schema.counter_tab_name + "', " +
+            "'" + schema.used_type + "', " +
+            "'" + schema.interval_flag + "', " +
+            "'" + schema.enable_flag + "');\n\n";
+
+        return strSql;
+    }
+
+    generateSqlInsertKpiCounter(schema) {
+        let strSql = "";
+
+        schema.counters.forEach((cid) => {
+            let counter = this.gMap.counters.get(cid);
+            strSql += "insert into tai_rtkpicounter(schema_id, counter_enname, counter_zhname, counter_filed)\n" +
+                "\t values(" +
+                "'" + schema.schema_id + "', " +
+                "'" + counter.counter_enname + "', " +
+                "'" + counter.counter_zhname + "', " +
+                "'" + schema.counter_field + "');\n\n";
+        });
+
+        return strSql;
+    }
+
+    generateSqlInsertKpi(schema) {
+        let strSql = "";
+
+        schema.kpis.forEach((kid) => {
+            let kpi = this.gMap.kpis.get(kid);
+            strSql += "insert into tai_rtkpis(schema_id, kpi_id, kpi_enname, kpi_zhname, kpi_exp, kpi_alarm, kpi_format, kpi_min_value, kpi_max_value, used_type, disp_order, kpi_field, baseline)\n" +
+                "\t values(" +
+                "'" + schema.schema_id + "', " +
+                "'" + kpi.kpi_id + "', " +
+                "'" + kpi.kpi_enname + "', " +
+                "'" + kpi.kpi_zhname + "', " +
+                "'" + kpi.kpi_exp + "', " +
+                "'" + kpi.kpi_alarm + "', " +
+                "'" + kpi.kpi_format + "', " +
+                "'" + kpi.kpi_min_value + "', " +
+                "'" + kpi.kpi_max_value + "', " +
+                "'" + kpi.used_type + "', " +
+                "'" + kpi.disp_order + "', " +
+                "'" + kpi.kpi_field + "', " +
+                "'" + kpi.baseline + "');\n\n";
+        });
+
+        return strSql;
+    }
+
     //todo <<<<< now >>>>> on button Schemas Export clicked
     onButtonSchemasExportClicked(e) {
-        // this.context.showMessage("导出指标组，开发中...");
-        //
-        // let zip = new JSZip();
-        // zip.file("doIT-建库脚本-1_sql.txt", "hello");
-        // zip.file("doIT-建库脚本-2_sql.txt", "world");
-        // zip.generateAsync({type: "blob"})
-        //     .then((content) => {
-        //         fs.saveAs(content, "doIT-建库脚本.zip");
-        //         // this.download("doIT-建库脚本.zip", content);
-        //     });
-
-        // let data = [{
-        //     '姓名': 'zhangsan',
-        //     '年龄': 20,
-        //     '性别': '男'
-        // },{
-        //     '姓名': 'zhangsan',
-        //     '年龄': 20,
-        //     '性别': '男'
-        // }];
-        // let dataType = 'json';
-
-        let worksheetValues = [];
+        let worksheetValues = [[]];
         let worksheetNames = ['消息号与名空间的对应'];
         let worksheetHeaders = [
             ["消息号", "名空间", "中文名称", "对应表名", "厂家ID", "网元类型", "网元详细分类", "采集粒度", "COUNTER_TAB_NAME"],
             ["原始指标名", "原始字段", "原始字段名称", "   ", "KPI指标名", "KPI指标", "算法", "KPI_ID", "是否告警", "数据格式", "最小值", "最大值"]
         ];
+        let strSqlCreateCounterTable = "";
+        let strSqlCreateKpiTable = "";
+        let strSqlInsertKpiSchema = "";
+        let strSqlInsertKpiCounter = "";
+        let strSqlInsertKpi = "";
 
-        console.log(this.gCurrent.schemasChecked);
-
-        worksheetValues[0] = [];
+        // worksheetValues[0] = [];
         let iSchema = 1;
         this.gCurrent.schemasChecked.forEach((value, key) => {
             let mySchema = this.gMap.schemas.get(key);
+            strSqlCreateCounterTable += this.generateSqlCreateCounterTable(mySchema);
+            strSqlCreateKpiTable += this.generateSqlCreateKpiTable(mySchema);
+            strSqlInsertKpiSchema += this.generateSqlInsertKpiSchema(mySchema);
+            strSqlInsertKpiCounter += this.generateSqlInsertKpiCounter(mySchema);
+            strSqlInsertKpi += this.generateSqlInsertKpi(mySchema);
+
             let dataSchema = ["", "", "", "", "", "", "", "", ""];
 
             dataSchema[0] = mySchema.schema_id;
@@ -2185,8 +2301,20 @@ export default class ServicePerformance extends React.PureComponent {
                 i++;
             });
 
-            let fileName = "kpis_" + moment().format("YYYYMMDDHHmmss") + '.xlsx';
+            let strNow =  moment().format("YYYYMMDDHHmmss");
+            let fileName = "kpis_" + strNow + '.xlsx';
             XLSX.writeFile(myWorkbook, fileName);
+
+            let zip = new JSZip();
+            zip.file("kpis_create_counter_table_sql.txt", strSqlCreateCounterTable);
+            zip.file("kpis_create_kpi_table_sql.txt", strSqlCreateKpiTable);
+            zip.file("kpis_insert_kpi_schema_sql.txt", strSqlInsertKpiSchema);
+            zip.file("kpis_insert_kpi_counter_sql.txt", strSqlInsertKpiCounter);
+            zip.file("kpis_insert_kpi_sql.txt", strSqlInsertKpi);
+            zip.generateAsync({type: "blob"})
+                .then((content) => {
+                    fs.saveAs(content, "kpis_" + strNow + ".zip");
+                });
 
         } catch (error) {
             console.error('exportTo: ', error)

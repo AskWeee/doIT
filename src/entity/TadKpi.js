@@ -13,6 +13,9 @@ export default class TadKpi{
         this.kpi_max_value = null;
         this.kpi_exp = null;
         this.used_info = null;
+        this.used_type = null;
+        this.disp_order = null;
+        this.baseline = null;
         this.kpiUiTitles = [];
     }
 
@@ -29,6 +32,9 @@ export default class TadKpi{
         this.kpi_max_value = "最大值";
         this.kpi_exp = "指标计算表达式";
         this.used_info = "";
+        this.used_type = "";
+        this.disp_order = -1;
+        this.baseline = "";
         this.kpiUiTitles = [];
     }
 }
