@@ -8,7 +8,7 @@ import moment from 'moment';
 import XLSX from 'xlsx';
 import JSZip from "jszip";
 import fs from "file-saver";
-import {Button, Input, Select, Tree, Modal, Form, Tooltip, Checkbox} from 'antd'
+import {Button, Input, Select, Tree, Modal, Form, Tooltip, Checkbox, Upload} from 'antd'
 import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, CloudDownloadOutlined, CloudUploadOutlined, CopyOutlined, MinusSquareOutlined, PlusSquareOutlined, SaveOutlined, QuestionCircleOutlined, EditOutlined,} from '@ant-design/icons'
 import TadKpiSchema from "../entity/TadKpiSchema";
 import TadKpi from "../entity/TadKpi";
@@ -187,6 +187,9 @@ export default class ServicePerformance extends React.PureComponent {
         this.doAddCounter = this.doAddCounter.bind(this);
         this.doDeleteCounter = this.doDeleteCounter.bind(this);
         this.doFixKpiCounters = this.doFixKpiCounters.bind(this);
+
+        this.importExcelKpisBeforeUpload = this.importExcelKpisBeforeUpload.bind(this);
+        this.importExcelKpisOnChange = this.importExcelKpisOnChange.bind(this);
 
         this.onTreeKpiSchemasSelected = this.onTreeKpiSchemasSelected.bind(this);
         this.onTreeKpiSchemasChecked = this.onTreeKpiSchemasChecked.bind(this);
@@ -560,6 +563,12 @@ export default class ServicePerformance extends React.PureComponent {
     // >>>>> ds Update Schema
     dsUpdateSchema(schema, what) {
         switch (what) {
+            case "import":
+                let schemaImported = lodash.cloneDeep(schema);
+                // schemaImported.kpis.length = 0;
+                // schemaImported.counters.length = 0;
+                this.gMap.schemas.set(schema.id, schemaImported);
+                break
             case "add":
                 this.gMap.schemas.set(schema.id, lodash.cloneDeep(schema));
                 break
@@ -765,8 +774,11 @@ export default class ServicePerformance extends React.PureComponent {
         switch (what) {
             case "add":
                 this.gMap.schemas.get(counter.sid).counters.push(counter.id);
-                this.gCurrent.counterNames.push(counter.counter_enname);
                 this.gMap.counters.set(counter.id, counter);
+
+                if (this.gCurrent.counterNames !== undefined) {
+                    this.gCurrent.counterNames.push(counter.counter_enname);
+                }
                 break
             case "delete":
                 if (this.gMap.schemas.has(counter.sid)) {
@@ -819,7 +831,7 @@ export default class ServicePerformance extends React.PureComponent {
         return myResult;
     }
 
-    //todo <<<<< >>>>> import indicator form excel
+    //todo >>>>> import indicator form excel
     doGetExcel() {
         axios.get('data/counter_001.xlsx', {responseType: 'arraybuffer'}).then(res => {
             let wb = XLSX.read(res.data, {type: 'array'});
@@ -1499,6 +1511,15 @@ export default class ServicePerformance extends React.PureComponent {
                             counter.sid = result.data.data.id;
                             this.doAddCounter(counter, "clone");
                         })
+                    } else if (what === "import") {
+                        schema.kpis2.forEach((itemKpi) => {
+                            itemKpi.sid = result.data.data.id;
+                            this.doAddKpi(itemKpi, "import");
+                        })
+                        schema.counters2.forEach((itemCounter) => {
+                            itemCounter.sid = result.data.data.id;
+                            this.doAddCounter(itemCounter, "import");
+                        })
                     }
                     this.context.showMessage("创建成功，新增指标组内部ID为：" + result.data.data.id);
                 } else {
@@ -1538,7 +1559,7 @@ export default class ServicePerformance extends React.PureComponent {
         });
     }
 
-    // >>>>> do Add KPI
+    //todo <<<< now >>>>> do Add KPI
     doAddKpi(kpi, what) {
         this.restAddKpi(kpi).then((result) => {
             if (result.status === 200) {
@@ -2013,8 +2034,9 @@ export default class ServicePerformance extends React.PureComponent {
         this.doCloneSchema(schema);
     }
 
+    //todo <<<<< now >>>>> on button Schemas Import clicked
     onButtonSchemasImportClicked(e) {
-        this.context.showMessage("导入指标组，开发中...");
+
     }
 
     getCellWidth(value) {
@@ -2057,7 +2079,7 @@ export default class ServicePerformance extends React.PureComponent {
         let iMax = 20;
         if (c > 79) iMax = 99 - c;
 
-        for(let i = 1; i <= iMax; i++) {
+        for (let i = 1; i <= iMax; i++) {
             strSql += "\t counter" + (c + i) + " float, \n";
         }
 
@@ -2090,7 +2112,7 @@ export default class ServicePerformance extends React.PureComponent {
         let iMax = 20;
         if (c > 79) iMax = 99 - c;
 
-        for(let i = 1; i <= iMax; i++) {
+        for (let i = 1; i <= iMax; i++) {
             strSql += "\t kpi" + (c + i) + " float,\n" +
                 "\t kpi" + (c + i) + "_status integer,\n";
         }
@@ -2217,7 +2239,9 @@ export default class ServicePerformance extends React.PureComponent {
             let cCounters = mySchema.counters.length;
             let cMax = cKpis > cCounters ? cKpis : cCounters;
 
-            for(let i = 0; i < cMax; i++) {
+            let data = [mySchema.schema_ns, "", "", "", "", "", "", "", "", "", "", ""];
+            worksheetValues[iSchema].push(data);
+            for (let i = 0; i < cMax; i++) {
                 let data = ["", "", "", "", "", "", "", "", "", "", "", ""];
                 if (i < cCounters) {
                     let myCounter = this.gMap.counters.get(mySchema.counters[i]);
@@ -2248,15 +2272,26 @@ export default class ServicePerformance extends React.PureComponent {
         console.log(worksheetValues);
         ///*
         try {
-            if (!XLSX) throw 'exportTo: the plug-in "XLSX" is undefined.'
-            if (!worksheetValues || worksheetValues.length === 0) throw 'exportTo: data is null or undefined.'
+            if (!XLSX) {
+                console.log('exportTo: the plug-in "XLSX" is undefined.');
+                return
+            }
+            if (!worksheetValues || worksheetValues.length === 0) {
+                console.log('exportTo: data is null or undefined.');
+                return
+            }
 
             let myWorkbook = XLSX.utils.book_new();
 
             let i = 0;
             let fitWidth = true;
             worksheetNames.forEach((wsName) => {
-                worksheetValues[i].unshift(worksheetHeaders[i === 0 ? 0 : 1]);
+                // worksheetValues[i].unshift(worksheetHeaders[i === 0 ? 0 : 1]);
+                if (i === 0)
+                    worksheetValues[i].unshift(worksheetHeaders[0]);
+                else
+                    worksheetValues[i].splice(1, 0, worksheetHeaders[1]);
+
                 let myWorksheet = XLSX.utils.json_to_sheet(worksheetValues[i], {skipHeader: true});
 
                 if (fitWidth) {
@@ -2282,6 +2317,8 @@ export default class ServicePerformance extends React.PureComponent {
                                 case 'function':
                                     colWidths[index].push(0)
                                     break
+                                default:
+                                    break
                             }
                             index++
                         }
@@ -2301,7 +2338,7 @@ export default class ServicePerformance extends React.PureComponent {
                 i++;
             });
 
-            let strNow =  moment().format("YYYYMMDDHHmmss");
+            let strNow = moment().format("YYYYMMDDHHmmss");
             let fileName = "kpis_" + strNow + '.xlsx';
             XLSX.writeFile(myWorkbook, fileName);
 
@@ -2318,7 +2355,6 @@ export default class ServicePerformance extends React.PureComponent {
 
         } catch (error) {
             console.error('exportTo: ', error)
-            throw error
         }
         //*/
     }
@@ -2901,8 +2937,244 @@ export default class ServicePerformance extends React.PureComponent {
         })
     }
 
+    importExcelKpisBeforeUpload(file) {
+        new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                //todo <<<<< now >>>>> upload and import excel
+                try {
+                    let data = e.target.result;
+                    let wb = XLSX.read(data, {type: "binary"});
+                    let dsSchemas = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[2]]);
+                    let isFirst = true;
+                    let propertyNames = [];
+                    let schemas = [];
+
+                    dsSchemas.forEach((schema) => {
+                        if (isFirst) {
+                            propertyNames = Object.keys(schema);
+                            isFirst = false;
+                        }
+
+                        let propNameVendorId = "厂家ID";
+                        let propNameCounterTabName = "COUNTER_TAB_NAME";
+                        for (let i = 0; i < propertyNames.length; i++) {
+                            if (propNameVendorId.toLowerCase() === propertyNames[i].toLowerCase()) {
+                                propNameVendorId = propertyNames[i];
+                            }
+                            if (propNameCounterTabName.toLowerCase() === propertyNames[i].toLowerCase()) {
+                                propNameCounterTabName = propertyNames[i];
+                            }
+                        }
+                        let mySchema = new TadKpiSchema();
+
+                        mySchema.schema_id = schema["消息号"];
+                        mySchema.schema_ns = schema["名空间"].toUpperCase();
+                        mySchema.schema_zhname = schema["中文名称"].toUpperCase();
+                        mySchema.tab_name = schema["对应表名"].toUpperCase();
+                        mySchema.vendor_id = schema[propNameVendorId];
+                        mySchema.object_class = schema["网元类型"];
+                        mySchema.sub_class = schema["网元详细分类"];
+                        mySchema.interval_flag = schema["采集粒度"];
+                        mySchema.counter_tab_name = schema[propNameCounterTabName].toUpperCase();
+
+                        schemas.push(mySchema);
+                    });
+
+                    for (let i = 3; i < wb.SheetNames.length; i++) {
+                        let sNs = "";
+                        let mapColumns = new Map();
+                        let range = XLSX.utils.decode_range(wb.Sheets[wb.SheetNames[i]]['!ref']);
+
+                        let counters = [];
+                        let kpis = [];
+                        for (let R = range.s.r; R <= range.e.r; ++R) {
+                            if (R === 0) {
+                                sNs = this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: 0, r: R})]).toUpperCase();
+                            } else if (R === 1) {
+                                for (let C = range.s.c; C <= range.e.c; ++C) {
+                                    let cFieldName = this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+                                    mapColumns.set(cFieldName, C);
+                                }
+                            } else {
+                                let strCounterZhName = this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: 0, r: R})]);
+                                let strCounterEnName = this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: 1, r: R})]);
+                                let strCounterField = this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: 2, r: R})]);
+                                let strKpiZhName = this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: 4, r: R})]);
+                                let strKpiEnName = this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: 5, r: R})]);
+                                let strKpiExp = this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: 6, r: R})]);
+                                let strKpiId = this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: 7, r: R})]);
+                                let strKpiAlarm = this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: 8, r: R})]);
+                                let strKpiFormat = this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: 9, r: R})]);
+                                let strKpiMinValue = this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: 10, r: R})]);
+                                let strKpiMaxValue = this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: 11, r: R})]);
+
+                                if ((strCounterZhName !== null) && (strCounterZhName !== "null")) {
+                                    let counter = new TadKpiCounter();
+                                    counter.counter_zhname = strCounterZhName.toUpperCase();
+                                    counter.counter_enname = strCounterEnName.toUpperCase();
+                                    counter.counter_field = strCounterField.toUpperCase();
+                                    counters.push(counter);
+                                }
+
+                                if ((strKpiZhName !== null) && (strKpiZhName !== "null")) {
+                                    let kpi = new TadKpi();
+                                    kpi.kpi_zhname = strKpiZhName.toUpperCase();
+                                    kpi.kpi_enname = strKpiEnName.toUpperCase();
+                                    kpi.kpi_exp = strKpiExp.toUpperCase();
+                                    kpi.kpi_id = strKpiId;
+                                    kpi.kpi_alarm = strKpiAlarm === "是" ? 1 : 0;
+                                    kpi.kpi_format = strKpiFormat.toUpperCase();
+                                    kpi.kpi_min_value = strKpiMinValue;
+                                    kpi.kpi_max_value = strKpiMaxValue;
+                                    kpi.kpi_field = "FIELD" + kpi.kpi_id;
+                                    kpis.push(kpi);
+                                }
+                            }
+                        }
+
+                        for(let j = 0; j < schemas.length; j++) {
+                            if (schemas[j].schema_ns === sNs) {
+                                counters.forEach((itemCounter) => {
+                                    schemas[j].counters2.push(itemCounter);
+                                });
+
+                                kpis.forEach((itemKpi) => {
+                                    schemas[j].kpis2.push(itemKpi);
+                                });
+                                break
+                            }
+                        };
+                    }
+
+                    schemas.forEach((itemSchema) => {
+                        this.doAddSchema(itemSchema, "import");
+                    })
+
+                    resolve();
+                } catch (e) {
+                    reject(e.message);
+                }
+            }
+            reader.readAsBinaryString(file);
+        })
+
+        return Upload.LIST_IGNORE;
+    }
+
+    importExcelKpisOnChange(info) {
+        if (info.file.status !== 'uploading') {
+            console.log(info.file, info.fileList);
+        }
+        if (info.file.status === 'done') {
+            console.log("uploading done");
+        } else if (info.file.status === 'error') {
+            console.log("upload failed.");
+        }
+    }
+
+    // uploadKpisProps = {
+    //     name: 'file',
+    //     // action: '',
+    //     // headers: {
+    //     //     authorization: 'authorization-text',
+    //     // },
+    //     accept: ".xls,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    //     beforeUpload: file => {
+    //         new Promise(function (resolve, reject) {
+    //             const reader = new FileReader();
+    //             reader.onload = (e) => {
+    //                 try {
+    //                     let data = e.target.result;
+    //                     let wb = XLSX.read(data, {type: "binary"});
+    //
+    //                     for (let i = 0; i < wb.SheetNames.length; i++) {
+    //                         let range = XLSX.utils.decode_range(wb.Sheets[wb.SheetNames[i]]['!ref']);
+    //                         for (let C = range.s.c; C <= range.e.c; ++C) {
+    //                             //console.log(this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: 0})]), C);
+    //
+    //                             // let C;
+    //                             //let lastIndicator = new TadIndicator();
+    //                             for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+    //                                 //let myIndicator = new TadIndicator();
+    //                                 //let myIndicatorCounter = new TadIndicatorCounter();
+    //
+    //                                 //myIndicator.excel_name = "counter_001.xlsx";
+    //                                 //myIndicator.excel_sheet_name = wb.SheetNames[i];
+    //                                 //C = this.getColumnIndex("设备类型,网元类型", mapColumns);
+    //                                 //myIndicator.indicator_object_class = (C === -1) ? null : this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]);
+    //                                 console.log(this.toCellValue(wb.Sheets[wb.SheetNames[i]][XLSX.utils.encode_cell({c: C, r: R})]));
+    //                             }
+    //                         }
+    //                     }
+    //
+    //                     /*
+    //                     mapIndicators.forEach((value, key) => {
+    //                         let myIndicator = value.indicator;
+    //                         axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/add_indicator",
+    //                             myIndicator,
+    //                             {headers: {'Content-Type': 'application/json'}}
+    //                         ).then((response) => {
+    //                             let data = response.data;
+    //
+    //                             if (data.success) {
+    //                                 let indicatorZhName = data.data.indicator_zhname;
+    //                                 let indicatorId = data.data.id;
+    //                                 if (mapIndicators.has(indicatorZhName)) {
+    //                                     mapIndicators.get(indicatorZhName).counters.forEach((counter) => {
+    //                                         let myCounter = counter;
+    //                                         myCounter.indicator_id = indicatorId;
+    //
+    //                                         axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/service/add_indicator_counter",
+    //                                             myCounter,
+    //                                             {headers: {'Content-Type': 'application/json'}}
+    //                                         ).then((response) => {
+    //                                             let data = response.data;
+    //
+    //                                             if (data.success) {
+    //                                                 // message.info("成功导入指标COUNTER：" + data.data.counter_zhname).then(r => {});
+    //                                                 this.context.showMessage("成功导入指标COUNTER：" + data.data.counter_zhname);
+    //                                             }
+    //                                         });
+    //                                     })
+    //                                 }
+    //                                 // message.info("成功导入指标：" + data.data.indicator_zhname).then(r => {});
+    //                                 this.context.showMessage("成功导入指标：" + data.data.indicator_zhname);
+    //                             }
+    //                         });
+    //                     })
+    //                     */
+    //
+    //                     const sName = wb.SheetNames[2];
+    //                     const sData = XLSX.utils.sheet_to_json(wb.Sheets[sName]);
+    //                     console.log(sData);
+    //                     resolve();
+    //                     //return Upload.LIST_IGNORE;
+    //                 } catch (e) {
+    //                     reject(e.message);
+    //                     //return Upload.LIST_IGNORE;
+    //                 }
+    //             }
+    //             reader.readAsBinaryString(file);
+    //         })
+    //
+    //         return Upload.LIST_IGNORE;
+    //     },
+    //     onChange(info) {
+    //         if (info.file.status !== 'uploading') {
+    //             console.log(info.file, info.fileList);
+    //         }
+    //         if (info.file.status === 'done') {
+    //             console.log("uploading done");
+    //         } else if (info.file.status === 'error') {
+    //             console.log("upload failed.");
+    //         }
+    //     },
+    // };
+
     //todo >>>>> render
     render() {
+
         return (
             <div className={this.state.styleLayout === "NN" ? "ServicePerformance" : "ServicePerformance ServicePerformanceSmall"}>
                 <div className={"BoxSchemasAndIndicators"}>
@@ -2915,7 +3187,13 @@ export default class ServicePerformance extends React.PureComponent {
                                 <Button size={"small"} type={"primary"} icon={<MinusSquareOutlined/>} onClick={() => {
                                     this.showModal("删除指标组")
                                 }}>删除</Button>
-                                <Button size={"small"} type={"primary"} icon={<CloudUploadOutlined/>} onClick={this.onButtonSchemasImportClicked}>导入</Button>
+                                {/*<Upload {...this.uploadKpisProps}>*/}
+                                <Upload name='file'
+                                        accept=".xls,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                        beforeUpload={this.importExcelKpisBeforeUpload}
+                                        onChange={this.importExcelKpisBeforeUpload}>
+                                    <Button size={"small"} type={"primary"} icon={<CloudUploadOutlined/>} onClick={this.onButtonSchemasImportClicked}>导入</Button>
+                                </Upload>
                                 <Button size={"small"} type={"primary"} icon={<CloudDownloadOutlined/>} onClick={this.onButtonSchemasExportClicked}>导出</Button>
                             </div>
                             <div>
@@ -3073,7 +3351,7 @@ export default class ServicePerformance extends React.PureComponent {
                                 </div>
                                 <div className="BoxSchemaName">
                                     <Form.Item className="BoxFormItemInput">
-                                        <Form.Item name="schemaZhName" noStyle><Input/></Form.Item>
+                                        <Form.Item name="schemaZhName2" noStyle><Input/></Form.Item>
                                         <Tooltip placement="topLeft" title="输入指标组中文名称" arrowPointAtCenter>
                                             <div className="input-icon"><QuestionCircleOutlined/></div>
                                         </Tooltip>
@@ -3093,7 +3371,7 @@ export default class ServicePerformance extends React.PureComponent {
                                 {/*</div>*/}
                                 <div className="BoxTabNames">
                                     <Form.Item className="BoxFormItemInput">
-                                        <Form.Item name="counterTabName" noStyle><Input/></Form.Item>
+                                        <Form.Item name="baseTabName" noStyle><Input/></Form.Item>
                                         <Tooltip placement="topLeft" title="输入指标组统计数据存储表名称" arrowPointAtCenter>
                                             <div className="input-icon"><QuestionCircleOutlined/></div>
                                         </Tooltip>

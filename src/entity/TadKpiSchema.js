@@ -27,6 +27,8 @@ export default class TadKpiSchema {
 
         this.kpis = [];
         this.counters = [];
+        this.kpis2 = [];
+        this.counters2 = [];
 
         this.schemaIdA1 = null;
         this.schemaIdA2 = null;

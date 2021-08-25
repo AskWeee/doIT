@@ -19,7 +19,6 @@ import EditableCellTool from "./EditableCellTool";
 const {TabPane} = Tabs;
 const {Stencil} = Addon;
 const {Rect} = Shape;
-const {Option} = Select;
 
 export default class DatabaseWorkspace extends React.Component {
     static contextType = GCtx;
@@ -279,6 +278,7 @@ export default class DatabaseWorkspace extends React.Component {
         this.onCheckboxColumnNullableFlagChanged = this.onCheckboxColumnNullableFlagChanged.bind(this);
 
         this.onSelectColumnDataTypeChanged = this.onSelectColumnDataTypeChanged.bind(this);
+        this.onSelectX6TableColumnDataTypeChanged = this.onSelectX6TableColumnDataTypeChanged.bind(this);
 
         this.onTabsTablePropertiesChanged = this.onTabsTablePropertiesChanged.bind(this);
     }
@@ -371,22 +371,24 @@ export default class DatabaseWorkspace extends React.Component {
     }
 
     onFormX6PropertiesFinish(values) {
-        console.log(values);
-
         let nodeData = this.gCurrent.node.getData();
 
         if (nodeData.nodeType === "table") {
-            this.gCurrent.node.attr('label/text', values.tableName);
+            let newTableName = values.tableName;
+
+            this.gCurrent.node.attr('label/text', newTableName);
+            this.gCurrent.node.setData({tableName: newTableName})
         } else if (nodeData.nodeType === "table_column") {
-            this.gCurrent.node.attr('label/text', values.tableColumnName);
+            let newColumnName = values.tableColumnName;
+
+            this.gCurrent.node.attr('label/text', newColumnName);
+            this.gCurrent.node.setData({columnName: newColumnName});
         }
     }
 
     x6SetFormItems() {
-        //if (this.gCurrent)
         let nodeData = this.gCurrent.node.getData();
 
-        console.log(this.gCurrent.nodeAttrs);
         if (nodeData.nodeType === "table") {
             let tableName = this.gCurrent.nodeAttrs.label.text;
 
@@ -394,10 +396,12 @@ export default class DatabaseWorkspace extends React.Component {
                 tableName: tableName,
             });
         } else if (nodeData.nodeType === "table_column") {
-            let columnName = this.gCurrent.nodeAttrs.label.text;
+            let columnName = nodeData.columnName;
+            let dataType = nodeData.dataType === undefined ? -99999 : nodeData.dataType;
 
             this.gRef.formX6Properties.current.setFieldsValue({
                 tableColumnName: columnName,
+                tableColumnDataType: dataType,
             });
         }
     }
@@ -524,6 +528,7 @@ export default class DatabaseWorkspace extends React.Component {
             this.gCurrent.node = null;
         });
 
+        //todo >>>>> x6Graph on node:click
         this.x6Graph.on('node:click', ({node}) => {
             let nodeData = node.getData();
 
@@ -541,8 +546,6 @@ export default class DatabaseWorkspace extends React.Component {
                 stroke: '#ffa940',
             })
 
-
-            console.log(nodeData);
             if (nodeData.nodeType === "table") {
                 node.toFront({deep: true});
                 this.setState({
@@ -566,6 +569,7 @@ export default class DatabaseWorkspace extends React.Component {
 
                 nodeTable.resize(160, h + hAdd);
 
+                let newColumnName = "new_table_column";
                 let myNodeColumn = this.x6Graph.createNode({
                     width: 140,
                     height: 30,
@@ -580,7 +584,21 @@ export default class DatabaseWorkspace extends React.Component {
                             fill: 'rgba(95,159,255,1)',
                             fontSize: 14,
                             fontWeight: "bold",
-                            text: "new_table_column",
+                            text: newColumnName,
+                        },
+                    },
+                    ports: {
+                        groups: {
+                            groupLeft: {
+                                position: {
+                                    name: "left",
+                                }
+                            },
+                            groupRight: {
+                                position: {
+                                    name: "right",
+                                }
+                            }
                         },
                     },
                 });
@@ -589,6 +607,7 @@ export default class DatabaseWorkspace extends React.Component {
                     x: 0,
                     y: 0,
                     nodeType: "table_column",
+                    columnName: newColumnName,
                 });
 
                 myNodeColumn.position(nodeTable.position().x + 10, nodeTable.position().y + h + hAdd - 40 - hAdd);
@@ -597,6 +616,7 @@ export default class DatabaseWorkspace extends React.Component {
 
                 node.position(nodeTable.position().x + 10, nodeTable.position().y + h + hAdd - 40);
             }
+
             this.x6SetFormItems();
         });
 
@@ -758,7 +778,7 @@ export default class DatabaseWorkspace extends React.Component {
                 this.gDynamic.nodeShadow.attr('label/textAnchor', 'middle')
                 this.gDynamic.nodeShadow.attr('label/textVerticalAnchor', 'top')
                 this.gDynamic.nodeShadow.attr('label/text', 'new_table');
-
+                this.gDynamic.nodeShadow.setData({tableName: "new_table"});
 
                 let myNodeButtonAdd = this.x6Graph.createNode({
                     width: 140,
@@ -2299,7 +2319,6 @@ export default class DatabaseWorkspace extends React.Component {
         }
     };
 
-
     onSelectDbUsersChanged(value) {
 
         this.gCurrent.dbUserId = value;
@@ -2316,6 +2335,53 @@ export default class DatabaseWorkspace extends React.Component {
 
     onSelectColumnDataTypeChanged(v) {
         this.gDynamic.columnDataType = v;
+    }
+
+    //todo <<<<< now >>>>> on select X6 Table Column Data Type changed
+    onSelectX6TableColumnDataTypeChanged(v) {
+        // this.gDynamic.x6TableColumnDataType = v;
+        let nodeType = v;
+        this.gCurrent.node.setData({
+            dataType: v
+        })
+
+        switch(nodeType) {
+            case "int":
+                this.gCurrent.node.addPort({
+                    id: 'portLeft',
+                    group: "groupLeft",
+                    attrs: {
+                        circle: {
+                            connectionCount: 1,
+                            r: 5,
+                            magnet: true,
+                            stroke: '#AFDEFF',
+                            fill: '#FFF',
+                            strokeWidth: 1,
+                        },
+                    },
+                });
+
+                this.gCurrent.node.addPort({
+                    id: 'portRight',
+                    group: "groupRight",
+                    attrs: {
+                        circle: {
+                            connectionCount: 2,
+                            r: 5,
+                            magnet: true,
+                            stroke: '#AFDEFF',
+                            fill: '#FFF',
+                            strokeWidth: 1,
+                        },
+                    },
+                });
+                break
+            default:
+                this.gCurrent.node.removePort("portLeft");
+                this.gCurrent.node.removePort("portRight");
+                break
+        }
     }
 
     onTableUnknownChecked(checkedKeys, info) {
@@ -3886,7 +3952,7 @@ export default class DatabaseWorkspace extends React.Component {
                                         <Form.Item className="box-form-item-input">
                                             {/*<Form.Item name="tableColumnDataType" noStyle><Input/></Form.Item>*/}
                                             <Form.Item name="tableColumnDataType" noStyle>
-                                                <Select options={optionsDataType} />
+                                                <Select options={optionsDataType} onChange={this.onSelectX6TableColumnDataTypeChanged} />
                                             </Form.Item>
                                             <Tooltip placement="topLeft" title="请选择表字段数据类型" arrowPointAtCenter>
                                                 <div className="input-icon"><QuestionCircleOutlined/></div>
