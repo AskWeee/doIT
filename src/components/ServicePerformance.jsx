@@ -190,6 +190,8 @@ export default class ServicePerformance extends React.PureComponent {
 
         this.importExcelKpisBeforeUpload = this.importExcelKpisBeforeUpload.bind(this);
         this.importExcelKpisOnChange = this.importExcelKpisOnChange.bind(this);
+        this.verifySchemaImported = this.verifySchemaImported.bind(this);
+        this.exportSchemas2excel = this.exportSchemas2excel.bind(this);
 
         this.onTreeKpiSchemasSelected = this.onTreeKpiSchemasSelected.bind(this);
         this.onTreeKpiSchemasChecked = this.onTreeKpiSchemasChecked.bind(this);
@@ -202,7 +204,6 @@ export default class ServicePerformance extends React.PureComponent {
         this.onButtonChangeStyleLayoutClicked = this.onButtonChangeStyleLayoutClicked.bind(this);
         this.onButtonSchemasAddClicked = this.onButtonSchemasAddClicked.bind(this);
         this.onButtonSchemasCopyPasteClicked = this.onButtonSchemasCopyPasteClicked.bind(this);
-        this.onButtonSchemasImportClicked = this.onButtonSchemasImportClicked.bind(this);
         this.onButtonSchemasExportClicked = this.onButtonSchemasExportClicked.bind(this);
         this.onButtonSchemasResetClicked = this.onButtonSchemasResetClicked.bind(this);
         this.onButtonKpisAddClicked = this.onButtonKpisAddClicked.bind(this);
@@ -831,7 +832,7 @@ export default class ServicePerformance extends React.PureComponent {
         return myResult;
     }
 
-    //todo >>>>> import indicator form excel
+    // >>>>> import indicator form excel
     doGetExcel() {
         axios.get('data/counter_001.xlsx', {responseType: 'arraybuffer'}).then(res => {
             let wb = XLSX.read(res.data, {type: 'array'});
@@ -1049,7 +1050,7 @@ export default class ServicePerformance extends React.PureComponent {
         })
     };
 
-    //todo >>>>> do Get All
+    // >>>>> do Get All
     doGetAll() {
         axios.all([
             this.doGetKpiDict(),
@@ -1559,7 +1560,7 @@ export default class ServicePerformance extends React.PureComponent {
         });
     }
 
-    //todo <<<< now >>>>> do Add KPI
+    // >>>>> do Add KPI
     doAddKpi(kpi, what) {
         this.restAddKpi(kpi).then((result) => {
             if (result.status === 200) {
@@ -2032,11 +2033,6 @@ export default class ServicePerformance extends React.PureComponent {
         let sid = this.gCurrent.schema.id;
         let schema = lodash.cloneDeep(this.gMap.schemas.get(sid));
         this.doCloneSchema(schema);
-    }
-
-    //todo <<<<< now >>>>> on button Schemas Import clicked
-    onButtonSchemasImportClicked(e) {
-
     }
 
     getCellWidth(value) {
@@ -2937,11 +2933,11 @@ export default class ServicePerformance extends React.PureComponent {
         })
     }
 
+    //todo <<<<< now >>>>> upload and import excel
     importExcelKpisBeforeUpload(file) {
         new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
-                //todo <<<<< now >>>>> upload and import excel
                 try {
                     let data = e.target.result;
                     let wb = XLSX.read(data, {type: "binary"});
@@ -2968,7 +2964,7 @@ export default class ServicePerformance extends React.PureComponent {
                         }
                         let mySchema = new TadKpiSchema();
 
-                        mySchema.schema_id = schema["消息号"];
+                        mySchema.schema_id = schema["消息号"].toString();
                         mySchema.schema_ns = schema["名空间"].toUpperCase();
                         mySchema.schema_zhname = schema["中文名称"].toUpperCase();
                         mySchema.tab_name = schema["对应表名"].toUpperCase();
@@ -2977,6 +2973,7 @@ export default class ServicePerformance extends React.PureComponent {
                         mySchema.sub_class = schema["网元详细分类"];
                         mySchema.interval_flag = schema["采集粒度"];
                         mySchema.counter_tab_name = schema[propNameCounterTabName].toUpperCase();
+                        mySchema.status = "NORMAL";
 
                         schemas.push(mySchema);
                     });
@@ -3047,9 +3044,26 @@ export default class ServicePerformance extends React.PureComponent {
                         };
                     }
 
+                    let gMapSchemas = Array.from(this.gMap.schemas.values());
+                    let errorSchemas = [];
+
                     schemas.forEach((itemSchema) => {
-                        this.doAddSchema(itemSchema, "import");
-                    })
+                        itemSchema.status = this.verifySchemaImported(gMapSchemas, itemSchema);
+                        console.log(itemSchema.status);
+                        if (itemSchema.status === "NORMAL") {
+                            this.doAddSchema(itemSchema, "import");
+                        } else if (itemSchema.status === "DUPLICATE") {
+                            errorSchemas.push(itemSchema);
+                        } else if (itemSchema.status === "ERROR_COUNTER_FIELD") {
+
+                        } else if (itemSchema.status === "ERROR_KPI_FIELD") {
+
+                        } else if (itemSchema.status === "ERROR_KPI_EXP") {
+
+                        }
+                    });
+
+                    this.exportSchemas2excel(errorSchemas);
 
                     resolve();
                 } catch (e) {
@@ -3072,6 +3086,170 @@ export default class ServicePerformance extends React.PureComponent {
             console.log("upload failed.");
         }
     }
+
+    verifySchemaImported(schemas, schema) {
+        let myResult = schema.status;
+
+        for(let i = 0; i < schemas.length; i++) {
+            if (schemas[i].schema_id === schema.schema_id) {
+                myResult = "DUPLICATE";
+                break
+            }
+        }
+
+        return myResult
+    }
+
+    exportSchemas2excel(schemas) {
+        let worksheetValues = [[]];
+        let worksheetNames = ['消息号与名空间的对应'];
+        let worksheetHeaders = [
+            ["消息号", "名空间", "中文名称", "对应表名", "厂家ID", "网元类型", "网元详细分类", "采集粒度", "COUNTER_TAB_NAME"],
+            ["原始指标名", "原始字段", "原始字段名称", "   ", "KPI指标名", "KPI指标", "算法", "KPI_ID", "是否告警", "数据格式", "最小值", "最大值"]
+        ];
+        let strSqlCreateCounterTable = "";
+        let strSqlCreateKpiTable = "";
+        let strSqlInsertKpiSchema = "";
+        let strSqlInsertKpiCounter = "";
+        let strSqlInsertKpi = "";
+
+        let iSchema = 1;
+        schemas.forEach((mySchema) => {
+            let dataSchema = ["", "", "", "", "", "", "", "", ""];
+
+            dataSchema[0] = mySchema.schema_id;
+            dataSchema[1] = mySchema.schema_ns;
+            dataSchema[2] = mySchema.schema_zhname;
+            dataSchema[3] = mySchema.tab_name;
+            dataSchema[4] = mySchema.vendor_id;
+            dataSchema[5] = mySchema.object_class;
+            dataSchema[6] = mySchema.sub_class;
+            dataSchema[7] = mySchema.interval_flag;
+            dataSchema[8] = mySchema.counter_tab_name;
+
+            worksheetValues[0].push(dataSchema);
+
+            worksheetValues[iSchema] = [];
+            let sheetName = mySchema.schema_ns;
+            if ((sheetName !== null) && (sheetName !== undefined)) {
+                let i = sheetName.lastIndexOf("/");
+                if (i >= 0) {
+                    sheetName = sheetName.substr(i + 1, sheetName.length - i);
+                }
+            } else {
+                sheetName = mySchema.schema_id;
+            }
+
+            worksheetNames[iSchema] = iSchema.toString().padStart(2, "0") + "_" + sheetName;
+
+            let cKpis = mySchema.kpis2.length;
+            let cCounters = mySchema.counters2.length;
+            let cMax = cKpis > cCounters ? cKpis : cCounters;
+
+            let data = [mySchema.schema_ns, "", "", "", "", "", "", "", "", "", "", ""];
+            worksheetValues[iSchema].push(data);
+            for (let i = 0; i < cMax; i++) {
+                let data = ["", "", "", "", "", "", "", "", "", "", "", ""];
+                if (i < cCounters) {
+                    let myCounter = mySchema.counters2[i];
+
+                    data[0] = myCounter.counter_zhname;
+                    data[1] = myCounter.counter_enname;
+                    data[2] = myCounter.counter_field;
+                }
+
+                if (i < cKpis) {
+                    let myKpi = mySchema.kpis2[i];
+
+                    data[4] = myKpi.kpi_zhname;
+                    data[5] = myKpi.kpi_enname;
+                    data[6] = myKpi.kpi_exp;
+                    data[7] = myKpi.kpi_id;
+                    data[8] = myKpi.kpi_alarm;
+                    data[9] = myKpi.kpi_format;
+                    data[10] = myKpi.kpi_min_value;
+                    data[11] = myKpi.kpi_max_value;
+                }
+
+                worksheetValues[iSchema].push(data);
+            }
+            iSchema++;
+        });
+
+        try {
+            if (!XLSX) {
+                console.log('exportTo: the plug-in "XLSX" is undefined.');
+                return
+            }
+            if (!worksheetValues || worksheetValues.length === 0) {
+                console.log('exportTo: data is null or undefined.');
+                return
+            }
+
+            let myWorkbook = XLSX.utils.book_new();
+
+            let i = 0;
+            let fitWidth = true;
+            worksheetNames.forEach((wsName) => {
+                if (i === 0)
+                    worksheetValues[i].unshift(worksheetHeaders[0]);
+                else
+                    worksheetValues[i].splice(1, 0, worksheetHeaders[1]);
+
+                let myWorksheet = XLSX.utils.json_to_sheet(worksheetValues[i], {skipHeader: true});
+
+                if (fitWidth) {
+                    let colWidths = [];
+                    let colNames = worksheetValues[i][0]; // Object.keys(data[0])  所有列的名称数组
+
+                    // 计算每一列的所有单元格宽度
+                    // 先遍历行
+                    worksheetValues[i].forEach((row) => {
+                        // 列序号
+                        let index = 0
+                        // 遍历列
+                        for (const key in row) {
+                            if (colWidths[index] == null) colWidths[index] = []
+
+                            switch (typeof row[key]) {
+                                case 'string':
+                                case 'number':
+                                case 'boolean':
+                                    colWidths[index].push(this.getCellWidth(row[key]))
+                                    break
+                                case 'object':
+                                case 'function':
+                                    colWidths[index].push(0)
+                                    break
+                                default:
+                                    break
+                            }
+                            index++
+                        }
+                    })
+
+                    myWorksheet['!cols'] = []
+                    // 每一列取最大值最为列宽
+                    colWidths.forEach((widths, index) => {
+                        // 计算列头的宽度
+                        widths.push(this.getCellWidth(colNames[index]))
+                        // 设置最大值为列宽
+                        myWorksheet['!cols'].push({wch: Math.max(...widths)})
+                    })
+                }
+
+                XLSX.utils.book_append_sheet(myWorkbook, myWorksheet, worksheetNames[i]);
+                i++;
+            });
+
+            let strNow = moment().format("YYYYMMDDHHmmss");
+            let fileName = "kpis_" + strNow + '.xlsx';
+            XLSX.writeFile(myWorkbook, fileName);
+        } catch (error) {
+            console.error('exportTo: ', error)
+        }
+    }
+
 
     // uploadKpisProps = {
     //     name: 'file',
@@ -3192,7 +3370,7 @@ export default class ServicePerformance extends React.PureComponent {
                                         accept=".xls,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                                         beforeUpload={this.importExcelKpisBeforeUpload}
                                         onChange={this.importExcelKpisBeforeUpload}>
-                                    <Button size={"small"} type={"primary"} icon={<CloudUploadOutlined/>} onClick={this.onButtonSchemasImportClicked}>导入</Button>
+                                    <Button size={"small"} type={"primary"} icon={<CloudUploadOutlined/>}>导入</Button>
                                 </Upload>
                                 <Button size={"small"} type={"primary"} icon={<CloudDownloadOutlined/>} onClick={this.onButtonSchemasExportClicked}>导出</Button>
                             </div>
