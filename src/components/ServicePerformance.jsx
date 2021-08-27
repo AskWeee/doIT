@@ -3056,12 +3056,18 @@ export default class ServicePerformance extends React.PureComponent {
 
     //todo <<<<< now >>>>> upload and import excel
     importExcelKpisBeforeUpload(file) {
+        let worksheetHeaders = [
+            ["消息号", "名空间", "中文名称", "对应表名", "厂家ID", "网元类型", "网元详细分类", "采集粒度", "COUNTER_TAB_NAME"],
+            ["原始指标名", "原始字段", "原始字段名称", "   ", "KPI指标名", "KPI指标", "算法", "KPI_ID", "是否告警", "数据格式", "最小值", "最大值"]
+        ];
+
         new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
                     let data = e.target.result;
                     let wb = XLSX.read(data, {type: "binary"});
+                    if (wb.SheetNames.length < 3) reject("文件格式不正确-SHEET数量少于3");
                     let dsSchemas = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[2]]);
                     let isFirst = true;
                     let propertyNames = [];
@@ -3071,6 +3077,11 @@ export default class ServicePerformance extends React.PureComponent {
                         if (isFirst) {
                             propertyNames = Object.keys(schema);
                             isFirst = false;
+                            for(let j = 0; j < propertyNames.length; j++) {
+                                if (!worksheetHeaders[0].includes(propertyNames[j].toUpperCase())) {
+                                    reject("文件格式不正确-表头字段-" + propertyNames[j]);
+                                }
+                            }
                         }
 
                         let propNameVendorId = "厂家ID";
