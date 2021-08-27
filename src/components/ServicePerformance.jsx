@@ -191,6 +191,7 @@ export default class ServicePerformance extends React.PureComponent {
         this.importExcelKpisBeforeUpload = this.importExcelKpisBeforeUpload.bind(this);
         this.importExcelKpisOnChange = this.importExcelKpisOnChange.bind(this);
         this.verifySchemaImported = this.verifySchemaImported.bind(this);
+        this.verifyKpiExpression = this.verifyKpiExpression.bind(this);
         this.exportSchemas2excel = this.exportSchemas2excel.bind(this);
 
         this.onTreeKpiSchemasSelected = this.onTreeKpiSchemasSelected.bind(this);
@@ -2559,6 +2560,126 @@ export default class ServicePerformance extends React.PureComponent {
         });
     }
 
+
+    verifyKpiExpression(exp, counters) {
+        let myResult = {
+            isFine: true,
+            data: []
+        }
+
+        let counterNames = [];
+        counters.forEach((itemCounter) => {
+            counterNames.push(itemCounter.counter_enname);
+        })
+
+        if (exp === null) return false;
+        if (exp.trim() === "" || exp === "指标计算表达式") return false;
+
+        // 自动将中文符号，转为英文符号：( ) . + - * /
+        // 自动将连写符号，转为单个符号：. + - * /
+        // 限定有效字符，可用：( ) . + - * / a-z 0-9 _
+        let hasError = false;
+        let expVarNames = [];
+        let expTestNew = "";
+        exp = exp.replace(/^\s+|\s+$/g, "");                // 去除前后端空格
+        exp = exp.replace(/[\w.*]*\w[.]*/g, "__KV__$&");    // 标识counter名称，范例：((nmosdb....table_name.field01+nmosdb.test.field + a01 +abce_test 0.0.5) ..100. 100..200))
+        exp = exp.replace(/[.]/g, "__KD__");                // 标识符号：“.”
+        exp = exp.replace(/%/g, "/100");                    // 替换%
+        exp = exp.replace(/\s+/g, "");                      // 清除内部空格
+        let arrExp = exp.match(/(\W?\w*)/g);                // 分解出代码段
+        arrExp.pop();
+        let kIndex = 0;
+        arrExp.map((item, index) => {
+            let ov = item.split("__KV__");
+            let operator = ov[0];
+
+            switch (operator) {
+                case "(":
+                    kIndex++;
+                    break
+                case ")":
+                    if (kIndex > 0) {
+                        kIndex--;
+                    } else {
+                        kIndex = 0;
+                        hasError = true;
+                    }
+                    break
+                default:
+                    break
+            }
+            if (ov.length === 1) {
+                expTestNew += operator;
+            } else if (ov.length === 2) {
+                let varName = ov[1].replace(/__KD__/g, ".");
+
+                if ((index + 1) < arrExp.length) {
+                    if (!(arrExp[index + 1].startsWith("+") ||
+                        arrExp[index + 1].startsWith("-") ||
+                        arrExp[index + 1].startsWith("*") ||
+                        arrExp[index + 1].startsWith("/") ||
+                        arrExp[index + 1].startsWith(")"))) {
+                        console.log("error code = 1");
+                        hasError = true;
+                    }
+                }
+
+                if (this.isNumber(varName)) {
+                    varName = varName.replace(/\./g, "__KDN__");
+                } else {
+                    if (varName.trim() !== "") {
+                        if (!counterNames.includes(varName)) {
+                            console.log("(" + varName + ") error code = 不存在");
+                            hasError = true;
+                            myResult.data.push(varName);
+                        } else {
+                            expVarNames.push(varName);
+                        }
+                    }
+                }
+
+                expTestNew += operator + varName;
+                varName = varName.replace(/__KDN__/g, ".");
+            } else {
+                console.log("error code = 2");
+                hasError = true;
+                let v = "";
+                for (let i = 1; i < ov.length; i++) {
+                    v += ov[i] + " ";
+                }
+                v = v.replace(/\s+$/, "");
+                v = v.replace(/__KD__/g, ".");
+
+                expTestNew += operator + v;
+            }
+        })
+        if (!hasError) {
+            try {
+                let _dynamicTest;
+                let strLets = "() => {\n";
+
+                expTestNew = expTestNew.replace(/\./g, "_");
+
+                expVarNames.forEach((item) => {
+                    if (!this.isNumber(item)) {
+                        strLets += "let " + item.replace(/\./g, "_") + " = 1;\n";
+                    }
+                });
+                expTestNew = strLets + "let test = " + expTestNew + ";\nreturn test;\n}";
+                expTestNew = expTestNew.replace(/__KDN__/g, ".");
+
+                _dynamicTest = eval(expTestNew);
+                _dynamicTest();
+            } catch (err) {
+                myResult.isFine = false;
+            }
+        } else {
+            myResult.isFine = false;
+        }
+
+        return myResult
+    }
+
     // >>>>> 复制到剪贴板
     doCopyToClipboard(text) {
         let input = document.getElementById("shadowInputForClipboard");
@@ -2964,16 +3085,16 @@ export default class ServicePerformance extends React.PureComponent {
                         }
                         let mySchema = new TadKpiSchema();
 
-                        mySchema.schema_id = schema["消息号"].toString();
-                        mySchema.schema_ns = schema["名空间"].toUpperCase();
-                        mySchema.schema_zhname = schema["中文名称"].toUpperCase();
-                        mySchema.tab_name = schema["对应表名"].toUpperCase();
+                        mySchema.schema_id = schema["消息号"].toString().trim();
+                        mySchema.schema_ns = schema["名空间"].toUpperCase().trim();
+                        mySchema.schema_zhname = schema["中文名称"].toUpperCase().trim();
+                        mySchema.tab_name = schema["对应表名"].toUpperCase().trim();
                         mySchema.vendor_id = schema[propNameVendorId];
                         mySchema.object_class = schema["网元类型"];
                         mySchema.sub_class = schema["网元详细分类"];
                         mySchema.interval_flag = schema["采集粒度"];
-                        mySchema.counter_tab_name = schema[propNameCounterTabName].toUpperCase();
-                        mySchema.status = "NORMAL";
+                        mySchema.counter_tab_name = schema[propNameCounterTabName].toUpperCase().trim();
+                        mySchema.status = { code: "NORMAL", data: [] };
 
                         schemas.push(mySchema);
                     });
@@ -3008,29 +3129,29 @@ export default class ServicePerformance extends React.PureComponent {
 
                                 if ((strCounterZhName !== null) && (strCounterZhName !== "null")) {
                                     let counter = new TadKpiCounter();
-                                    counter.counter_zhname = strCounterZhName.toUpperCase();
-                                    counter.counter_enname = strCounterEnName.toUpperCase();
-                                    counter.counter_field = strCounterField.toUpperCase();
+                                    counter.counter_zhname = strCounterZhName.toUpperCase().trim();
+                                    counter.counter_enname = strCounterEnName.toUpperCase().trim();
+                                    counter.counter_field = strCounterField.toUpperCase().trim();
                                     counters.push(counter);
                                 }
 
                                 if ((strKpiZhName !== null) && (strKpiZhName !== "null")) {
                                     let kpi = new TadKpi();
-                                    kpi.kpi_zhname = strKpiZhName.toUpperCase();
-                                    kpi.kpi_enname = strKpiEnName.toUpperCase();
-                                    kpi.kpi_exp = strKpiExp.toUpperCase();
-                                    kpi.kpi_id = strKpiId;
-                                    kpi.kpi_alarm = strKpiAlarm === "是" ? 1 : 0;
-                                    kpi.kpi_format = strKpiFormat.toUpperCase();
-                                    kpi.kpi_min_value = strKpiMinValue;
-                                    kpi.kpi_max_value = strKpiMaxValue;
+                                    kpi.kpi_zhname = strKpiZhName.toUpperCase().trim();
+                                    kpi.kpi_enname = strKpiEnName.toUpperCase().trim();
+                                    kpi.kpi_exp = strKpiExp.toUpperCase().trim();
+                                    kpi.kpi_id = strKpiId.trim();
+                                    kpi.kpi_alarm = strKpiAlarm.trim() === "是" ? 1 : 0;
+                                    kpi.kpi_format = strKpiFormat.toUpperCase().trim();
+                                    kpi.kpi_min_value = strKpiMinValue.trim();
+                                    kpi.kpi_max_value = strKpiMaxValue.trim();
                                     kpi.kpi_field = "FIELD" + kpi.kpi_id;
                                     kpis.push(kpi);
                                 }
                             }
                         }
 
-                        for(let j = 0; j < schemas.length; j++) {
+                        for (let j = 0; j < schemas.length; j++) {
                             if (schemas[j].schema_ns === sNs) {
                                 counters.forEach((itemCounter) => {
                                     schemas[j].counters2.push(itemCounter);
@@ -3041,29 +3162,46 @@ export default class ServicePerformance extends React.PureComponent {
                                 });
                                 break
                             }
-                        };
+                        }
+                        ;
                     }
 
                     let gMapSchemas = Array.from(this.gMap.schemas.values());
+                    let normalSchemas = [];
+                    let duplicateSchemas = [];
                     let errorSchemas = [];
 
                     schemas.forEach((itemSchema) => {
                         itemSchema.status = this.verifySchemaImported(gMapSchemas, itemSchema);
-                        console.log(itemSchema.status);
-                        if (itemSchema.status === "NORMAL") {
+
+                        if (itemSchema.status.code === "NORMAL") {
+                            normalSchemas.push(itemSchema);
                             this.doAddSchema(itemSchema, "import");
-                        } else if (itemSchema.status === "DUPLICATE") {
+                        } else if (itemSchema.status.code === "DUPLICATE") {
+                            duplicateSchemas.push(itemSchema);
+                        }  else {
+                            if (itemSchema.status.code === "ERROR_COUNTER_FIELD") {
+                                console.log(itemSchema.status.data)
+                            }
+                            if (itemSchema.status.code === "ERROR_KPI_FIELD") {
+                                console.log(itemSchema.status.data)
+                            }
+                            if (itemSchema.status.code === "ERROR_KPI_EXP") {
+                                console.log(itemSchema.status.data)
+                            }
                             errorSchemas.push(itemSchema);
-                        } else if (itemSchema.status === "ERROR_COUNTER_FIELD") {
-
-                        } else if (itemSchema.status === "ERROR_KPI_FIELD") {
-
-                        } else if (itemSchema.status === "ERROR_KPI_EXP") {
-
                         }
                     });
 
-                    this.exportSchemas2excel(errorSchemas);
+                    if (normalSchemas.length > 0) {
+                        this.exportSchemas2excel(normalSchemas);
+                    }
+                    if (duplicateSchemas.length > 0) {
+                        this.exportSchemas2excel(duplicateSchemas);
+                    }
+                    if (errorSchemas.length > 0) {
+                        this.exportSchemas2excel(errorSchemas);
+                    }
 
                     resolve();
                 } catch (e) {
@@ -3087,15 +3225,25 @@ export default class ServicePerformance extends React.PureComponent {
         }
     }
 
+    //todo <<<<< now >>>>> Verify Schema Imported
     verifySchemaImported(schemas, schema) {
         let myResult = schema.status;
 
-        for(let i = 0; i < schemas.length; i++) {
+        for (let i = 0; i < schemas.length; i++) {
             if (schemas[i].schema_id === schema.schema_id) {
-                myResult = "DUPLICATE";
+                myResult.code = "DUPLICATE";
                 break
             }
         }
+
+        let verifyResult;
+        schema.kpis2.forEach((itemKpi) => {
+            verifyResult = this.verifyKpiExpression(itemKpi.kpi_exp, schema.counters2)
+            if (!verifyResult.isFine) {
+                myResult.code = "ERROR_KPI_EXP";
+                myResult.data.push([itemKpi, verifyResult.data]);
+            }
+        });
 
         return myResult
     }
