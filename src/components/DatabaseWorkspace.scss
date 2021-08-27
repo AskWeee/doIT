@@ -28,7 +28,7 @@ $debugBorderColor2: green;
 .DatabaseWorkspace {
     overflow: hidden;
     display: grid;
-    grid-template-columns: 1fr 1fr 3fr;
+    grid-template-columns: 1fr 2fr 4fr;
     background: darkgray;
     border: 1px solid rgba(55, 55, 55, 1);
     margin: 5px;
@@ -223,7 +223,7 @@ $debugBorderColor2: green;
                                 background: rgba(255, 255, 255, 1);
                                 margin: 0 0 3px 0;
                                 display: grid;
-                                grid-template-columns: 1fr auto auto auto;
+                                grid-template-columns: 1fr auto auto auto auto;
 
                                 .BoxSearch {
                                     margin: 3px 2px 3px 3px;
@@ -362,7 +362,7 @@ $debugBorderColor2: green;
         .BoxContent {
             border: $debugBorderWidth solid red;
             display: grid;
-            grid-template-columns: 180px 1fr 300px;
+            grid-template-columns: 100px 1fr 300px;
             grid-gap: 3px;
             margin: 3px;
 

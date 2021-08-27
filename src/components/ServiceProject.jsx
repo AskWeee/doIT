@@ -2592,7 +2592,7 @@ export default class ServiceProject extends React.PureComponent {
     onButtonAddProjectClicked(e) {
         let commTree = new TadCommTree();
 
-        if (this.gCurrent.project !== null) {
+        if ((this.gCurrent.project !== null) && (this.gCurrent.project !== undefined)) {
             commTree.node_parent_id = this.gCurrent.project.id;
         } else {
             commTree.node_parent_id = -1;

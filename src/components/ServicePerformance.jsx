@@ -3107,11 +3107,6 @@ export default class ServicePerformance extends React.PureComponent {
             ["消息号", "名空间", "中文名称", "对应表名", "厂家ID", "网元类型", "网元详细分类", "采集粒度", "COUNTER_TAB_NAME"],
             ["原始指标名", "原始字段", "原始字段名称", "   ", "KPI指标名", "KPI指标", "算法", "KPI_ID", "是否告警", "数据格式", "最小值", "最大值"]
         ];
-        let strSqlCreateCounterTable = "";
-        let strSqlCreateKpiTable = "";
-        let strSqlInsertKpiSchema = "";
-        let strSqlInsertKpiCounter = "";
-        let strSqlInsertKpi = "";
 
         let iSchema = 1;
         schemas.forEach((mySchema) => {

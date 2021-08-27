@@ -6,7 +6,7 @@ import axios from "axios";
 import moment from 'moment';
 import {Button, Select, Tree, Table, Input, Tabs, Checkbox, Form, Tooltip} from 'antd'
 import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, PlusSquareOutlined, QuestionCircleOutlined} from '@ant-design/icons'
-import {Graph, Addon, Shape} from "@antv/x6";
+import {Graph, Addon, Shape, DataUri} from "@antv/x6";
 import KColumnTitle from "./KColumnTitle";
 import TadTable from "../entity/TadTable";
 import TadTableColumn from '../entity/TadTableColumn'
@@ -15,6 +15,9 @@ import TadTableIndexColumn from "../entity/TadTableIndexColumn";
 import TadTablePartition from "../entity/TadTablePartition";
 import TadTableRelation from "../entity/TadTableRelation";
 import EditableCellTool from "./EditableCellTool";
+import TadTableEr from "../entity/TadTableEr";
+import TadTableErTree from "../entity/TadTableErTree";
+import TadTableErTable from "../entity/TadTableErTable";
 
 const {TabPane} = Tabs;
 const {Stencil} = Addon;
@@ -148,10 +151,19 @@ export default class DatabaseWorkspace extends React.Component {
             tablePropertiesScrollY: 400,
             isTableNameEditing: false,
             tableColumnEditingKey: null,
+            isTableErTreeEditing: false,
+            treeDataTableErs: [],
         }
 
         //todo >>>>> bind
         this.doInit = this.doInit.bind(this);
+
+        this.restGetTableErTables = this.restGetTableErTables.bind(this);
+        this.restAddTableErTable = this.restAddTableErTable.bind(this);
+        this.restDeleteTableErTable = this.restDeleteTableErTable.bind(this);
+        this.doGetTableErTables = this.doGetTableErTables.bind(this);
+        this.doAddTableErTable = this.doAddTableErTable.bind(this);
+        this.doDeleteTableErTable = this.doDeleteTableErTable.bind(this);
 
         this.restAddTable = this.restAddTable.bind(this);
         this.restUpdateTable = this.restUpdateTable.bind(this);
@@ -165,13 +177,29 @@ export default class DatabaseWorkspace extends React.Component {
         this.restAddTableIndexColumn = this.restAddTableIndexColumn.bind(this);
         this.restUpdateTableIndexColumn = this.restUpdateTableIndexColumn.bind(this);
         this.restDeleteTableIndexColumn = this.restDeleteTableIndexColumn.bind(this);
+        this.restGetTableEr = this.restGetTableEr.bind(this);
+        this.restAddTableEr = this.restAddTableEr.bind(this);
+        this.restUpdateTableEr = this.restUpdateTableEr.bind(this);
+        this.restDeleteTableEr = this.restDeleteTableEr.bind(this);
+        this.restGetTableErTrees = this.restGetTableErTrees.bind(this);
+        this.restAddTableErTree = this.restAddTableErTree.bind(this);
+        this.restUpdateTableErTree = this.restUpdateTableErTree.bind(this);
+        this.restDeleteTableErTree = this.restDeleteTableErTree.bind(this);
 
         this.x6Move = this.x6Move.bind(this);
         this.x6Update = this.x6Update.bind(this);
         this.x6AddEntityTable = this.x6AddEntityTable.bind(this);
         this.x6SetFormItems = this.x6SetFormItems.bind(this);
         this.onFormX6PropertiesFinish = this.onFormX6PropertiesFinish.bind(this);
+        this.onButtonX6ToPng = this.onButtonX6ToPng.bind(this);
+        this.onButtonX6Save = this.onButtonX6Save.bind(this);
+        this.uiUpdateTableErTree = this.uiUpdateTableErTree.bind(this);
+        this.getCommTreeNode = this.getCommTreeNode.bind(this);
 
+        this.doGetTableErTrees = this.doGetTableErTrees.bind(this);
+        this.doAddTableErTree = this.doAddTableErTree.bind(this);
+        this.doUpdateTableErTree = this.doUpdateTableErTree.bind(this);
+        this.doDeleteTableErTree = this.doDeleteTableErTree.bind(this);
         this.doAddTable = this.doAddTable.bind(this);
         this.doUpdateTable = this.doUpdateTable.bind(this);
         this.doDeleteTable = this.doDeleteTable.bind(this);
@@ -184,6 +212,10 @@ export default class DatabaseWorkspace extends React.Component {
         this.doAddTableIndexColumn = this.doAddTableIndexColumn.bind(this);
         this.doUpdateTableIndexColumn = this.doUpdateTableIndexColumn.bind(this);
         this.doDeleteTableIndexColumn = this.doDeleteTableIndexColumn.bind(this);
+        this.doGetTableEr = this.doGetTableEr.bind(this);
+        this.doAddTableEr = this.doAddTableEr.bind(this);
+        this.doUpdateTableEr = this.doUpdateTableEr.bind(this);
+        this.doDeleteTableEr = this.doDeleteTableEr.bind(this);
 
         this.doNewGetAll = this.doNewGetAll.bind(this);
         this.doGetProductRelations = this.doGetProductRelations.bind(this);
@@ -260,6 +292,9 @@ export default class DatabaseWorkspace extends React.Component {
         this.onButtonErDiagramClicked = this.onButtonErDiagramClicked.bind(this);
         this.onButtonX6FormConfirmClicked = this.onButtonX6FormConfirmClicked.bind(this);
         this.onButtonX6FormCancelClicked = this.onButtonX6FormCancelClicked.bind(this);
+        this.onButtonAddTableErDirClicked = this.onButtonAddTableErDirClicked.bind(this);
+        this.onButtonAddTableErClicked = this.onButtonAddTableErClicked.bind(this);
+        this.onButtonAddTable2ErDiagramClicked = this.onButtonAddTable2ErDiagramClicked.bind(this);
 
         this.onInputIndexNameChanged = this.onInputIndexNameChanged.bind(this);
         this.onInputPartitionNameChanged = this.onInputPartitionNameChanged.bind(this);
@@ -704,14 +739,14 @@ export default class DatabaseWorkspace extends React.Component {
         this.x6Graph.centerContent();
 
         this.x6Stencil = new Stencil({
-            title: '组件库',
+            // title: '组件库',
             target: this.x6Graph,
-            collapsable: true,
-            stencilGraphWidth: 180,
+            // collapsable: true,
+            stencilGraphWidth: 100,
             stencilGraphHeight: 120,
             layoutOptions: {
                 columns: 1,
-                columnWidth: 180,
+                columnWidth: 100,
                 rowHeight: 50,
                 center: true,
                 dx: 0,
@@ -721,10 +756,6 @@ export default class DatabaseWorkspace extends React.Component {
                 {
                     name: 'group1',
                     title: '库表对象',
-                },
-                {
-                    name: 'group2',
-                    title: '业务模板',
                 },
             ],
             getDragNode: (node) => {
@@ -841,11 +872,11 @@ export default class DatabaseWorkspace extends React.Component {
         this.gRef.x6StencilContainerBox.current.appendChild(this.x6Stencil.container);
 
         const rTable = new Rect({
-            width: 120,
+            width: 60,
             height: 40,
             attrs: {
                 body: {
-                    fill: '#7FCFFF',
+                    fill: '#AFAFAF',
                     stroke: '#4B4A67',
                     strokeWidth: 1,
                 },
@@ -858,56 +889,7 @@ export default class DatabaseWorkspace extends React.Component {
         })
         rTable.setData({nodeType: "table"});
 
-        const rView = new Rect({
-            width: 120,
-            height: 40,
-            attrs: {
-                body: {
-                    fill: '#7FCFFF',
-                    stroke: '#4B4A67',
-                    strokeWidth: 1,
-                },
-                text: {
-                    text: '视图',
-                    fill: 'black',
-                    fontWeight: "bold",
-                },
-            },
-        })
-        rView.setData({nodeType: "view"});
-
-        const rbUsers = new Rect({
-            width: 120,
-            height: 40,
-            attrs: {
-                rect: {
-                    fill: '#3FAFEF',
-                    stroke: '#4B4A67',
-                    strokeWidth: 1
-                },
-                text: {
-                    text: '组表-用户管理', fill: 'black'
-                },
-            },
-        })
-
-        const rbTree = new Rect({
-            width: 120,
-            height: 40,
-            attrs: {
-                rect: {
-                    fill: '#3FAFEF',
-                    stroke: '#4B4A67',
-                    strokeWidth: 1
-                },
-                text: {
-                    text: '单表-树结构', fill: 'black'
-                },
-            },
-        })
-
-        this.x6Stencil.load([rTable, rView], 'group1')
-        this.x6Stencil.load([rbUsers, rbTree], 'group2')
+        this.x6Stencil.load([rTable], 'group1')
     }
 
     x6Move() {
@@ -1113,20 +1095,197 @@ export default class DatabaseWorkspace extends React.Component {
         return myNode
     }
 
+    onButtonX6ToPng(e) {
+        this.x6Graph.toPNG((dataUri) => {
+            DataUri.downloadDataUri(dataUri, "x6ErInstance.png");
+        }, {
+            padding: {
+                top: 20,
+                right: 20,
+                bottom: 20,
+                left: 20
+            }
+        })
+    }
+
+    //todo <<<<< now >>>>> on button X6 Save clicked
+    onButtonX6Save(e) {
+        this.myJson = this.x6Graph.toJSON();
+        let strJson = JSON.stringify(this.myJson);
+        let myTableEr = new TadTableEr();
+        myTableEr.er_id = 3;
+        myTableEr.er_content = strJson;
+        // this.doAddTableEr(myTableEr);
+        this.doUpdateTableEr(myTableEr);
+    }
+
+    //todo <<<<< now >>>>> on button Add Table Er Dir clicked
+    onButtonAddTableErDirClicked(e) {
+        let erTree = new TadTableErTree();
+
+        if ((this.gCurrent.erTreeNode !== null) && (this.gCurrent.erTreeNode !== undefined)) {
+            if (this.gCurrent.erTreeNode.nodeType !== "er_dir") return
+            erTree.node_parent_id = this.gCurrent.erTreeNode.id;
+        } else {
+            erTree.node_parent_id = -1;
+        }
+
+        erTree.node_zhname = "新增目录";
+        erTree.node_enname = "newErDir";
+        erTree.node_type = "er_dir";
+
+        this.doAddTableErTree(erTree);
+    }
+
+    //todo <<<<< nwo >>>>> on button Add Table 2 Er Dialog clicked
+    onButtonAddTable2ErDiagramClicked(e) {
+        let erTable = new TadTableErTable();
+
+        if ((this.gCurrent.erTreeNode !== null) && (this.gCurrent.erTreeNode !== undefined)) {
+            if (this.gCurrent.erTreeNode.nodeType === "er_diagram") {
+                erTable.er_id = this.gCurrent.erTreeNode.id;
+                erTable.table_id = this.gCurrent.tableId;
+
+                this.doAddTableErTable(erTable);
+            }
+        }
+    }
+
+    onButtonAddTableErClicked(e) {
+        let erTree = new TadTableErTree();
+
+        if ((this.gCurrent.erTreeNode !== null) && (this.gCurrent.erTreeNode !== undefined)) {
+            if (this.gCurrent.erTreeNode.nodeType !== "er_dir") return
+
+            erTree.node_parent_id = this.gCurrent.erTreeNode.id;
+        } else {
+            erTree.node_parent_id = -1;
+        }
+
+        erTree.node_zhname = "新增ER图";
+        erTree.node_enname = "newErDiagram";
+        erTree.node_type = "er_diagram";
+
+        this.doAddTableErTree(erTree);
+    }
+
+    restGetTableErTables() {
+        let params = {};
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_er_tables",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+    restAddTableErTable(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_er_table",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+    restDeleteTableErTable(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table_er_table",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+    doGetTableErTables(params) {
+        this.restGetTableErTables(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+    doAddTableErTable(params) {
+        this.restAddTableErTable(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    result.data.data.id = result.data.data.table_id;
+                    result.data.data.node_zhname = this.gMap.tables.get(result.data.data.table_id).table_name;
+                    result.data.data.node_type = "er_table";
+                    this.uiUpdateTableErTree(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+    doDeleteTableErTable(params) {
+        this.restDeleteTableErTable(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    restGetTableErTrees() {
+        let params = {};
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_er_trees",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+    restAddTableErTree(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_er_tree",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+    restUpdateTableErTree(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/update_table_er_tree",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+    restDeleteTableErTree(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table_er_tree",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
     restAddTable(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table",
             params,
             {headers: {'Content-Type': 'application/json'}})
     }
-
     restUpdateTable(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/update_table",
             params,
             {headers: {'Content-Type': 'application/json'}})
     }
-
     restDeleteTable(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+    restGetTableEr(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_er",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restAddTableEr(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_er",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+    restUpdateTableEr(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/update_table_er",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+    restDeleteTableEr(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table_er",
             params,
             {headers: {'Content-Type': 'application/json'}})
     }
@@ -1136,13 +1295,11 @@ export default class DatabaseWorkspace extends React.Component {
             params,
             {headers: {'Content-Type': 'application/json'}})
     }
-
     restUpdateTableColumn(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/update_table_column",
             params,
             {headers: {'Content-Type': 'application/json'}})
     }
-
     restDeleteTableColumn(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table_column",
             params,
@@ -1154,13 +1311,11 @@ export default class DatabaseWorkspace extends React.Component {
             params,
             {headers: {'Content-Type': 'application/json'}})
     }
-
     restUpdateTableIndex(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/update_table_index",
             params,
             {headers: {'Content-Type': 'application/json'}})
     }
-
     restDeleteTableIndex(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table_index",
             params,
@@ -1172,13 +1327,11 @@ export default class DatabaseWorkspace extends React.Component {
             params,
             {headers: {'Content-Type': 'application/json'}})
     }
-
     restUpdateTableIndexColumn(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/update_table_index_column",
             params,
             {headers: {'Content-Type': 'application/json'}})
     }
-
     restDeleteTableIndexColumn(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table_index_column",
             params,
@@ -1577,6 +1730,181 @@ export default class DatabaseWorkspace extends React.Component {
                 this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
             }
         });
+    }
+
+    doGetTableEr(params) {
+        this.restGetTableEr(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doAddTableEr(params) {
+        this.restAddTableEr(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doUpdateTableEr(params) {
+        this.restUpdateTableEr(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doDeleteTableEr(params) {
+        this.restDeleteTableEr(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doGetTableErTrees(params) {
+        this.restGetTableErTrees(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doAddTableErTree(params) {
+        this.restAddTableErTree(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateTableErTree(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doUpdateTableErTree(params) {
+        this.restUpdateTableErTree(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doDeleteTableErTree(params) {
+        this.restDeleteTableErTree(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    getCommTreeNode(treeNodes, id, uiTree) {
+        for (let i = 0; i < treeNodes.length; i++) {
+            if (treeNodes[i].key === id) {
+                treeNodes[i].children.push(uiTree);
+                return
+            } else {
+                this.getCommTreeNode(treeNodes[i].children, id, uiTree);
+            }
+        }
+    }
+
+    uiUpdateTableErTree(erTree, what) {
+        let treeDataTableErs;
+
+        switch (what) {
+            case "add":
+                treeDataTableErs = lodash.cloneDeep(this.state.treeDataTableErs);
+
+                let uiTree = {
+                    key: erTree.id,
+                    title: erTree.node_zhname,
+                    children: [],
+                    tag: {
+                        nodeType: erTree.node_type
+                    }
+                }
+
+                if (erTree.node_parent_id === -1) {
+                    treeDataTableErs.push(uiTree);
+                } else {
+                    this.getCommTreeNode(treeDataTableErs, this.gCurrent.erTreeNode.id, uiTree);
+                }
+
+                this.setState({
+                    treeDataTableErs: treeDataTableErs
+                })
+                break
+            case "update":
+                treeDataTableErs = lodash.cloneDeep(this.state.treeDataTableErs);
+
+                // this.setProjectTitle(treeDataTableErTrees, erTree.id, erTree.node_zhname);
+
+                this.setState({
+                    isTableErTreeEditing: false,
+                    treeDataTableErs: treeDataTableErs
+                })
+                break
+            case "delete":
+                treeDataTableErs = lodash.cloneDeep(this.state.treeDataTableErs);
+
+                // this.deleteProject(treeDataTableErTrees, this.gCurrent.project.id);
+                this.gCurrent.erTreeNode = null;
+
+                this.setState({
+                    treeDataTableErs: treeDataTableErs
+                })
+                break
+            default:
+                break;
+        }
     }
 
     // >>>>> ui update table
@@ -2307,17 +2635,47 @@ export default class DatabaseWorkspace extends React.Component {
 
     //todo <<<<< now >>>>> on Tree ErDiagram selected
     onTreeErDiagramSelected(selectedKeys, info) {
-        if (info.selected && info.node.tag.nodeType === "table") {
+        console.log(info.node.tag.nodeType);
+
+        if (info.selected) {
+            this.gCurrent.erTreeNode = {
+                id: selectedKeys[0],
+                nodeType: info.node.tag.nodeType,
+            }
+
+        }
+
+        if (info.selected && info.node.tag.nodeType === "er_table") {
             let tId = selectedKeys[0];
             if (!this.gDynamic.entities.has(tId)) {
                 let myTable = lodash.cloneDeep(this.gMap.tables.get(tId));
                 let enTable = this.x6AddEntityTable(myTable);
                 this.gDynamic.entities.set(myTable.table_id, enTable);
             }
-        } else {
+        }
 
+        if (info.selected && info.node.tag.nodeType === "er_diagram") {
+            let myTableEr = new TadTableEr();
+            myTableEr.er_id = 3;
+            this.restGetTableEr(myTableEr).then((result) => {
+                if (result.status === 200) {
+                    if (result.data.success) {
+                        let content = result.data.data.er_content;
+                        let buffer = new Uint8Array(content.data);
+                        let strJson = new TextDecoder('utf-8').decode(buffer);
+                        let myJson = JSON.parse(strJson);
+                        this.x6Graph.fromJSON(myJson);
+                        this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                    } else {
+                        this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                    }
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+                }
+            });
         }
     };
+
 
     onSelectDbUsersChanged(value) {
 
@@ -3860,7 +4218,7 @@ export default class DatabaseWorkspace extends React.Component {
                                         <div className={"BoxSearch"}>
                                             <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
                                         </div>
-                                        <Button onClick={this.onButtonAddTableClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>加入ER图</Button>
+                                        <Button onClick={this.onButtonAddTable2ErDiagramClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>加入ER图</Button>
                                     </div>
                                     <div className={"BoxUpDown"}>
                                         <div className="BoxLeftRight">
@@ -3877,8 +4235,9 @@ export default class DatabaseWorkspace extends React.Component {
                                             <div className={"BoxSearch"}>
                                                 <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
                                             </div>
-                                            <Button onClick={this.onButtonAddTableClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新增</Button>
-                                            <Button onClick={this.onButtonRenameTableClicked} disabled={this.state.isTableNameEditing} size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>修改</Button>
+                                            <Button onClick={this.onButtonAddTableErDirClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新建目录</Button>
+                                            <Button onClick={this.onButtonAddTableErClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新建ER图</Button>
+                                            <Button disabled={this.state.isTableNameEditing} size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>修改</Button>
                                             {/*<Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditConfirmClicked}>确认</Button>*/}
                                             {/*<Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditCancelClicked}>放弃</Button>*/}
                                             <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>删除</Button>
@@ -3886,7 +4245,7 @@ export default class DatabaseWorkspace extends React.Component {
                                         <div className={"BoxTreeErDiagram"}>
                                             <div className={"BoxTree"}>
                                                 <div className={"BoxTreeInstance"}>
-                                                    <Tree className={"TreeKnown"} treeData={this.state.treeDataTablesKnown} onSelect={this.onTreeErDiagramSelected} selectable={!this.state.isTableNameEditing} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
+                                                    <Tree className={"TreeKnown"} treeData={this.state.treeDataTableErs} onSelect={this.onTreeErDiagramSelected} selectable={!this.state.isTableNameEditing} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
                                                 </div>
                                             </div>
                                         </div>
@@ -3911,8 +4270,8 @@ export default class DatabaseWorkspace extends React.Component {
                             <div className={"box-box-canvas-toolbar"}>
                                 <div className={"box-box-canvas-toolbar-title"}>&nbsp;</div>
                                 <div className={"box-box-canvas-toolbar-buttons"}>
-                                    <Button size={"small"} type={"primary"}>保存</Button>
-                                    <Button size={"small"} type={"primary"}>导出</Button>
+                                    <Button size={"small"} type={"primary"} onClick={this.onButtonX6Save}>保存</Button>
+                                    <Button size={"small"} type={"primary"} onClick={this.onButtonX6ToPng}>导出</Button>
                                 </div>
                             </div>
                             <div ref={this.gRef.x6GraphContainerBox} className="box-canvas">
