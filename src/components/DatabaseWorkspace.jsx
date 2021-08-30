@@ -181,10 +181,15 @@ export default class DatabaseWorkspace extends React.Component {
         this.restAddTableEr = this.restAddTableEr.bind(this);
         this.restUpdateTableEr = this.restUpdateTableEr.bind(this);
         this.restDeleteTableEr = this.restDeleteTableEr.bind(this);
+
         this.restGetTableErTrees = this.restGetTableErTrees.bind(this);
         this.restAddTableErTree = this.restAddTableErTree.bind(this);
         this.restUpdateTableErTree = this.restUpdateTableErTree.bind(this);
         this.restDeleteTableErTree = this.restDeleteTableErTree.bind(this);
+        this.doGetTableErTrees = this.doGetTableErTrees.bind(this);
+        this.doAddTableErTree = this.doAddTableErTree.bind(this);
+        this.doUpdateTableErTree = this.doUpdateTableErTree.bind(this);
+        this.doDeleteTableErTree = this.doDeleteTableErTree.bind(this);
 
         this.x6Move = this.x6Move.bind(this);
         this.x6Update = this.x6Update.bind(this);
@@ -196,10 +201,6 @@ export default class DatabaseWorkspace extends React.Component {
         this.uiUpdateTableErTree = this.uiUpdateTableErTree.bind(this);
         this.getCommTreeNode = this.getCommTreeNode.bind(this);
 
-        this.doGetTableErTrees = this.doGetTableErTrees.bind(this);
-        this.doAddTableErTree = this.doAddTableErTree.bind(this);
-        this.doUpdateTableErTree = this.doUpdateTableErTree.bind(this);
-        this.doDeleteTableErTree = this.doDeleteTableErTree.bind(this);
         this.doAddTable = this.doAddTable.bind(this);
         this.doUpdateTable = this.doUpdateTable.bind(this);
         this.doDeleteTable = this.doDeleteTable.bind(this);

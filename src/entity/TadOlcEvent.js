@@ -2,6 +2,7 @@ export default class TadOlcEvent{
 
     constructor() {
         this.uuid = null;
+        this.dir_id = null;
         this.title = null;
         this.desc = null;
         this.type = null;
