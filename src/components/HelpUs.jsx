@@ -192,7 +192,6 @@ export default class HelpUs extends React.PureComponent {
     }
 
     getHelpTreeNode(treeNodes, id, uiTree) {
-        console.log(id, uiTree);
         for (let i = 0; i < treeNodes.length; i++) {
             if (treeNodes[i].key === id) {
                 treeNodes[i].children.push(uiTree);
@@ -368,7 +367,6 @@ export default class HelpUs extends React.PureComponent {
                 })
                 break
             case "update":
-                console.log(treeNode);
                 treeDataOlcEvents = lodash.cloneDeep(this.state.treeDataOlcEvents);
 
                 this.setDirTitle(treeDataOlcEvents, treeNode.uuid, treeNode.node_zhname);
@@ -612,7 +610,6 @@ export default class HelpUs extends React.PureComponent {
     }
 
     onTreeOlcEventsSelected(selectedKeys, info) {
-        console.log(info.node);
         if (info.selected) {
             this.gCurrent.helpTreeNode = {
                 uuid: selectedKeys[0],
@@ -718,13 +715,18 @@ export default class HelpUs extends React.PureComponent {
     onButtonAddBugClicked(e) {
         let olcEvent = new TadOlcEvent();
 
-        olcEvent.type = "BUG";
-        olcEvent.status = "NEW";
-        olcEvent.title = "新BUG - " + moment().format("YYYYMMDDHHmmss");
-        olcEvent.customer = this.context.user.name;
-        olcEvent.time_created = moment().format("YYYY-MM-DD HH:mm:ss");
+        if ((this.gCurrent.helpTreeNode !== null) && (this.gCurrent.helpTreeNode !== undefined)) {
+            if (this.gCurrent.helpTreeNode.nodeType !== "NODE_DIR") return
 
-        this.doAddOlcEvent(olcEvent);
+            olcEvent.dir_id = parseInt(this.gCurrent.helpTreeNode.uuid);
+            olcEvent.type = "BUG";
+            olcEvent.status = "NEW";
+            olcEvent.title = "新BUG - " + moment().format("YYYYMMDDHHmmss");
+            olcEvent.customer = this.context.user.name;
+            olcEvent.time_created = moment().format("YYYY-MM-DD HH:mm:ss");
+
+            this.doAddOlcEvent(olcEvent);
+        }
     }
 
     onButtonRenameClicked(e) {

@@ -1189,40 +1189,94 @@ export default class DatabaseImport extends React.Component {
         this.gCurrent.connectionId = value;
         let connection = this.gMap.connections.get(value);
 
-        axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_schemas", connection,
-            {headers: {'Content-Type': 'application/json'}}).then((response) => {
+        if (connection.db_type === "oracle") {
 
-            let mapTablesByLetter = new Map();
-            let setLetters = new Set();
-            let mapTablesArchivedByLetter = new Map();
-            let setLettersArchived = new Set();
-            let mapTablesIgnoredByLetter = new Map();
-            let setLettersIgnored = new Set();
-            let data = response.data.data[0].data;
-            let dataIndex = response.data.data[1].data;
-            let dataPartition = response.data.data[2].data;
-            let lettersUnknown;
-            let lettersArchived;
-            let lettersIgnored;
+            axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_schemas", connection,
+                {headers: {'Content-Type': 'application/json'}}).then((response) => {
 
-            for (let i = 0; i < data.rows.length; i++) {
-                let item = data.rows[i];
-                let tableName = item[0].toLowerCase();
-                let columnName = item[1].toLowerCase();
-                let dataType = item[2].toLowerCase();
-                let dataLength = item[3];
+                let mapTablesByLetter = new Map();
+                let setLetters = new Set();
+                let mapTablesArchivedByLetter = new Map();
+                let setLettersArchived = new Set();
+                let mapTablesIgnoredByLetter = new Map();
+                let setLettersIgnored = new Set();
+                let data = response.data.data[0].data;
+                let dataIndex = response.data.data[1].data;
+                let dataPartition = response.data.data[2].data;
+                let lettersUnknown;
+                let lettersArchived;
+                let lettersIgnored;
 
-                if (tableName.startsWith("temp_") || tableName.endsWith("$")) continue
-                if (this.gMap.tablesIgnoredByName.has(tableName)) {
+                for (let i = 0; i < data.rows.length; i++) {
+                    let item = data.rows[i];
+                    let tableName = item[0].toLowerCase();
+                    let columnName = item[1].toLowerCase();
+                    let dataType = item[2].toLowerCase();
+                    let dataLength = item[3];
+
+                    if (tableName.startsWith("temp_") || tableName.endsWith("$")) continue
+                    if (this.gMap.tablesIgnoredByName.has(tableName)) {
+                        let firstLetter = tableName[0].toUpperCase();
+                        setLettersIgnored.add(firstLetter);
+                        if (!mapTablesIgnoredByLetter.has(firstLetter)) {
+                            let mapTables = new Map();
+                            mapTables.set(tableName, {columns: [{name: columnName, type: dataType, length: dataLength}]});
+                            mapTablesIgnoredByLetter.set(firstLetter, {tables: mapTables});
+                        } else {
+                            if (!mapTablesIgnoredByLetter.get(firstLetter).tables.has(tableName)) {
+                                mapTablesIgnoredByLetter.get(firstLetter).tables.set(tableName, {
+                                    columns: [{
+                                        name: columnName,
+                                        type: dataType,
+                                        length: dataLength
+                                    }]
+                                });
+                            } else {
+                                mapTablesIgnoredByLetter.get(firstLetter).tables.get(tableName).columns.push({
+                                    name: columnName,
+                                    type: dataType,
+                                    length: dataLength
+                                });
+                            }
+                        }
+                        continue
+                    }
+                    if (this.gMap.tablesByName.has(tableName)) {
+                        let firstLetter = tableName[0].toUpperCase();
+                        setLettersArchived.add(firstLetter);
+                        if (!mapTablesArchivedByLetter.has(firstLetter)) {
+                            let mapTables = new Map();
+                            mapTables.set(tableName, {columns: [{name: columnName, type: dataType, length: dataLength}]});
+                            mapTablesArchivedByLetter.set(firstLetter, {tables: mapTables});
+                        } else {
+                            if (!mapTablesArchivedByLetter.get(firstLetter).tables.has(tableName)) {
+                                mapTablesArchivedByLetter.get(firstLetter).tables.set(tableName, {
+                                    columns: [{
+                                        name: columnName,
+                                        type: dataType,
+                                        length: dataLength
+                                    }]
+                                });
+                            } else {
+                                mapTablesArchivedByLetter.get(firstLetter).tables.get(tableName).columns.push({
+                                    name: columnName,
+                                    type: dataType,
+                                    length: dataLength
+                                });
+                            }
+                        }
+                        continue
+                    }
+
                     let firstLetter = tableName[0].toUpperCase();
-                    setLettersIgnored.add(firstLetter);
-                    if (!mapTablesIgnoredByLetter.has(firstLetter)) {
+                    setLetters.add(firstLetter);
+                    if (!mapTablesByLetter.has(firstLetter)) {
                         let mapTables = new Map();
                         mapTables.set(tableName, {columns: [{name: columnName, type: dataType, length: dataLength}]});
-                        mapTablesIgnoredByLetter.set(firstLetter, {tables: mapTables});
+                        mapTablesByLetter.set(firstLetter, {tables: mapTables});
                     } else {
-                        if (!mapTablesIgnoredByLetter.get(firstLetter).tables.has(tableName)) {
-                            mapTablesIgnoredByLetter.get(firstLetter).tables.set(tableName, {
+                        if (!mapTablesByLetter.get(firstLetter).tables.has(tableName)) {
+                            mapTablesByLetter.get(firstLetter).tables.set(tableName, {
                                 columns: [{
                                     name: columnName,
                                     type: dataType,
@@ -1230,204 +1284,155 @@ export default class DatabaseImport extends React.Component {
                                 }]
                             });
                         } else {
-                            mapTablesIgnoredByLetter.get(firstLetter).tables.get(tableName).columns.push({
+                            mapTablesByLetter.get(firstLetter).tables.get(tableName).columns.push({
                                 name: columnName,
                                 type: dataType,
                                 length: dataLength
                             });
                         }
                     }
-                    continue
                 }
-                if (this.gMap.tablesByName.has(tableName)) {
-                    let firstLetter = tableName[0].toUpperCase();
-                    setLettersArchived.add(firstLetter);
-                    if (!mapTablesArchivedByLetter.has(firstLetter)) {
-                        let mapTables = new Map();
-                        mapTables.set(tableName, {columns: [{name: columnName, type: dataType, length: dataLength}]});
-                        mapTablesArchivedByLetter.set(firstLetter, {tables: mapTables});
-                    } else {
-                        if (!mapTablesArchivedByLetter.get(firstLetter).tables.has(tableName)) {
-                            mapTablesArchivedByLetter.get(firstLetter).tables.set(tableName, {
-                                columns: [{
-                                    name: columnName,
-                                    type: dataType,
-                                    length: dataLength
-                                }]
-                            });
-                        } else {
-                            mapTablesArchivedByLetter.get(firstLetter).tables.get(tableName).columns.push({
-                                name: columnName,
-                                type: dataType,
-                                length: dataLength
-                            });
-                        }
-                    }
-                    continue
-                }
+                this.gMap.tablesUnknownByLetter = mapTablesByLetter;
+                this.gMap.tablesArchivedByLetter = mapTablesArchivedByLetter;
+                this.gMap.tablesIgnoredByLetter = mapTablesIgnoredByLetter;
 
-                let firstLetter = tableName[0].toUpperCase();
-                setLetters.add(firstLetter);
-                if (!mapTablesByLetter.has(firstLetter)) {
-                    let mapTables = new Map();
-                    mapTables.set(tableName, {columns: [{name: columnName, type: dataType, length: dataLength}]});
-                    mapTablesByLetter.set(firstLetter, {tables: mapTables});
-                } else {
-                    if (!mapTablesByLetter.get(firstLetter).tables.has(tableName)) {
-                        mapTablesByLetter.get(firstLetter).tables.set(tableName, {
-                            columns: [{
-                                name: columnName,
-                                type: dataType,
-                                length: dataLength
-                            }]
-                        });
-                    } else {
-                        mapTablesByLetter.get(firstLetter).tables.get(tableName).columns.push({
-                            name: columnName,
-                            type: dataType,
-                            length: dataLength
-                        });
-                    }
-                }
-            }
-            this.gMap.tablesUnknownByLetter = mapTablesByLetter;
-            this.gMap.tablesArchivedByLetter = mapTablesArchivedByLetter;
-            this.gMap.tablesIgnoredByLetter = mapTablesIgnoredByLetter;
-
-            // 生成UI数据
-            lettersUnknown = Array.from(setLetters).sort();
-            let lettersUnknownTreeData = [];
-            lettersUnknown.forEach((item) => {
-                lettersUnknownTreeData.push({
-                    key: item,
-                    title: item,
-                    children: []
+                // 生成UI数据
+                lettersUnknown = Array.from(setLetters).sort();
+                let lettersUnknownTreeData = [];
+                lettersUnknown.forEach((item) => {
+                    lettersUnknownTreeData.push({
+                        key: item,
+                        title: item,
+                        children: []
+                    })
                 })
-            })
 
-            let treeDataTablesUnknown = this.uiGetTablesByLetter("unknown", lettersUnknown[0]);
-            this.gCurrent.letterUnknownSelected = lettersUnknown[0];
+                let treeDataTablesUnknown = this.uiGetTablesByLetter("unknown", lettersUnknown[0]);
+                this.gCurrent.letterUnknownSelected = lettersUnknown[0];
 
-            lettersArchived = Array.from(setLettersArchived);
-            let lettersArchivedTreeData = [];
-            lettersArchived.forEach((item) => {
-                lettersArchivedTreeData.push({
-                    key: item,
-                    title: item,
-                    children: []
+                lettersArchived = Array.from(setLettersArchived);
+                let lettersArchivedTreeData = [];
+                lettersArchived.forEach((item) => {
+                    lettersArchivedTreeData.push({
+                        key: item,
+                        title: item,
+                        children: []
+                    })
                 })
-            })
 
-            let tablesArchivedTreeData = this.uiGetTablesByLetter("archived", lettersArchived[0]);
-            this.gCurrent.letterArchivedSelected = lettersArchived[0];
+                let tablesArchivedTreeData = this.uiGetTablesByLetter("archived", lettersArchived[0]);
+                this.gCurrent.letterArchivedSelected = lettersArchived[0];
 
-            lettersIgnored = Array.from(setLettersIgnored);
-            let lettersIgnoredTreeData = [];
-            lettersIgnored.forEach((item) => {
-                lettersIgnoredTreeData.push({
-                    key: item,
-                    title: item,
-                    children: []
+                lettersIgnored = Array.from(setLettersIgnored);
+                let lettersIgnoredTreeData = [];
+                lettersIgnored.forEach((item) => {
+                    lettersIgnoredTreeData.push({
+                        key: item,
+                        title: item,
+                        children: []
+                    })
                 })
-            })
 
-            let tablesIgnoredTreeData = this.uiGetTablesByLetter("ignored", lettersIgnored[0]);
-            this.gCurrent.letterIgnoredSelected = lettersIgnored[0];
+                let tablesIgnoredTreeData = this.uiGetTablesByLetter("ignored", lettersIgnored[0]);
+                this.gCurrent.letterIgnoredSelected = lettersIgnored[0];
 
-            // index information
-            let mapTableIndexes = new Map();
-            for (let i = 0; i < dataIndex.rows.length; i++) {
-                let item = dataIndex.rows[i];
-                let tableName = item[0] ? item[0].toLowerCase() : item[0]; //0: {name: "TABLE_NAME"}
-                let indexName = item[1]; //1: {name: "INDEX_NAME"}
-                let indexType = item[2] ? item[2].toLowerCase() : item[2]; //2: {name: "INDEX_TYPE"}
-                let uniqueness = item[3] ? item[3].toLowerCase() : item[3]; //3: {name: "UNIQUENESS"}
-                let columnName = item[4] ? item[4].toLowerCase() : item[4]; //4: {name: "COLUMN_NAME"}
-                let columnPosition = item[5]; //5: {name: "COLUMN_POSITION"}
-                let descend = item[6] ? item[6].toLowerCase() : item[6]; //6: {name: "DESCEND"}
-                if (!mapTableIndexes.has(tableName)) {
-                    let mapIndex = new Map();
-                    mapIndex.set(indexName, {
-                        indexType: indexType, uniqueness: uniqueness, columns: [{
-                            indexName: indexName,
-                            columnName: columnName,
-                            columnPosition: columnPosition,
-                            descend: descend
-                        }]
-                    });
-                    mapTableIndexes.set(tableName, mapIndex);
-                } else {
-                    if (!mapTableIndexes.get(tableName).has(indexName)) {
-                        mapTableIndexes.get(tableName).set(indexName, {
+                // index information
+                let mapTableIndexes = new Map();
+                for (let i = 0; i < dataIndex.rows.length; i++) {
+                    let item = dataIndex.rows[i];
+                    let tableName = item[0] ? item[0].toLowerCase() : item[0]; //0: {name: "TABLE_NAME"}
+                    let indexName = item[1]; //1: {name: "INDEX_NAME"}
+                    let indexType = item[2] ? item[2].toLowerCase() : item[2]; //2: {name: "INDEX_TYPE"}
+                    let uniqueness = item[3] ? item[3].toLowerCase() : item[3]; //3: {name: "UNIQUENESS"}
+                    let columnName = item[4] ? item[4].toLowerCase() : item[4]; //4: {name: "COLUMN_NAME"}
+                    let columnPosition = item[5]; //5: {name: "COLUMN_POSITION"}
+                    let descend = item[6] ? item[6].toLowerCase() : item[6]; //6: {name: "DESCEND"}
+                    if (!mapTableIndexes.has(tableName)) {
+                        let mapIndex = new Map();
+                        mapIndex.set(indexName, {
                             indexType: indexType, uniqueness: uniqueness, columns: [{
                                 indexName: indexName,
                                 columnName: columnName,
                                 columnPosition: columnPosition,
                                 descend: descend
                             }]
-                        })
+                        });
+                        mapTableIndexes.set(tableName, mapIndex);
                     } else {
-                        mapTableIndexes.get(tableName).get(indexName).columns.push({
-                            indexName: indexName,
-                            columnName: columnName,
-                            columnPosition: columnPosition,
-                            descend: descend
+                        if (!mapTableIndexes.get(tableName).has(indexName)) {
+                            mapTableIndexes.get(tableName).set(indexName, {
+                                indexType: indexType, uniqueness: uniqueness, columns: [{
+                                    indexName: indexName,
+                                    columnName: columnName,
+                                    columnPosition: columnPosition,
+                                    descend: descend
+                                }]
+                            })
+                        } else {
+                            mapTableIndexes.get(tableName).get(indexName).columns.push({
+                                indexName: indexName,
+                                columnName: columnName,
+                                columnPosition: columnPosition,
+                                descend: descend
+                            })
+                        }
+                    }
+                }
+                this.gMap.tableIndexes = mapTableIndexes;
+                console.log(mapTableIndexes);
+
+                // partition information
+                let mapTablePartitions = new Map();
+                for (let i = 0; i < dataPartition.rows.length; i++) {
+                    let item = dataPartition.rows[i];
+                    let tableName = item[0] ? item[0].toLowerCase() : item[0]; //0: {name: "TABLE_NAME"}
+                    let partitionType = item[1] ? item[1].toLowerCase() : item[1]; //1: {name: "PARTITION_TYPE"}
+                    let partitionName = item[2]; //2: {name: "PARTITION_NAME"}
+                    let highValue = item[3] ? item[3].toLowerCase() : item[3]; //3: {name: "HIGH_VALUE"}
+                    let partitionPosition = item[4]; //4: {name: "PARTITION_POSITION"}
+                    let columnName = item[5] ? item[5].toLowerCase() : item[5]; //5: {name: "COLUMN_NAME"}
+
+                    if (!mapTablePartitions.has(tableName)) {
+                        mapTablePartitions.set(tableName, {
+                            partitionType: partitionType, columnName: columnName, partitions: [{
+                                partitionName: partitionName, highValue: highValue, partitionPosition: partitionPosition
+                            }]
+                        });
+                    } else {
+                        mapTablePartitions.get(tableName).partitions.push({
+                            partitionName: partitionName, highValue: highValue, partitionPosition: partitionPosition
                         })
                     }
                 }
-            }
-            this.gMap.tableIndexes = mapTableIndexes;
-            console.log(mapTableIndexes);
+                this.gMap.tablePartitions = mapTablePartitions;
 
-            // partition information
-            let mapTablePartitions = new Map();
-            for (let i = 0; i < dataPartition.rows.length; i++) {
-                let item = dataPartition.rows[i];
-                let tableName = item[0] ? item[0].toLowerCase() : item[0]; //0: {name: "TABLE_NAME"}
-                let partitionType = item[1] ? item[1].toLowerCase() : item[1]; //1: {name: "PARTITION_TYPE"}
-                let partitionName = item[2]; //2: {name: "PARTITION_NAME"}
-                let highValue = item[3] ? item[3].toLowerCase() : item[3]; //3: {name: "HIGH_VALUE"}
-                let partitionPosition = item[4]; //4: {name: "PARTITION_POSITION"}
-                let columnName = item[5] ? item[5].toLowerCase() : item[5]; //5: {name: "COLUMN_NAME"}
-
-                if (!mapTablePartitions.has(tableName)) {
-                    mapTablePartitions.set(tableName, {
-                        partitionType: partitionType, columnName: columnName, partitions: [{
-                            partitionName: partitionName, highValue: highValue, partitionPosition: partitionPosition
-                        }]
-                    });
-                } else {
-                    mapTablePartitions.get(tableName).partitions.push({
-                        partitionName: partitionName, highValue: highValue, partitionPosition: partitionPosition
-                    })
-                }
-            }
-            this.gMap.tablePartitions = mapTablePartitions;
-
-            this.setState({
-                lettersUnknownSelectedKeys: [],
-                lettersUnknownTreeData: [],
-                treeDataTablesUnknown: [],
-                lettersArchivedSelectedKeys: [],
-                lettersArchivedTreeData: [],
-                tablesArchivedTreeData: [],
-                lettersIgnoredSelectedKeys: [],
-                lettersIgnoredTreeData: [],
-                tablesIgnoredTreeData: [],
-            }, () => {
                 this.setState({
-                    lettersUnknownSelectedKeys: [lettersUnknown[0]],
-                    lettersUnknownTreeData: lettersUnknownTreeData,
-                    treeDataTablesUnknown: treeDataTablesUnknown,
-                    lettersArchivedSelectedKeys: [lettersArchived[0]],
-                    lettersArchivedTreeData: lettersArchivedTreeData,
-                    tablesArchivedTreeData: tablesArchivedTreeData,
-                    lettersIgnoredSelectedKeys: [lettersIgnored[0]],
-                    lettersIgnoredTreeData: lettersIgnoredTreeData,
-                    tablesIgnoredTreeData: tablesIgnoredTreeData,
+                    lettersUnknownSelectedKeys: [],
+                    lettersUnknownTreeData: [],
+                    treeDataTablesUnknown: [],
+                    lettersArchivedSelectedKeys: [],
+                    lettersArchivedTreeData: [],
+                    tablesArchivedTreeData: [],
+                    lettersIgnoredSelectedKeys: [],
+                    lettersIgnoredTreeData: [],
+                    tablesIgnoredTreeData: [],
+                }, () => {
+                    this.setState({
+                        lettersUnknownSelectedKeys: [lettersUnknown[0]],
+                        lettersUnknownTreeData: lettersUnknownTreeData,
+                        treeDataTablesUnknown: treeDataTablesUnknown,
+                        lettersArchivedSelectedKeys: [lettersArchived[0]],
+                        lettersArchivedTreeData: lettersArchivedTreeData,
+                        tablesArchivedTreeData: tablesArchivedTreeData,
+                        lettersIgnoredSelectedKeys: [lettersIgnored[0]],
+                        lettersIgnoredTreeData: lettersIgnoredTreeData,
+                        tablesIgnoredTreeData: tablesIgnoredTreeData,
+                    });
                 });
             });
-        });
+        } else if (connection.db_type === "mysql") {
+            this.context.showMessage("MySQL数据源的接入正在开发中，请稍后。");
+        }
     }
 
     onSelectDbUsersChanged(value, option) {

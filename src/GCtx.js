@@ -20,12 +20,12 @@ const GCtx = React.createContext({
     menus: [
         {
             id: 'menu_database', label: '数据库管理', desc: '数据库管理', ref: null, children: [
+                {id: 'menu_database_workspace', label: '数据库工作台', desc: '数据库工作台', ref: null},
+                // {id: 'menu_database_maintain', label: '库表结构及数据维护', desc: '库表结构及数据维护', ref: null},
+                {id: 'menu_divider_1', label: '', desc: '', ref: null},
                 {id: 'menu_database_import', label: '库表结构及数据导入', desc: '库表结构及数据导入', ref: null},
-                {id: 'menu_database_maintain', label: '库表结构及数据维护', desc: '库表结构及数据维护', ref: null},
                 {id: 'menu_database_compare', label: '库表结构及数据对比', desc: '库表结构及数据对比', ref: null},
                 {key: 'menu_database_export',id: 'menu_database_export', label: '库表结构及数据导出', desc: '库表结构及数据导出', ref: null},
-                {id: 'menu_divider_1', label: '', desc: '', ref: null},
-                {id: 'menu_database_workspace', label: '数据库工作台', desc: '数据库工作台', ref: null},
                 {id: 'menu_divider_2', label: '', desc: '', ref: null},
                 {id: 'menu_database_config', label: '基础信息配置管理', desc: '基础信息配置管理', ref: null},
             ]
