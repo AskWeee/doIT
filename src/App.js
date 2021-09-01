@@ -166,6 +166,12 @@ class App extends React.Component {
             case 'menu_help_us':
                 this.ComContent.showComponentHelpUs("menu_help_us");
                 break
+            case 'menu_mdd_dataflow':
+                this.ComContent.showComponentMddDataFlow("menu_mdd_dataflow");
+                break
+            case 'menu_operation_kafka':
+                this.ComContent.showComponentOperationKafka("menu_operation_kafka");
+                break
             default:
                 break
         }

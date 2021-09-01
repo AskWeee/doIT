@@ -124,6 +124,10 @@ $colorComponentToolbar: rgb(175, 225, 255);
         justify-content: center;
     }
 
+    .CheckboxWithTitle {
+        margin-right: 3px;
+    }
+
     .BoxSchemasAndIndicators {
         display: grid;
         grid-template-rows: 1fr 1fr;
@@ -153,16 +157,33 @@ $colorComponentToolbar: rgb(175, 225, 255);
 
                 .BoxButtons {
                     display: grid;
-                    grid-template-columns: auto auto auto auto auto;
-                    grid-gap: 3px;
+                    grid-template-columns: auto auto auto auto auto auto;
+                    // grid-gap: 3px;
+
+                    .BoxCheckbox {
+                        border: {
+                            width: 1px 0 1px 1px;
+                            style: solid;
+                            color: #D2D2D2;
+                        };
+                        border-radius: 2px 0 0 2px;
+                        padding: 0 3px 0 3px;
+                        background: #EBEBEB;
+                    }
+
+                    .BoxCheckboxTrue {
+                        border-color: #1A8BF5 !important;
+                        background: #1A8BF5 !important;
+                    }
 
                     Button {
+                        margin-right: 3px;
 
                         &:first-child {
                             margin-left: 50px;
                         }
                         &:last-child {
-                            margin-right: 3px;
+                            border-radius: 0 2px 2px 0;
                         }
                     }
                 }
@@ -220,6 +241,10 @@ $colorComponentToolbar: rgb(175, 225, 255);
                 .BoxTitle {
                     margin: 0 0 0 5px;
                     color: black;
+
+                    .CheckboxWithTitle {
+                        margin-right: 3px;
+                    }
                 }
 
                 .BoxButtons {
@@ -298,7 +323,7 @@ $colorComponentToolbar: rgb(175, 225, 255);
 
                     .BoxButtons {
                         display: grid;
-                        grid-template-columns: auto auto auto;
+                        grid-template-columns: auto auto auto auto;
                         grid-gap: 3px;
 
                         //Button {
@@ -356,7 +381,7 @@ $colorComponentToolbar: rgb(175, 225, 255);
 
                     .BoxButtons {
                         display: grid;
-                        grid-template-columns: auto auto;
+                        grid-template-columns: auto auto auto auto;
                         grid-gap: 3px;
 
                         Button {
@@ -472,6 +497,12 @@ $colorComponentToolbar: rgb(175, 225, 255);
                     .BoxSchemaIds {
                         display: grid;
                         //grid-template-columns: 1fr 1fr 1fr 1fr;
+                        grid-template-columns: auto auto auto auto;
+                        grid-gap: 3px;
+                    }
+
+                    .BoxSchemaGroup2 {
+                        display: grid;
                         grid-template-columns: auto auto auto;
                         grid-gap: 3px;
                     }

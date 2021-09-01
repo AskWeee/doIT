@@ -10,7 +10,7 @@ const GCtx = React.createContext({
         {id: 3, name: "潘璐", online: false, host: ""},
     ],
     message: "message from global context",
-    serviceIp: "10.31.3.2",
+    serviceIp: "10.31.3.12",
     servicePort: "8090",
     reactElementKey: 0,
     mapMenus: new Map(),
@@ -40,7 +40,7 @@ const GCtx = React.createContext({
             ]
         },
         {
-            id: 'menu_lowcode', label: '低代码管理', desc: '', ref: null, children: [
+            id: 'menu_mdd', label: '模型驱动开发', desc: '', ref: null, children: [
                 {id: 'menu_lowcode_single_table', label: '单表维护页面生成', desc: '', ref: null},
                 {id: 'menu_lowcode_multi_table', label: '级联表维护页面生成', desc: '', ref: null},
                 {id: 'menu_lowcode_report', label: '报表页面生成', desc: '', ref: null},
@@ -48,7 +48,7 @@ const GCtx = React.createContext({
                 {id: 'menu_lowcode_business_object', label: '业务对象维护页面生成', desc: '', ref: null},
                 {id: 'menu_lowcode_component', label: '业务组件管理', desc: '', ref: null},
                 {id: 'menu_lowcode_business', label: '业务对象管理', desc: '', ref: null},
-                {id: 'menu_lowcode_dataflow', label: '数据处理逻辑管理', desc: '', ref: null}
+                {id: 'menu_mdd_dataflow', label: '数据处理逻辑管理', desc: '', ref: null}
             ]
         },
         {

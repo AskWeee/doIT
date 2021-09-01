@@ -1,0 +1,18 @@
+$tabs-border-color: rgb(225, 225, 225);
+$colorComponentToolbar: rgb(175, 225, 255);
+
+.BoxHidden {
+    width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-width: 0 !important;
+    overflow: hidden !important;
+}
+
+.OperationKafka {
+    background: #0f4f8f;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: hidden;
+}

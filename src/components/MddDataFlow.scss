@@ -1,0 +1,147 @@
+$tabs-border-color: rgb(225, 225, 225);
+$colorTitleBarBackground: rgb(175, 225, 255);
+$colorBoxBackground: lightgray;
+$colorBoxPropertiesTitleBarBackground: darkgray;
+
+$debugBorderWidth: 0px;
+$debugBorderColor: red;
+$debugBorderColor2: green;
+
+.BoxHidden {
+    width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-width: 0 !important;
+    overflow: hidden !important;
+}
+
+.MddDataFlow {
+    background: #0f4f8f;
+    display: grid;
+    overflow: hidden;
+
+    .BoxErDiagram {
+        border: $debugBorderWidth solid red;
+        display: grid;
+        background: $colorBoxBackground;
+        margin: 3px 3px 3px 0;
+        grid-template-rows: auto 1fr;
+
+        .BoxTitleBar {
+            border: $debugBorderWidth solid red;
+            background: $colorTitleBarBackground;
+            display: grid;
+            grid-template-columns: 1fr auto;
+
+            .BoxTitle {
+                display: grid;
+                align-content: center;
+                margin: 0 0 0 5px;
+                color: black;
+            }
+        }
+
+        .BoxContent {
+            border: $debugBorderWidth solid red;
+            display: grid;
+            grid-template-columns: 140px 1fr 300px;
+            grid-gap: 3px;
+            margin: 3px;
+
+            .BoxEntities {
+                border: 1px solid lighten($colorBoxBackground, 30%);
+                display: grid;
+                background: lighten(lightgray, 15%);
+
+                .x6-widget-stencil {
+                    border: $debugBorderWidth solid red;
+                    position: relative;
+                }
+            }
+
+            .box-box-canvas {
+                border: 1px solid lighten($colorBoxBackground, 30%);
+                display: grid;
+                grid-template-rows: auto 1fr;
+
+                .box-box-canvas-toolbar {
+                    border: 1px solid lighten($colorBoxBackground, 30%);
+                    display: grid;
+                    grid-template-columns: 1fr auto auto;
+                    align-content: end;
+                    background: lighten($colorBoxBackground, 15%);
+                    margin: 3px;
+
+                    .box-box-canvas-toolbar-title {
+
+                    }
+
+                    .box-box-canvas-toolbar-buttons {
+                        margin: 3px;
+
+                        Button {
+                            margin-left: 3px;
+                        }
+                    }
+                }
+
+                .box-canvas {
+                    border: 1px solid lighten($colorBoxBackground, 30%);
+                    display: grid;
+                    margin: 0 3px 3px 3px;
+                }
+            }
+
+            .box-properties {
+                display: grid;
+
+                .form-x6-properties {
+                    display: grid;
+                    border: 1px solid lighten($colorBoxBackground, 30%);
+                    grid-template-rows: auto 1fr;
+                    background: lighten($colorBoxBackground, 15%);
+                    grid-gap: 5px;
+
+                    .box-properties-title-bar {
+                        display: grid;
+                        grid-template-rows: auto auto;
+                        justify-content: center;
+                        align-content: center;
+                        grid-gap: 5px;
+
+                        .box-properties-title {
+                            display: grid;
+                            color: black;
+                            justify-content: center;
+                        }
+
+                        .box-properties-buttons {
+                            display: grid;
+                            grid-template-columns: auto auto;
+                            grid-gap: 3px;
+                        }
+                    }
+
+                    .box-properties-content {
+                        display: grid;
+                        grid-template-rows: auto auto 1fr;
+                        grid-gap: 3px;
+                        margin: 3px;
+
+                        .box-form-items-table-column{
+                            display: grid;
+                            grid-template-rows: auto auto 1fr;
+                            grid-gap: 3px;
+                        }
+                        .form-properties {
+                            display: grid;
+                            grid-template-rows: auto auto;
+                        }
+
+                    }
+                }
+            }
+        }
+    }
+}

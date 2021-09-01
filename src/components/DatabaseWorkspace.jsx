@@ -33,17 +33,30 @@ export default class DatabaseWorkspace extends React.Component {
     gMap = {};
     gData = {};
     gCurrent = {
-        selectDynamicColumnDataType: React.createRef(),
-        boxTableColumns: React.createRef(),
+        productLineId: undefined,
+        productId: undefined,
+        moduleId: undefined,
+        dbUserId: undefined,
+        productsNodeSelectedType: undefined,
+        letterSelected: undefined,
+        tableId: undefined,
     };
     gDynamic = {
         entities: new Map(),
     };
     gRef = {
+        boxTableColumns: React.createRef(),
+        treeProducts: React.createRef(),
+        treeTableFirstLetters: React.createRef(),
+        treeTables: React.createRef(),
+        treeTableFirstLetters4ErDiagram: React.createRef(),
+        treeTables4ErDiagram: React.createRef(),
+        treeErDiagrams: React.createRef(),
         x6StencilContainerBox: React.createRef(),
         x6GraphContainerBox: React.createRef(),
         x6GraphContainer: React.createRef(),
         formX6Properties: React.createRef(),
+        selectDbUser: React.createRef(),
     }
 
     constructor(props) {
@@ -54,6 +67,11 @@ export default class DatabaseWorkspace extends React.Component {
             isErDiagram: true,
             tabNavSelected: "tabNavTwo",
             nodeType: "unknown",
+            treeSelectedKeysProducts: [],
+            treeExpandedKeysProducts: [],
+            productLineDbUserId: -1,
+            treeSelectedKeysTableFirstLetters: [],
+            treeSelectedKeysTables: [],
 
             dbUsersSelectOptions: [{value: -1, label: "请选择产品线数据库用户"}],
             dbUserSelected: -1,
@@ -190,6 +208,8 @@ export default class DatabaseWorkspace extends React.Component {
         this.doUpdateTableErTree = this.doUpdateTableErTree.bind(this);
         this.doDeleteTableErTree = this.doDeleteTableErTree.bind(this);
 
+        this.showTableDetail = this.showTableDetail.bind(this);
+
         this.x6Move = this.x6Move.bind(this);
         this.x6Update = this.x6Update.bind(this);
         this.x6AddEntityTable = this.x6AddEntityTable.bind(this);
@@ -250,6 +270,7 @@ export default class DatabaseWorkspace extends React.Component {
         this.onTreeProductsSelected = this.onTreeProductsSelected.bind(this);
         this.onTreeTablesKnownSelected = this.onTreeTablesKnownSelected.bind(this);
         this.onTreeErDiagramSelected = this.onTreeErDiagramSelected.bind(this);
+        this.onTreeProductsExpanded = this.onTreeProductsExpanded.bind(this);
 
         this.showProductDbUsers = this.showProductDbUsers.bind(this);
         this.showProductTables = this.showProductTables.bind(this);
@@ -569,7 +590,7 @@ export default class DatabaseWorkspace extends React.Component {
             this.gCurrent.node = null;
         });
 
-        //todo >>>>> x6Graph on node:click
+        // >>>>> x6Graph on node:click
         this.x6Graph.on('node:click', ({node}) => {
             let nodeData = node.getData();
 
@@ -723,6 +744,7 @@ export default class DatabaseWorkspace extends React.Component {
             cell.attr('line/strokeWidth', '1');
         })
 
+        //todo <<<<< now >>>>> x6 on node:dblclick
         this.x6Graph.on("node:dblclick", ({cell, e}) => {
             let nodeData = cell.getData();
             let tableId = nodeData.nodeId;
@@ -731,17 +753,38 @@ export default class DatabaseWorkspace extends React.Component {
             let myModule = this.gMap.modules.get(myTable.module_id);
             let myProduct = this.gMap.products.get(myModule.product_id);
             let myProductLine = this.gMap.productLines.get(myDbUser.product_line_id);
-            console.log(myTable,myDbUser,myModule,myProduct,myProductLine);
-            // const p = this.x6Graph.clientToGraph(e.clientX, e.clientY)
-            // cell.addTools([
-            //     {
-            //         name: 'editableCell',
-            //         args: {
-            //             x: p.x,
-            //             y: p.y,
-            //         },
-            //     },
-            // ])
+            let tableFirstLetter = myTable.table_name[0].toUpperCase();
+
+            this.gCurrent.productLineId = myProductLine.product_line_id;
+            this.gCurrent.productId = myProduct.product_id;
+            this.gCurrent.moduleId = myModule.module_id;
+            this.gCurrent.dbUserId = myDbUser.user_id;
+            this.gCurrent.productsNodeSelectedType = "module";
+            this.gCurrent.letterSelected = tableFirstLetter;
+            this.gCurrent.tableId = myTable.table_id;
+
+            let keys = [
+                myProductLine.product_line_id,
+                myProductLine.product_line_id + "_" + myProduct.product_id,
+                myProductLine.product_line_id + "_" + myProduct.product_id + "_" + myModule.module_id,
+            ];
+
+            this.showProductDbUsers();
+            this.showModuleTables();
+            this.showTableDetail();
+
+            let tablesTreeData = this.doGetTablesByLetter("known", tableFirstLetter);
+
+            this.setState({
+                treeSelectedKeysProducts: [keys[2]],
+                treeExpandedKeysProducts: keys,
+                isErDiagram: false,
+                tabNavSelected: "tabNavOne",
+                treeDataTablesKnown: tablesTreeData,
+                treeSelectedKeysTableFirstLetters: tableFirstLetter,
+                treeSelectedKeysTables: [myTable.table_id],
+                productLineDbUserId: myDbUser.user_id
+            })
         });
 
         this.x6Graph.on('edge:dblclick', ({edge}) => {
@@ -2454,11 +2497,14 @@ export default class DatabaseWorkspace extends React.Component {
         }
     }
 
-    showProductDbUsers() {
+    showProductDbUsers(productLineId) {
+        let id = productLineId;
         let dbUsersSelectOptions = [{value: -1, label: "请选择产品线数据库用户"}];
 
+        if (id === undefined) id = this.gCurrent.productLineId
+
         this.gData.dbUsers.forEach((item) => {
-            if (item.product_line_id === this.gCurrent.productLineId) {
+            if (item.product_line_id === id) {
                 let option = {
                     value: item.user_id,
                     label: item.user_name
@@ -2490,6 +2536,10 @@ export default class DatabaseWorkspace extends React.Component {
 
     // >>>>> on tree 表名首字母 selected
     onTreeLettersKnownSelected(selectedKeys, info) {
+        this.setState({
+            treeSelectedKeysTableFirstLetters: selectedKeys
+        });
+
         if (info.selected) {
             this.gCurrent.letterSelected = selectedKeys[0];
 
@@ -2502,8 +2552,17 @@ export default class DatabaseWorkspace extends React.Component {
         }
     }
 
-    // >>>>> on Tree 产品 selected
+    onTreeProductsExpanded(expandedKeys) {
+        this.setState({
+            treeExpandedKeys: expandedKeys
+        })
+    }
+    //todo <<<<< now >>>>> on Tree 产品 selected
     onTreeProductsSelected(selectedKeys, info) {
+        this.setState({
+            treeSelectedKeysProducts: selectedKeys
+        });
+
         if (info.selected) {
             let ids = selectedKeys[0].toString().split("_");
             let nodeType = info.node.nodeType;
@@ -2610,137 +2669,144 @@ export default class DatabaseWorkspace extends React.Component {
 
     };
 
+    showTableDetail() {
+        let myColumn = new TadTableColumn();
+        let myIndex = new TadTableIndex();
+        let myIndexColumn = new TadTableIndexColumn();
+        let myPartition = new TadTablePartition();
+        let myRelation = new TadTableRelation();
+
+        let tableId = this.gCurrent.tableId;
+        myColumn.table_id = tableId;
+        myIndex.table_id = tableId;
+        myIndexColumn.table_id = tableId;
+        myPartition.table_id = tableId;
+        myPartition.key = tableId;
+        myPartition.partitionColumn = this.gMap.tables.get(tableId).partition_column;
+        myPartition.partitionType = this.gMap.tables.get(tableId).partition_type;
+        myPartition.partitionNames = [];
+        myPartition.partitionHighValues = [];
+        myRelation.s_table_id = this.gCurrent.tableId;
+
+        axios.all([
+            this.doGetTablePropertyColumns(myColumn),
+            this.doGetTablePropertyIndexes(myIndex),
+            this.doGetTablePropertyIndexColumns(myIndexColumn),
+            this.doGetTablePropertyPartitions(myPartition),
+            this.doGetTablePropertyRelations(myRelation)
+        ]).then(axios.spread((
+            columns,
+            indexes,
+            indexColumns,
+            partitions,
+            relations) => {
+
+            let pageSizeColumns = columns.data.data.length;
+            let dsColumns = [];
+            let pageSizeIndexes = indexes.data.data.length;
+            let dsIndexes = [];
+            let dsIndexColumns = [];
+            let pageSizePartitions = partitions.data.data.length;
+            let dsPartitions = [];
+            let pageSizeRelations = relations.data.data.length;
+            let dsRelations = [];
+
+            let table = this.gMap.tables.get(this.gCurrent.tableId);
+
+            columns.data.data.forEach((item) => {
+                let uiObject = item;
+                uiObject.key = item.column_id;
+                dsColumns.push(uiObject);
+            })
+
+            let indexSql = "";
+            if (indexes.data.data.length > 0) {
+                indexes.data.data.forEach((item) => {
+                    let uiObject = item;
+                    uiObject.key = item.id;
+                    uiObject.columns = [];
+
+                    indexSql += 'CREATE INDEX "' + item.index_name + '" ON "' + table.table_name + '" (\n';
+                    for (let i = 0; i < indexColumns.data.data.length; i++) {
+                        let indexName = indexColumns.data.data[i].index_name;
+                        if (indexName === item.index_name) {
+                            let columnName = indexColumns.data.data[i].column_name;
+                            let descend = indexColumns.data.data[i].descend;
+                            let columnPosition = indexColumns.data.data[i].column_position;
+                            uiObject.columns.push({
+                                columnName: columnName,
+                                descend: descend,
+                                columnPosition: columnPosition
+                            });
+                            indexSql += '\t"' + columnName + '",\n';
+                        }
+                    }
+                    dsIndexes.push(uiObject);
+                    indexSql = indexSql.substr(0, indexSql.length - 2);
+                    indexSql += '\n);\n\n'
+                });
+
+                indexColumns.data.data.forEach((item) => {
+                    dsIndexColumns.push(item);
+                });
+            }
+
+            // let partitionSql = "";
+            if (partitions.data.data.length > 0) {
+                switch (myPartition.partition_type) {
+                    case "range":
+                        // partitionSql += 'PARTITION BY ' + myPartition.partition_type.toUpperCase() + '(' + myPartition.partition_column + ') (\n';
+                        partitions.data.data.forEach((item) => {
+                            myPartition.partitionNames.push(item.partition_name);
+                            myPartition.partitionHighValues.push(item.high_value);
+                            // partitionSql += '\tPARTITION "' + item.partition_name + '" VALUES LESS THAN (' + item.high_value + '),\n';
+                        })
+                        break
+                    case "list":
+                        break
+                    case "hash":
+                        break
+                    default:
+                        break
+                }
+                dsPartitions.push(myPartition);
+                // partitionSql = partitionSql.substr(0, partitionSql.length - 2);
+                // partitionSql += '\n);\n\n';
+            }
+
+            relations.data.data.forEach((item) => {
+                let uiObject = item;
+                uiObject.key = item.id;
+                dsRelations.push(uiObject);
+            })
+
+            this.setState({
+                pageSizeColumns: pageSizeColumns,
+                dsColumns: dsColumns,
+                pageSizeIndexes: pageSizeIndexes,
+                dsIndexes: dsIndexes,
+                pageSizePartitions: pageSizePartitions,
+                dsPartitions: dsPartitions,
+                pageSizeRelations: pageSizeRelations,
+                dsRelations: dsRelations,
+                tableSql: this.getTableSql(table),
+                // domTableSql: domTableSql
+            })
+        }));
+    }
     // >>>>> on Tree 表 selected
     onTreeTablesKnownSelected(selectedKeys, info) {
         // if (selectedKeys[0] === undefined) return;
         // if (info.node.tag.nodeType !== "table") return;
 
+        this.setState({
+            treeSelectedKeysTables: selectedKeys
+        });
+
         if (info.selected && info.node.tag.nodeType === "table") {
             this.gCurrent.tableId = info.node.key;
 
-            let myColumn = new TadTableColumn();
-            let myIndex = new TadTableIndex();
-            let myIndexColumn = new TadTableIndexColumn();
-            let myPartition = new TadTablePartition();
-            let myRelation = new TadTableRelation();
-
-            let tableId = this.gCurrent.tableId;
-            myColumn.table_id = tableId;
-            myIndex.table_id = tableId;
-            myIndexColumn.table_id = tableId;
-            myPartition.table_id = tableId;
-            myPartition.key = tableId;
-            myPartition.partitionColumn = this.gMap.tables.get(tableId).partition_column;
-            myPartition.partitionType = this.gMap.tables.get(tableId).partition_type;
-            myPartition.partitionNames = [];
-            myPartition.partitionHighValues = [];
-            myRelation.s_table_id = this.gCurrent.tableId;
-
-            axios.all([
-                this.doGetTablePropertyColumns(myColumn),
-                this.doGetTablePropertyIndexes(myIndex),
-                this.doGetTablePropertyIndexColumns(myIndexColumn),
-                this.doGetTablePropertyPartitions(myPartition),
-                this.doGetTablePropertyRelations(myRelation)
-            ]).then(axios.spread((
-                columns,
-                indexes,
-                indexColumns,
-                partitions,
-                relations) => {
-
-                let pageSizeColumns = columns.data.data.length;
-                let dsColumns = [];
-                let pageSizeIndexes = indexes.data.data.length;
-                let dsIndexes = [];
-                let dsIndexColumns = [];
-                let pageSizePartitions = partitions.data.data.length;
-                let dsPartitions = [];
-                let pageSizeRelations = relations.data.data.length;
-                let dsRelations = [];
-
-                let table = this.gMap.tables.get(this.gCurrent.tableId);
-
-                columns.data.data.forEach((item) => {
-                    let uiObject = item;
-                    uiObject.key = item.column_id;
-                    dsColumns.push(uiObject);
-                })
-
-                let indexSql = "";
-                if (indexes.data.data.length > 0) {
-                    indexes.data.data.forEach((item) => {
-                        let uiObject = item;
-                        uiObject.key = item.id;
-                        uiObject.columns = [];
-
-                        indexSql += 'CREATE INDEX "' + item.index_name + '" ON "' + table.table_name + '" (\n';
-                        for (let i = 0; i < indexColumns.data.data.length; i++) {
-                            let indexName = indexColumns.data.data[i].index_name;
-                            if (indexName === item.index_name) {
-                                let columnName = indexColumns.data.data[i].column_name;
-                                let descend = indexColumns.data.data[i].descend;
-                                let columnPosition = indexColumns.data.data[i].column_position;
-                                uiObject.columns.push({
-                                    columnName: columnName,
-                                    descend: descend,
-                                    columnPosition: columnPosition
-                                });
-                                indexSql += '\t"' + columnName + '",\n';
-                            }
-                        }
-                        dsIndexes.push(uiObject);
-                        indexSql = indexSql.substr(0, indexSql.length - 2);
-                        indexSql += '\n);\n\n'
-                    });
-
-                    indexColumns.data.data.forEach((item) => {
-                        dsIndexColumns.push(item);
-                    });
-                }
-
-                // let partitionSql = "";
-                if (partitions.data.data.length > 0) {
-                    switch (myPartition.partition_type) {
-                        case "range":
-                            // partitionSql += 'PARTITION BY ' + myPartition.partition_type.toUpperCase() + '(' + myPartition.partition_column + ') (\n';
-                            partitions.data.data.forEach((item) => {
-                                myPartition.partitionNames.push(item.partition_name);
-                                myPartition.partitionHighValues.push(item.high_value);
-                                // partitionSql += '\tPARTITION "' + item.partition_name + '" VALUES LESS THAN (' + item.high_value + '),\n';
-                            })
-                            break
-                        case "list":
-                            break
-                        case "hash":
-                            break
-                        default:
-                            break
-                    }
-                    dsPartitions.push(myPartition);
-                    // partitionSql = partitionSql.substr(0, partitionSql.length - 2);
-                    // partitionSql += '\n);\n\n';
-                }
-
-                relations.data.data.forEach((item) => {
-                    let uiObject = item;
-                    uiObject.key = item.id;
-                    dsRelations.push(uiObject);
-                })
-
-                this.setState({
-                    pageSizeColumns: pageSizeColumns,
-                    dsColumns: dsColumns,
-                    pageSizeIndexes: pageSizeIndexes,
-                    dsIndexes: dsIndexes,
-                    pageSizePartitions: pageSizePartitions,
-                    dsPartitions: dsPartitions,
-                    pageSizeRelations: pageSizeRelations,
-                    dsRelations: dsRelations,
-                    tableSql: this.getTableSql(table),
-                    // domTableSql: domTableSql
-                })
-            }));
+            this.showTableDetail();
         } else {
             this.gCurrent.tableId = undefined;
 
@@ -2829,6 +2895,10 @@ export default class DatabaseWorkspace extends React.Component {
     onSelectDbUsersChanged(value) {
 
         this.gCurrent.dbUserId = value;
+        this.setState({
+            productLineDbUserId: value
+        });
+
         if (this.gCurrent.productsNodeSelectedType === "product") {
             this.showProductTables()
         } else if (this.gCurrent.productsNodeSelectedType === "module") {
@@ -4324,7 +4394,13 @@ export default class DatabaseWorkspace extends React.Component {
                         <Button onClick={this.onButtonProductsChangeComponentSizeClicked} icon={this.state.styleLayout === "NNN" ? <CaretLeftOutlined/> : <CaretRightOutlined/>} size={"small"} type={"ghost"}/>
                     </div>
                     <div className={this.state.styleLayout === "NNN" ? "BoxTree" : "BoxTree BoxHidden"}>
-                        <Tree treeData={this.state.treeDataProducts} onSelect={this.onTreeProductsSelected} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true}/>
+                        <Tree ref={this.gRef.treeProducts}
+                              treeData={this.state.treeDataProducts}
+                              onSelect={this.onTreeProductsSelected}
+                              onExpand={this.onTreeProductsExpanded}
+                              selectedKeys={this.state.treeSelectedKeysProducts}
+                              expandedKeys={this.state.treeExpandedKeysProducts}
+                              switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true}/>
                     </div>
                     <div className={this.state.styleLayout === "NNN" ? "BoxDescription" : "BoxDescription BoxHidden"}>information</div>
                 </div>
@@ -4334,7 +4410,11 @@ export default class DatabaseWorkspace extends React.Component {
                         <Button onClick={this.onButtonTablesChangeComponentSizeClicked} icon={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? <CaretLeftOutlined/> : <CaretRightOutlined/>} size={"small"} type={"ghost"}/>
                     </div>
                     <div className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxSelect" : "BoxSelect BoxHidden"}>
-                        <Select onChange={this.onSelectDbUsersChanged} defaultValue={this.state.dbUserSelected} options={this.state.dbUsersSelectOptions}/>
+                        <Select ref={this.gRef.selectDbUser}
+                                onChange={this.onSelectDbUsersChanged}
+                                defaultValue={this.state.dbUserSelected}
+                                value={this.state.productLineDbUserId}
+                                options={this.state.dbUsersSelectOptions}/>
                     </div>
                     <div className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxTabs" : "BoxTabs BoxHidden"}>
                         <div className="Tabs">
@@ -4353,11 +4433,21 @@ export default class DatabaseWorkspace extends React.Component {
                                     </div>
                                     <div className="BoxListTree">
                                         <div className={"BoxList"}>
-                                            <Tree treeData={this.state.treeDataLettersKnown} onSelect={this.onTreeLettersKnownSelected} defaultSelectedKeys={this.state.lettersKnownSelectedKeys} className={"TreeLetters"} blockNode={true} showLine={{showLeafIcon: false}} showIcon={false}/>
+                                            <Tree ref={this.gRef.treeTableFirstLetters}
+                                                  treeData={this.state.treeDataLettersKnown}
+                                                  onSelect={this.onTreeLettersKnownSelected}
+                                                  defaultSelectedKeys={this.state.lettersKnownSelectedKeys}
+                                                  selectedKeys={this.state.treeSelectedKeysTableFirstLetters}
+                                                  className={"TreeLetters"} blockNode={true} showLine={{showLeafIcon: false}} showIcon={false}/>
                                         </div>
                                         <div className={"BoxTree"}>
                                             <div className={"BoxTree2"}>
-                                                <Tree className={"TreeKnown"} treeData={this.state.treeDataTablesKnown} onSelect={this.onTreeTablesKnownSelected} selectable={!this.state.isTableNameEditing} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
+                                                <Tree ref={this.gRef.treeTables}
+                                                      treeData={this.state.treeDataTablesKnown}
+                                                      onSelect={this.onTreeTablesKnownSelected}
+                                                      selectedKeys={this.state.treeSelectedKeysTables}
+                                                      selectable={!this.state.isTableNameEditing}
+                                                      className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
                                             </div>
                                         </div>
                                     </div>
@@ -4372,11 +4462,20 @@ export default class DatabaseWorkspace extends React.Component {
                                     <div className={"BoxUpDown"}>
                                         <div className="BoxLeftRight">
                                             <div className={"BoxList"}>
-                                                <Tree treeData={this.state.treeDataLettersKnown} onSelect={this.onTreeLettersKnownSelected} defaultSelectedKeys={this.state.lettersKnownSelectedKeys} className={"TreeLetters"} blockNode={true} showLine={{showLeafIcon: false}} showIcon={false}/>
+                                                <Tree ref={this.gRef.treeTableFirstLetters4ErDiagram}
+                                                    treeData={this.state.treeDataLettersKnown}
+                                                    onSelect={this.onTreeLettersKnownSelected}
+                                                      selectedKeys={this.state.treeSelectedKeysTableFirstLetters}
+                                                    defaultSelectedKeys={this.state.lettersKnownSelectedKeys} className={"TreeLetters"} blockNode={true} showLine={{showLeafIcon: false}} showIcon={false}/>
                                             </div>
                                             <div className={"BoxTree"}>
                                                 <div className={"BoxTreeInstance"}>
-                                                    <Tree className={"TreeKnown"} treeData={this.state.treeDataTablesKnown} onSelect={this.onTreeTablesKnownSelected} selectable={!this.state.isTableNameEditing} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
+                                                    <Tree ref={this.gRef.treeTables4ErDiagram}
+                                                          treeData={this.state.treeDataTablesKnown}
+                                                          onSelect={this.onTreeTablesKnownSelected}
+                                                          selectedKeys={this.state.treeSelectedKeysTables}
+                                                          selectable={!this.state.isTableNameEditing}
+                                                          className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
                                                 </div>
                                             </div>
                                         </div>
@@ -4394,7 +4493,8 @@ export default class DatabaseWorkspace extends React.Component {
                                         <div className={"BoxTreeErDiagram"}>
                                             <div className={"BoxTree"}>
                                                 <div className={"BoxTreeInstance"}>
-                                                    <Tree treeData={this.state.treeDataTableErs}
+                                                    <Tree ref={this.gRef.treeErDiagrams}
+                                                          treeData={this.state.treeDataTableErs}
                                                           onSelect={this.onTreeErDiagramSelected}
                                                           selectable={!this.state.isTableNameEditing}
                                                           className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>

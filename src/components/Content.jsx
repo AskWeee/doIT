@@ -12,6 +12,8 @@ import LowcodeSingleTable from "./LowcodeSingleTable";
 import ServicePerformance from "./ServicePerformance";
 import ServiceProject from "./ServiceProject";
 import HelpUs from "./HelpUs";
+import MddDataFlow from "./MddDataFlow";
+import OperationKafka from "./OperationKafka";
 
 class Content extends React.Component {
     static contextType = GCtx;
@@ -77,6 +79,18 @@ class Content extends React.Component {
         let menuItem = this.getMenuItem(menuId);
 
         this.showComponent(menuItem.label, <HelpUs key={menuId}/>);
+    }
+
+    showComponentMddDataFlow(menuId) {
+        let menuItem = this.getMenuItem(menuId);
+
+        this.showComponent(menuItem.label, <MddDataFlow key={menuId}/>);
+    }
+
+    showComponentOperationKafka(menuId) {
+        let menuItem = this.getMenuItem(menuId);
+
+        this.showComponent(menuItem.label, <OperationKafka key={menuId}/>);
     }
 
     getMenuItem(menuId) {
