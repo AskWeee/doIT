@@ -637,7 +637,6 @@ export default class ServicePerformance extends React.PureComponent {
 
         switch (what) {
             case "add":
-                console.log("add", kpi);
                 treeDataKpis = lodash.cloneDeep(this.state.treeDataKpis);
 
                 let uiKpi = {
@@ -673,13 +672,11 @@ export default class ServicePerformance extends React.PureComponent {
                 let index = -1;
                 for (let i = 0; i < treeDataKpis.length; i++) {
                     let item = treeDataKpis[i];
-                    console.log(kpi, item.key, kpi.id);
                     if (item.key === kpi.id) {
                         index = i;
                         break
                     }
                 }
-                console.log(index, treeDataKpis[index]);
                 treeDataKpis.splice(index, 1);
                 let newKpi = new TadKpi();
                 newKpi.init();

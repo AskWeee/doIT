@@ -55,7 +55,6 @@ export default class DatabaseWorkspace extends React.Component {
         x6StencilContainerBox: React.createRef(),
         x6GraphContainerBox: React.createRef(),
         x6GraphContainer: React.createRef(),
-        formX6Properties: React.createRef(),
         selectDbUser: React.createRef(),
     }
 
@@ -213,8 +212,6 @@ export default class DatabaseWorkspace extends React.Component {
         this.x6Move = this.x6Move.bind(this);
         this.x6Update = this.x6Update.bind(this);
         this.x6AddEntityTable = this.x6AddEntityTable.bind(this);
-        this.x6SetFormItems = this.x6SetFormItems.bind(this);
-        this.onFormX6PropertiesFinish = this.onFormX6PropertiesFinish.bind(this);
         this.onButtonX6ToPng = this.onButtonX6ToPng.bind(this);
         this.onButtonX6Save = this.onButtonX6Save.bind(this);
         this.uiUpdateTableErTree = this.uiUpdateTableErTree.bind(this);
@@ -428,45 +425,6 @@ export default class DatabaseWorkspace extends React.Component {
 
     }
 
-    onFormX6PropertiesInitialValues() {
-
-    }
-
-    onFormX6PropertiesFinish(values) {
-        let nodeData = this.gCurrent.node.getData();
-
-        if (nodeData.nodeType === "table") {
-            let newTableName = values.tableName;
-
-            this.gCurrent.node.attr('label/text', newTableName);
-            this.gCurrent.node.setData({tableName: newTableName})
-        } else if (nodeData.nodeType === "table_column") {
-            let newColumnName = values.tableColumnName;
-
-            this.gCurrent.node.attr('label/text', newColumnName);
-            this.gCurrent.node.setData({columnName: newColumnName});
-        }
-    }
-
-    x6SetFormItems() {
-        let nodeData = this.gCurrent.node.getData();
-
-        if (nodeData.nodeType === "table") {
-            let tableName = this.gCurrent.nodeAttrs.label.text;
-
-            this.gRef.formX6Properties.current.setFieldsValue({
-                tableName: tableName,
-            });
-        } else if (nodeData.nodeType === "table_column") {
-            let columnName = nodeData.columnName;
-            let dataType = nodeData.dataType === undefined ? -99999 : nodeData.dataType;
-
-            this.gRef.formX6Properties.current.setFieldsValue({
-                tableColumnName: columnName,
-                tableColumnDataType: dataType,
-            });
-        }
-    }
 
     x6ElementsStyleReset() {
         const nodes = this.x6Graph.getNodes();
@@ -678,8 +636,6 @@ export default class DatabaseWorkspace extends React.Component {
 
                 node.position(nodeTable.position().x + 10, nodeTable.position().y + h + hAdd - 40);
             }
-
-            this.x6SetFormItems();
         });
 
         this.x6Graph.on('node:mouseenter', ({node}) => {
@@ -910,7 +866,6 @@ export default class DatabaseWorkspace extends React.Component {
 
                 this.gCurrent.node = this.gDynamic.nodeShadow;
                 this.gCurrent.nodeAttrs = this.gDynamic.nodeShadow.getAttrs();
-                this.x6SetFormItems();
 
                 return node.clone();
             },
@@ -2126,6 +2081,8 @@ export default class DatabaseWorkspace extends React.Component {
                 table.partitions = [];
                 table.relations = [];
                 this.gMap.tables.set(table.table_id, table);
+                this.gData.tables.push(table);
+                console.log(this.gMap.modules);
                 if (this.gMap.tablesByLetter.has(this.gCurrent.letterSelected)) {
                     this.gMap.tablesByLetter.get(this.gCurrent.letterSelected).tables.push(table.table_id);
                 } else {
@@ -2554,7 +2511,7 @@ export default class DatabaseWorkspace extends React.Component {
 
     onTreeProductsExpanded(expandedKeys) {
         this.setState({
-            treeExpandedKeys: expandedKeys
+            treeExpandedKeysProducts: expandedKeys
         })
     }
     //todo <<<<< now >>>>> on Tree 产品 selected
@@ -2836,19 +2793,24 @@ export default class DatabaseWorkspace extends React.Component {
         }
 
         if (info.selected && info.node.tag.nodeType === "NODE_ER_TABLE") {
-            // let tId = selectedKeys[0];
-            // if (!this.gDynamic.entities.has(tId)) {
-            //     let myTable = lodash.cloneDeep(this.gMap.tables.get(tId));
-            //     let enTable = this.x6AddEntityTable(myTable);
-            //     this.gDynamic.entities.set(myTable.table_id, enTable);
-            // }
+            const nodes = this.x6Graph.getNodes();
+            nodes.forEach((itemNode) => {
+                let nodeData = itemNode.getData();
+                if (nodeData.nodeType.toUpperCase() === "TABLE") {
+                    if (nodeData.nodeId === selectedKeys[0]) {
+                        this.x6Graph.scrollToCell(itemNode);
+                    }
+                }
+            })
         }
 
         if (info.selected && info.node.tag.nodeType === "NODE_ER_DIAGRAM") {
             let nodeId = selectedKeys[0];
 
+
             if (this.gMap.erTables.has(nodeId)) {
                 let erTables = this.gMap.erTables.get(nodeId);
+                this.gCurrent.erTablesSelected = erTables;
                 if (!erTables.isLoaded) {
                     let myErTreeNodes = [];
                     erTables.tables.forEach((itemErTable) => {
@@ -2878,6 +2840,7 @@ export default class DatabaseWorkspace extends React.Component {
                                 let strJson = new TextDecoder('utf-8').decode(buffer);
                                 let myJson = JSON.parse(strJson);
                                 this.x6Graph.fromJSON(myJson);
+                                this.x6Graph.scrollToContent();
                                 this.context.showMessage("成功，内部ID为：" + result.data.data.id);
                             }
                         }
@@ -2888,6 +2851,31 @@ export default class DatabaseWorkspace extends React.Component {
                     this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
                 }
             });
+
+            //todo <<<<< now >>>>> 监测表结构是否变化，如果变化，增更新ER图
+            let tables = [];
+            const nodes = this.x6Graph.getNodes();
+            nodes.forEach((itemNode) => {
+                let nodeData = itemNode.getData();
+                if (nodeData.nodeType.toUpperCase() === "TABLE") {
+                    tables.push({id: nodeData.nodeId, columns: []});
+                    if (nodeData.nodeId === selectedKeys[0]) {
+                        // itemNode.setAttrs({
+                        //     body: { fill: '#f5f5f5' },
+                        // })
+                        this.x6Graph.scrollToCell(itemNode);
+                    }
+                    const nodeChildren = itemNode.getChildren();
+                    nodeChildren.forEach((itemNodeChild) => {
+                        const nodeChildData = itemNodeChild.getData();
+                        if (nodeChildData.nodeType.toUpperCase() === "TABLE_COLUMN") {
+                            tables[tables.length - 1].columns.push(nodeChildData.nodeId);
+                        }
+                    })
+                }
+            })
+            console.log(tables);
+
         }
     };
 
@@ -4529,49 +4517,6 @@ export default class DatabaseWorkspace extends React.Component {
                             <div ref={this.gRef.x6GraphContainerBox} className="box-canvas">
                                 <div ref={this.gRef.x6GraphContainer}/>
                             </div>
-                        </div>
-                        <div className={"box-properties"}>
-                            <Form ref={this.gRef.formX6Properties}
-                                  initialValues={this.onFormX6PropertiesInitialValues}
-                                  onFinish={this.onFormX6PropertiesFinish}
-                                  className={"form-x6-properties"}>
-                                <div className="box-properties-title-bar">
-                                    <div className="box-properties-title">属性编辑</div>
-                                    <div className="box-properties-buttons">
-                                        <Button htmlType="submit" disabled={false}
-                                                icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>确认</Button>
-                                        <Button onClick={this.onButtonX6FormCancelClicked} disabled={false}
-                                                icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>放弃</Button>
-                                    </div>
-                                </div>
-                                <div className={"box-properties-content"}>
-                                    <div className={this.state.nodeType === "table" ? "box-form-items-table" : "BoxHidden"}>
-                                        <Form.Item className="box-form-item-input">
-                                            <Form.Item name="tableName" noStyle><Input/></Form.Item>
-                                            <Tooltip placement="topLeft" title="请输入表名称" arrowPointAtCenter>
-                                                <div className="input-icon"><QuestionCircleOutlined/></div>
-                                            </Tooltip>
-                                        </Form.Item>
-                                    </div>
-                                    <div className={this.state.nodeType === "table_column" ? "box-form-items-table-column" : "BoxHidden"}>
-                                        <Form.Item className="box-form-item-input">
-                                            <Form.Item name="tableColumnName" noStyle><Input/></Form.Item>
-                                            <Tooltip placement="topLeft" title="请输入表字段名称" arrowPointAtCenter>
-                                                <div className="input-icon"><QuestionCircleOutlined/></div>
-                                            </Tooltip>
-                                        </Form.Item>
-                                        <Form.Item className="box-form-item-input">
-                                            {/*<Form.Item name="tableColumnDataType" noStyle><Input/></Form.Item>*/}
-                                            <Form.Item name="tableColumnDataType" noStyle>
-                                                <Select options={optionsDataType} onChange={this.onSelectX6TableColumnDataTypeChanged}/>
-                                            </Form.Item>
-                                            <Tooltip placement="topLeft" title="请选择表字段数据类型" arrowPointAtCenter>
-                                                <div className="input-icon"><QuestionCircleOutlined/></div>
-                                            </Tooltip>
-                                        </Form.Item>
-                                    </div>
-                                </div>
-                            </Form>
                         </div>
                     </div>
                 </div>
