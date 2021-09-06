@@ -5508,6 +5508,11 @@ fast-levenshtein@^2.0.6, fast-levenshtein@~2.0.6:
   resolved "https://registry.npm.taobao.org/fast-levenshtein/download/fast-levenshtein-2.0.6.tgz"
   integrity sha1-PYpcZog6FqMMqGQ+hR8Zuqd5eRc=
 
+fastjson@^2.0.1:
+  version "2.0.1"
+  resolved "https://registry.nlark.com/fastjson/download/fastjson-2.0.1.tgz#a271b09376dfd227a9e28a0a0b70756368d7e05d"
+  integrity sha1-onGwk3bf0iep4ooKC3B1Y2jX4F0=
+
 fastq@^1.6.0:
   version "1.11.0"
   resolved "https://registry.npm.taobao.org/fastq/download/fastq-1.11.0.tgz?cache=0&sync_timestamp=1614183553351&other_urls=https%3A%2F%2Fregistry.npm.taobao.org%2Ffastq%2Fdownload%2Ffastq-1.11.0.tgz"

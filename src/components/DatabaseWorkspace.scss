@@ -152,7 +152,7 @@ $debugBorderColor2: green;
                             background: rgba(255, 255, 255, 1);
                             margin: 3px 3px 0 3px;
                             display: grid;
-                            grid-template-columns: 1fr auto auto auto;
+                            grid-template-columns: 1fr auto auto auto auto;
 
                             .BoxSearch {
                                 margin: 3px 2px 3px 3px;
@@ -580,7 +580,7 @@ $debugBorderColor2: green;
                     padding-right: 5px;
                     margin-top: 5px;
                     display: grid;
-                    grid-template-rows: auto 1fr;
+                    grid-template-rows: auto 1fr auto 1fr;
                     grid-gap: 3px;
 
                     .BoxToolbar {
@@ -596,6 +596,12 @@ $debugBorderColor2: green;
 
                     .BoxDetail {
                         display: grid;
+                    }
+
+                    .BoxSelect {
+                        display: grid;
+                        grid-template-columns: 1fr auto;
+                        grid-gap: 3px;
                     }
 
                 }

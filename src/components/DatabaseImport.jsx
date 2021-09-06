@@ -1179,17 +1179,13 @@ export default class DatabaseImport extends React.Component {
         return myResult;
     }
 
-    // ****************************************************************************************************
-    // SELECT...
-    // ****************************************************************************************************
-
-    // 选择目标数据源，并获取目标数据库结构信息
+    //todo <<<<< now >>>>> 选择目标数据源，并获取目标数据库结构信息
     onSelectConnectionsChanged(value, option) {
 
         this.gCurrent.connectionId = value;
         let connection = this.gMap.connections.get(value);
 
-        if (connection.db_type === "oracle") {
+        // if (connection.db_type === "oracle") {
 
             axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_schemas", connection,
                 {headers: {'Content-Type': 'application/json'}}).then((response) => {
@@ -1206,6 +1202,7 @@ export default class DatabaseImport extends React.Component {
                 let lettersUnknown;
                 let lettersArchived;
                 let lettersIgnored;
+                console.log(dataIndex, dataPartition);
 
                 for (let i = 0; i < data.rows.length; i++) {
                     let item = data.rows[i];
@@ -1336,75 +1333,84 @@ export default class DatabaseImport extends React.Component {
                 let tablesIgnoredTreeData = this.uiGetTablesByLetter("ignored", lettersIgnored[0]);
                 this.gCurrent.letterIgnoredSelected = lettersIgnored[0];
 
-                // index information
-                let mapTableIndexes = new Map();
-                for (let i = 0; i < dataIndex.rows.length; i++) {
-                    let item = dataIndex.rows[i];
-                    let tableName = item[0] ? item[0].toLowerCase() : item[0]; //0: {name: "TABLE_NAME"}
-                    let indexName = item[1]; //1: {name: "INDEX_NAME"}
-                    let indexType = item[2] ? item[2].toLowerCase() : item[2]; //2: {name: "INDEX_TYPE"}
-                    let uniqueness = item[3] ? item[3].toLowerCase() : item[3]; //3: {name: "UNIQUENESS"}
-                    let columnName = item[4] ? item[4].toLowerCase() : item[4]; //4: {name: "COLUMN_NAME"}
-                    let columnPosition = item[5]; //5: {name: "COLUMN_POSITION"}
-                    let descend = item[6] ? item[6].toLowerCase() : item[6]; //6: {name: "DESCEND"}
-                    if (!mapTableIndexes.has(tableName)) {
-                        let mapIndex = new Map();
-                        mapIndex.set(indexName, {
-                            indexType: indexType, uniqueness: uniqueness, columns: [{
-                                indexName: indexName,
-                                columnName: columnName,
-                                columnPosition: columnPosition,
-                                descend: descend
-                            }]
-                        });
-                        mapTableIndexes.set(tableName, mapIndex);
-                    } else {
-                        if (!mapTableIndexes.get(tableName).has(indexName)) {
-                            mapTableIndexes.get(tableName).set(indexName, {
+                if (connection.db_type === "oracle") {
+                    // index information
+                    let mapTableIndexes = new Map();
+                    for (let i = 0; i < dataIndex.rows.length; i++) {
+                        let item = dataIndex.rows[i];
+                        let tableName = item[0] ? item[0].toLowerCase() : item[0]; //0: {name: "TABLE_NAME"}
+                        let indexName = item[1]; //1: {name: "INDEX_NAME"}
+                        let indexType = item[2] ? item[2].toLowerCase() : item[2]; //2: {name: "INDEX_TYPE"}
+                        let uniqueness = item[3] ? item[3].toLowerCase() : item[3]; //3: {name: "UNIQUENESS"}
+                        let columnName = item[4] ? item[4].toLowerCase() : item[4]; //4: {name: "COLUMN_NAME"}
+                        let columnPosition = item[5]; //5: {name: "COLUMN_POSITION"}
+                        let descend = item[6] ? item[6].toLowerCase() : item[6]; //6: {name: "DESCEND"}
+                        if (!mapTableIndexes.has(tableName)) {
+                            let mapIndex = new Map();
+                            mapIndex.set(indexName, {
                                 indexType: indexType, uniqueness: uniqueness, columns: [{
                                     indexName: indexName,
                                     columnName: columnName,
                                     columnPosition: columnPosition,
                                     descend: descend
                                 }]
-                            })
+                            });
+                            mapTableIndexes.set(tableName, mapIndex);
                         } else {
-                            mapTableIndexes.get(tableName).get(indexName).columns.push({
-                                indexName: indexName,
-                                columnName: columnName,
-                                columnPosition: columnPosition,
-                                descend: descend
+                            if (!mapTableIndexes.get(tableName).has(indexName)) {
+                                mapTableIndexes.get(tableName).set(indexName, {
+                                    indexType: indexType, uniqueness: uniqueness, columns: [{
+                                        indexName: indexName,
+                                        columnName: columnName,
+                                        columnPosition: columnPosition,
+                                        descend: descend
+                                    }]
+                                })
+                            } else {
+                                mapTableIndexes.get(tableName).get(indexName).columns.push({
+                                    indexName: indexName,
+                                    columnName: columnName,
+                                    columnPosition: columnPosition,
+                                    descend: descend
+                                })
+                            }
+                        }
+                    }
+                    this.gMap.tableIndexes = mapTableIndexes;
+                    console.log(mapTableIndexes);
+
+                    // partition information
+                    let mapTablePartitions = new Map();
+                    for (let i = 0; i < dataPartition.rows.length; i++) {
+                        let item = dataPartition.rows[i];
+                        let tableName = item[0] ? item[0].toLowerCase() : item[0]; //0: {name: "TABLE_NAME"}
+                        let partitionType = item[1] ? item[1].toLowerCase() : item[1]; //1: {name: "PARTITION_TYPE"}
+                        let partitionName = item[2]; //2: {name: "PARTITION_NAME"}
+                        let highValue = item[3] ? item[3].toLowerCase() : item[3]; //3: {name: "HIGH_VALUE"}
+                        let partitionPosition = item[4]; //4: {name: "PARTITION_POSITION"}
+                        let columnName = item[5] ? item[5].toLowerCase() : item[5]; //5: {name: "COLUMN_NAME"}
+
+                        if (!mapTablePartitions.has(tableName)) {
+                            mapTablePartitions.set(tableName, {
+                                partitionType: partitionType, columnName: columnName, partitions: [{
+                                    partitionName: partitionName, highValue: highValue, partitionPosition: partitionPosition
+                                }]
+                            });
+                        } else {
+                            mapTablePartitions.get(tableName).partitions.push({
+                                partitionName: partitionName, highValue: highValue, partitionPosition: partitionPosition
                             })
                         }
                     }
+                    this.gMap.tablePartitions = mapTablePartitions;
+                } else if (connection.db_type === "mysql") {
+                    // 索引信息
+                    // 目前rest服务返回内容有问题，需要修正
+                    this.gMap.tableIndexes = new Map();
+                    // 分区信息
+                    // 目前rest服务返回内容有问题，需要修正
+                    this.gMap.tablePartitions = new Map();
                 }
-                this.gMap.tableIndexes = mapTableIndexes;
-                console.log(mapTableIndexes);
-
-                // partition information
-                let mapTablePartitions = new Map();
-                for (let i = 0; i < dataPartition.rows.length; i++) {
-                    let item = dataPartition.rows[i];
-                    let tableName = item[0] ? item[0].toLowerCase() : item[0]; //0: {name: "TABLE_NAME"}
-                    let partitionType = item[1] ? item[1].toLowerCase() : item[1]; //1: {name: "PARTITION_TYPE"}
-                    let partitionName = item[2]; //2: {name: "PARTITION_NAME"}
-                    let highValue = item[3] ? item[3].toLowerCase() : item[3]; //3: {name: "HIGH_VALUE"}
-                    let partitionPosition = item[4]; //4: {name: "PARTITION_POSITION"}
-                    let columnName = item[5] ? item[5].toLowerCase() : item[5]; //5: {name: "COLUMN_NAME"}
-
-                    if (!mapTablePartitions.has(tableName)) {
-                        mapTablePartitions.set(tableName, {
-                            partitionType: partitionType, columnName: columnName, partitions: [{
-                                partitionName: partitionName, highValue: highValue, partitionPosition: partitionPosition
-                            }]
-                        });
-                    } else {
-                        mapTablePartitions.get(tableName).partitions.push({
-                            partitionName: partitionName, highValue: highValue, partitionPosition: partitionPosition
-                        })
-                    }
-                }
-                this.gMap.tablePartitions = mapTablePartitions;
 
                 this.setState({
                     lettersUnknownSelectedKeys: [],
@@ -1430,9 +1436,9 @@ export default class DatabaseImport extends React.Component {
                     });
                 });
             });
-        } else if (connection.db_type === "mysql") {
-            this.context.showMessage("MySQL数据源的接入正在开发中，请稍后。");
-        }
+        // } else if (connection.db_type === "mysql") {
+        //     this.context.showMessage("MySQL数据源的接入正在开发中，请稍后。");
+        // }
     }
 
     onSelectDbUsersChanged(value, option) {
@@ -2011,7 +2017,7 @@ export default class DatabaseImport extends React.Component {
                     <div className={"BoxSearch"}>
                         <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
                     </div>
-                    <Button size={"small"} type={"primary"} onClick={this.onButtonInClicked} icon={<LeftOutlined/>}>导入</Button>
+                    <Button onClick={this.onButtonInClicked} size={"small"} type={"primary"} icon={<LeftOutlined/>}>导入</Button>
                     <Button size={"small"} type={"primary"} onClick={this.onButtonIsTempClicked} icon={<DeleteOutlined/>}>忽略</Button>
                     <Button size={"small"} type={"primary"} onClick={this.onButtonIsNotTempClicked} icon={<CheckOutlined/>}>还原</Button>
                 </div>

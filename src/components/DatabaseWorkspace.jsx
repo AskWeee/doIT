@@ -73,6 +73,8 @@ export default class DatabaseWorkspace extends React.Component {
             treeSelectedKeysTables: [],
 
             dbUsersSelectOptions: [{value: -1, label: "请选择产品线数据库用户"}],
+            connectionsSelectOptions: [{value: -1, label: "请选择来源数据库"}],
+            connectionsSelected: -1,
             dbUserSelected: -1,
             treeDataProducts: [],
             treeDataLettersKnown: [],
@@ -207,6 +209,8 @@ export default class DatabaseWorkspace extends React.Component {
         this.doUpdateTableErTree = this.doUpdateTableErTree.bind(this);
         this.doDeleteTableErTree = this.doDeleteTableErTree.bind(this);
 
+        this.restGetDbConnections = this.restGetDbConnections.bind(this);
+
         this.showTableDetail = this.showTableDetail.bind(this);
 
         this.x6Move = this.x6Move.bind(this);
@@ -261,6 +265,7 @@ export default class DatabaseWorkspace extends React.Component {
 
         this.onSelectDbUsersChanged = this.onSelectDbUsersChanged.bind(this);
         this.onSelect = this.onSelect.bind(this);
+        this.onSelectConnectionsChanged = this.onSelectConnectionsChanged.bind(this);
         this.onTableUnknownChecked = this.onTableUnknownChecked.bind(this);
         this.onTableKnownChecked = this.onTableKnownChecked.bind(this);
 
@@ -276,6 +281,7 @@ export default class DatabaseWorkspace extends React.Component {
         this.getTableId = this.getTableId.bind(this);
 
         this.onButtonAddTableClicked = this.onButtonAddTableClicked.bind(this);
+        this.onButtonCloneTableClicked = this.onButtonCloneTableClicked.bind(this);
         this.onButtonRenameTableClicked = this.onButtonRenameTableClicked.bind(this);
         this.onButtonDeleteTableClicked = this.onButtonDeleteTableClicked.bind(this);
         this.onButtonAddColumnClicked = this.onButtonAddColumnClicked.bind(this);
@@ -315,6 +321,7 @@ export default class DatabaseWorkspace extends React.Component {
         this.onButtonAddTableErDirClicked = this.onButtonAddTableErDirClicked.bind(this);
         this.onButtonAddTableErClicked = this.onButtonAddTableErClicked.bind(this);
         this.onButtonAddTable2ErDiagramClicked = this.onButtonAddTable2ErDiagramClicked.bind(this);
+        this.onButtonGetTableDataClicked = this.onButtonGetTableDataClicked.bind(this);
 
         this.onInputIndexNameChanged = this.onInputIndexNameChanged.bind(this);
         this.onInputPartitionNameChanged = this.onInputPartitionNameChanged.bind(this);
@@ -410,6 +417,21 @@ export default class DatabaseWorkspace extends React.Component {
         this.gUi.treeProductsData = dataTreeProducts;
         this.setState({
             treeDataProducts: this.gUi.treeProductsData,
+        })
+
+        this.gUi.treeProductsData = dataTreeProducts;
+
+        let connectionsSelectOptions = [{value: -1, label: "请选择来源数据库"}];
+        this.gData.connections.forEach((item) => {
+            let option = {
+                value: item.connection_id,
+                label: item.connection_name
+            }
+            connectionsSelectOptions.push(option);
+        })
+
+        this.setState({
+            connectionsSelectOptions: connectionsSelectOptions
         })
     }
 
@@ -700,7 +722,7 @@ export default class DatabaseWorkspace extends React.Component {
             cell.attr('line/strokeWidth', '1');
         })
 
-        //todo <<<<< now >>>>> x6 on node:dblclick
+        // >>>>> x6 on node:dblclick
         this.x6Graph.on("node:dblclick", ({cell, e}) => {
             let nodeData = cell.getData();
             let tableId = nodeData.nodeId;
@@ -748,6 +770,16 @@ export default class DatabaseWorkspace extends React.Component {
                 `边ID:${edge.id}, 起始节点: ${edge.source.cell},目标节点: ${edge.target.cell}`
             )
         });
+
+        // >>>>> x6 on edge:connected
+        this.x6Graph.on('edge:connected', ({ isNew, edge, currentCell }) => {
+            if (isNew) {
+                console.log(edge);
+                const nodeSource = edge.getSourceCell();
+                // const nodeCurrent = edge.getCurrentCell();
+                console.log(nodeSource.getData(), currentCell.getData());
+            }
+        })
 
         this.x6Graph.centerContent();
 
@@ -964,84 +996,86 @@ export default class DatabaseWorkspace extends React.Component {
         let n = 0;
         table.columns.forEach((item) => {
             let myColumn = this.gMap.columns.get(item);
-            let enColumn = this.x6Graph.addNode({
-                x: x,
-                y: y + n * (hc + 2),
-                width: wc,
-                height: hc,
-                label: myColumn.column_name,
-                attrs: {
-                    body: {
-                        connectionCount: 0,
-                        stroke: "#2F2F2F",
-                        strokeWidth: 1,
-                        fill: '#8F8F8F',
-                        magnet: true,
-                    },
-                    label: {
-                        fill: '#fff',
-                        fontSize: 12,
-                    },
-                },
-                ports: {
-                    groups: {
-                        groupLeft: {
-                            position: {
-                                name: "left",
-                            }
-                        },
-                        groupRight: {
-                            position: {
-                                name: "right",
-                            }
-                        }
-                    },
-                },
-            });
-
             if ((myColumn.data_type === "int") || (myColumn.data_type === "number")) {
-                enColumn.addPort({
-                    id: 'portLeft',
-                    group: "groupLeft",
+                let enColumn = this.x6Graph.addNode({
+                    x: x,
+                    y: y + n * (hc + 2),
+                    width: wc,
+                    height: hc,
+                    label: myColumn.column_name,
                     attrs: {
-                        circle: {
-                            connectionCount: 1,
-                            r: 5,
-                            magnet: true,
-                            stroke: '#AFDEFF',
-                            fill: '#FFF',
+                        body: {
+                            connectionCount: 0,
+                            stroke: "#2F2F2F",
                             strokeWidth: 1,
+                            fill: '#8F8F8F',
+                            magnet: true,
+                        },
+                        label: {
+                            fill: '#fff',
+                            fontSize: 12,
+                        },
+                    },
+                    ports: {
+                        groups: {
+                            groupLeft: {
+                                position: {
+                                    name: "left",
+                                }
+                            },
+                            groupRight: {
+                                position: {
+                                    name: "right",
+                                }
+                            }
                         },
                     },
                 });
 
-                enColumn.addPort({
-                    id: 'portRight',
-                    group: "groupRight",
-                    attrs: {
-                        circle: {
-                            connectionCount: 2,
-                            r: 5,
-                            magnet: true,
-                            stroke: '#AFDEFF',
-                            fill: '#FFF',
-                            strokeWidth: 1,
+                if ((myColumn.data_type === "int") || (myColumn.data_type === "number")) {
+                    enColumn.addPort({
+                        id: 'portLeft',
+                        group: "groupLeft",
+                        attrs: {
+                            circle: {
+                                connectionCount: 1,
+                                r: 5,
+                                magnet: true,
+                                stroke: '#AFDEFF',
+                                fill: '#FFF',
+                                strokeWidth: 1,
+                            },
                         },
-                    },
+                    });
+
+                    enColumn.addPort({
+                        id: 'portRight',
+                        group: "groupRight",
+                        attrs: {
+                            circle: {
+                                connectionCount: 2,
+                                r: 5,
+                                magnet: true,
+                                stroke: '#AFDEFF',
+                                fill: '#FFF',
+                                strokeWidth: 1,
+                            },
+                        },
+                    });
+                }
+
+                enColumn.setData({
+                    nodeType: "table_column",
+                    nodeId: item,
                 });
+
+                enTable.addChild(enColumn);
+
+                // let view = this.x6Graph.findViewByCell(enColumn);
+                // view.can("nodeMovable", false);
+
+                n++;
             }
-
-            enColumn.setData({
-                nodeType: "table_column",
-                nodeId: item,
-            });
-
-            enTable.addChild(enColumn);
-
-            // let view = this.x6Graph.findViewByCell(enColumn);
-            // view.can("nodeMovable", false);
-
-            n++;
         });
 
 
@@ -1122,8 +1156,24 @@ export default class DatabaseWorkspace extends React.Component {
 
     //todo <<<<< now >>>>> on button X6 Save clicked
     onButtonX6Save(e) {
-        this.myJson = this.x6Graph.toJSON();
-        let strJson = JSON.stringify(this.myJson);
+        let myJson = this.x6Graph.toJSON();
+
+        // 解决循环引用问题，来自网络方案（JerryWang）<<<<<
+        let cache = [];
+        let strJson = JSON.stringify(myJson, function(key, value) {
+            if (typeof value === 'object' && value !== null) {
+                if (cache.indexOf(value) !== -1) {
+                    // 移除
+                    return;
+                }
+                // 收集所有的值
+                cache.push(value);
+            }
+            return value;
+        });
+        cache = null;
+        // 解决循环引用问题，来自网络方案（JerryWang）>>>>>
+
         let myTableEr = new TadTableEr();
         myTableEr.er_id = this.gCurrent.erTreeNode.id;
         myTableEr.er_content = strJson;
@@ -1156,7 +1206,11 @@ export default class DatabaseWorkspace extends React.Component {
         if ((this.gCurrent.erTreeNode !== null) && (this.gCurrent.erTreeNode !== undefined)) {
             if (this.gCurrent.erTreeNode.nodeType === "NODE_ER_DIAGRAM") {
 
+                // 这里两个判断是可以合并的，目前只是为了快
+                // 因为erTables没有的话，tables则一定为空（没有）
                 if (!this.gMap.erTables.has(this.gCurrent.erTreeNode.id)) {
+                    // 如果表从未被引用
+                    console.log("1");
                     erTable.er_id = this.gCurrent.erTreeNode.id;
                     erTable.table_id = this.gCurrent.tableId;
                     this.doAddTableErTable(erTable);
@@ -1173,6 +1227,8 @@ export default class DatabaseWorkspace extends React.Component {
                     myTableEr.er_content = strJson;
                     this.doUpdateTableEr(myTableEr);
                 } else if (!this.gMap.erTables.get(this.gCurrent.erTreeNode.id).tables.includes(this.gCurrent.tableId)) {
+                    // 该表被引用过，现在确认当前ER图是否引用
+                    console.log("2");
                     erTable.er_id = this.gCurrent.erTreeNode.id;
                     erTable.table_id = this.gCurrent.tableId;
                     this.doAddTableErTable(erTable);
@@ -1462,6 +1518,12 @@ export default class DatabaseWorkspace extends React.Component {
         return uiTrees;
     }
 
+    restGetDbConnections() {
+        let params = {};
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_connections", params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
     doNewGetAll() {
         axios.all([
             this.doGetProductRelations(),
@@ -1476,6 +1538,7 @@ export default class DatabaseWorkspace extends React.Component {
             this.doNewGetTypes(),
             this.restGetTableErTrees(),
             this.restGetTableErTables(),
+            this.restGetDbConnections(),
         ]).then(axios.spread((
             productRelations,
             productLines,
@@ -1488,7 +1551,8 @@ export default class DatabaseWorkspace extends React.Component {
             columns,
             types,
             erTrees,
-            erTables) => {
+            erTables,
+            connections) => {
             let mapProductRelations = new Map();
             let mapProductLines = new Map();
             let mapDbUsers = new Map();
@@ -1500,6 +1564,7 @@ export default class DatabaseWorkspace extends React.Component {
             let mapColumns = new Map();
             let mapTypes = new Map();
             let mapErTables = new Map();
+            let mapConnections = new Map();
 
             this.gData.productRelations = productRelations.data.data;
             this.gData.productLines = productLines.data.data;
@@ -1513,6 +1578,7 @@ export default class DatabaseWorkspace extends React.Component {
             this.gData.types = types.data.data;
             let dsErTrees = erTrees.data.data;
             let treeDataTableErs = [];
+            this.gData.connections = connections.data.data;
 
             for (let i = 0; i < dsErTrees.length; i++) {
                 if (dsErTrees[i].node_parent_id === -1) {
@@ -1703,6 +1769,23 @@ export default class DatabaseWorkspace extends React.Component {
                 }
             });
 
+            connections.data.data.forEach(function (item) {
+                let myKey = item.connection_id;
+                if (!mapConnections.has(myKey)) {
+                    mapConnections.set(myKey, {
+                        connection_id: myKey,
+                        connection_name: item.connection_name,
+                        db_host: item.db_host,
+                        db_port: item.db_port,
+                        db_sid: item.db_sid,
+                        db_username: item.db_username,
+                        db_password: item.db_password,
+                        db_type: item.db_type
+                    });
+                }
+            });
+
+
             this.gMap.productRelations = mapProductRelations;
             this.gMap.productLines = mapProductLines;
             this.gMap.dbUsers = mapDbUsers;
@@ -1714,6 +1797,7 @@ export default class DatabaseWorkspace extends React.Component {
             this.gMap.columns = mapColumns;
             this.gMap.types = mapTypes;
             this.gMap.erTables = mapErTables;
+            this.gMap.connections = mapConnections;
 
         })).then(() => {
             this.doInit();
@@ -2082,7 +2166,7 @@ export default class DatabaseWorkspace extends React.Component {
                 table.relations = [];
                 this.gMap.tables.set(table.table_id, table);
                 this.gData.tables.push(table);
-                console.log(this.gMap.modules);
+
                 if (this.gMap.tablesByLetter.has(this.gCurrent.letterSelected)) {
                     this.gMap.tablesByLetter.get(this.gCurrent.letterSelected).tables.push(table.table_id);
                 } else {
@@ -2841,6 +2925,32 @@ export default class DatabaseWorkspace extends React.Component {
                                 let myJson = JSON.parse(strJson);
                                 this.x6Graph.fromJSON(myJson);
                                 this.x6Graph.scrollToContent();
+
+                                //todo <<<<< now >>>>> 监测表结构是否变化，如果变化，增更新ER图
+                                let tables = [];
+                                const nodes = this.x6Graph.getNodes();
+                                nodes.forEach((itemNode) => {
+                                    let nodeData = itemNode.getData();
+
+                                    if (nodeData.nodeType.toUpperCase() === "TABLE") {
+                                        tables.push({id: nodeData.nodeId, columns: []});
+                                        if (nodeData.nodeId === selectedKeys[0]) {
+                                            // itemNode.setAttrs({
+                                            //     body: { fill: '#f5f5f5' },
+                                            // })
+                                            this.x6Graph.scrollToCell(itemNode);
+                                        }
+                                        const nodeChildren = itemNode.getChildren();
+                                        nodeChildren.forEach((itemNodeChild) => {
+                                            const nodeChildData = itemNodeChild.getData();
+                                            if (nodeChildData.nodeType.toUpperCase() === "TABLE_COLUMN") {
+                                                tables[tables.length - 1].columns.push(nodeChildData.nodeId);
+                                            }
+                                        })
+                                    }
+                                })
+                                console.log("用于检测表格字段是否发生变化", tables);
+
                                 this.context.showMessage("成功，内部ID为：" + result.data.data.id);
                             }
                         }
@@ -2852,29 +2962,7 @@ export default class DatabaseWorkspace extends React.Component {
                 }
             });
 
-            //todo <<<<< now >>>>> 监测表结构是否变化，如果变化，增更新ER图
-            let tables = [];
-            const nodes = this.x6Graph.getNodes();
-            nodes.forEach((itemNode) => {
-                let nodeData = itemNode.getData();
-                if (nodeData.nodeType.toUpperCase() === "TABLE") {
-                    tables.push({id: nodeData.nodeId, columns: []});
-                    if (nodeData.nodeId === selectedKeys[0]) {
-                        // itemNode.setAttrs({
-                        //     body: { fill: '#f5f5f5' },
-                        // })
-                        this.x6Graph.scrollToCell(itemNode);
-                    }
-                    const nodeChildren = itemNode.getChildren();
-                    nodeChildren.forEach((itemNodeChild) => {
-                        const nodeChildData = itemNodeChild.getData();
-                        if (nodeChildData.nodeType.toUpperCase() === "TABLE_COLUMN") {
-                            tables[tables.length - 1].columns.push(nodeChildData.nodeId);
-                        }
-                    })
-                }
-            })
-            console.log(tables);
+
 
         }
     };
@@ -2979,6 +3067,27 @@ export default class DatabaseWorkspace extends React.Component {
         this.doAddTable(myTable);
     }
 
+    onButtonCloneTableClicked() {
+        this.context.showMessage("「复制」功能正在开发，请稍后。");
+
+        // let myTable = new TadTable();
+        //
+        // if (this.gCurrent.letterSelected === undefined) {
+        //     this.gCurrent.letterSelected = "T";
+        //
+        //     let treeDataTablesKnown = this.doGetTablesByLetter("known", this.gCurrent.letterSelected);
+        //
+        //     this.setState({
+        //         treeDataTablesKnown: treeDataTablesKnown
+        //     })
+        // }
+        // myTable.table_name = this.gCurrent.letterSelected + "_TABLE_NEW_" + moment().format("YYYYMMDDHHmmss");
+        // myTable.module_id = this.gCurrent.moduleId;
+        // myTable.db_user_id = this.gCurrent.dbUserId;
+        //
+        // this.doAddTable(myTable);
+    }
+
     onInputTableNameChanged(e) {
         this.gDynamic.tableName = e.target.value;
     }
@@ -3008,6 +3117,11 @@ export default class DatabaseWorkspace extends React.Component {
             treeDataTablesKnown: treeDataTablesKnown
         })
 
+    }
+
+    onButtonGetTableDataClicked(e) {
+        this.context.showMessage("「获取数据」功能正在开发，请稍后。");
+        console.log(this.gCurrent);
     }
 
     onInputColumnNameChanged(e) {
@@ -3939,6 +4053,12 @@ export default class DatabaseWorkspace extends React.Component {
         }
     }
 
+    onSelectConnectionsChanged(value, option) {
+
+        this.gCurrent.connectionId = value;
+        let connection = this.gMap.connections.get(value);
+    }
+
     //todo >>>>> render
     render() {
         const optionsDataType = [
@@ -3954,9 +4074,11 @@ export default class DatabaseWorkspace extends React.Component {
         ];
 
         const getDataType = (dataType) => {
+            console.log(dataType);
+            if (dataType.toUpperCase() === "VARCHAR") dataType = "STRING";
             let myResult = null;
-            for (let i = 0; i < optionsDataType.length; i++) {
-                if (optionsDataType[i].value === dataType) {
+            for (let i = 1; i < optionsDataType.length; i++) {
+                if (optionsDataType[i].value.toUpperCase() === dataType.toUpperCase()) {
                     myResult = optionsDataType[i].label;
                     break
                 }
@@ -4413,6 +4535,7 @@ export default class DatabaseWorkspace extends React.Component {
                                             <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
                                         </div>
                                         <Button onClick={this.onButtonAddTableClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新增</Button>
+                                        <Button onClick={this.onButtonCloneTableClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>复制</Button>
                                         <Button onClick={this.onButtonRenameTableClicked} disabled={this.state.isTableNameEditing} size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>修改</Button>
                                         {/*<Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditConfirmClicked}>确认</Button>*/}
                                         {/*<Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditCancelClicked}>放弃</Button>*/}
@@ -4677,6 +4800,26 @@ export default class DatabaseWorkspace extends React.Component {
                                                     style={{display: this.state.isShownButtonAlterRecordConfirm}}>确认</Button>
                                             <Button onClick={this.onButtonAlterIndexCancelClicked}
                                                     style={{display: this.state.isShownButtonAlterRecordCancel}}>放弃</Button>
+                                        </div>
+                                        <div className={"BoxDetail"}>
+                                            <Table
+                                                dataSource={this.state.dsRecords}
+                                                columns={this.state.columnsRecord}
+                                                scroll={{y: 400}}
+                                                bordered={true}
+                                                size={"small"}
+                                                pagination={{
+                                                    pageSize: this.state.pageSizeRecords,
+                                                    position: ["none", "none"]
+                                                }}
+                                                rowSelection={{
+                                                    type: "radio",
+                                                    ...this.onRowRecordSelected
+                                                }}/>
+                                        </div>
+                                        <div className={"BoxSelect"}>
+                                            <Select onChange={this.onSelectConnectionsChanged} defaultValue={this.state.connectionsSelected} options={this.state.connectionsSelectOptions} size="small"/>
+                                            <Button onClick={this.onButtonGetTableDataClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>获取数据</Button>
                                         </div>
                                         <div className={"BoxDetail"}>
                                             <Table

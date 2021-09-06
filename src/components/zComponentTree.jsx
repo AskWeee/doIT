@@ -16,7 +16,7 @@ import TadTableEr from "../entity/TadTableEr";
 const {Stencil} = Addon;
 const {Rect} = Shape;
 
-export default class MddDataFlow extends React.PureComponent {
+export default class KTree extends React.PureComponent {
     static contextType = GCtx;
 
     gMap = {};

@@ -118,6 +118,7 @@ export default class ServicePerformance extends React.PureComponent {
             optionsSchemaIdB1: [{label: "空间粒度", value: -99999}],
             optionsSchemaIdB2: [{label: "网元类型", value: -99999}],
             optionsVendor: [{label: "不区分厂家", value: -1}],
+            optionsObjectClass: [{label: "不区分网元细分类型", value: -1}],
             optionsObjectSubClass: [{label: "不区分网元细分类型", value: -1}],
             optionsIntervalFlag: [{label: "采集粒度", value: -99999}],
             // optionsProduct: [{label: "使用该指标的产品", value: -99999}],
@@ -246,6 +247,10 @@ export default class ServicePerformance extends React.PureComponent {
         this.onSelectSchemaIdChanged = this.onSelectSchemaIdChanged.bind(this);
         //this.onSelectSchemaObjectClassChanged = this.onSelectSchemaObjectClassChanged.bind(this);
         // this.onSelectKpiUsedProductChanged = this.onSelectKpiUsedProductChanged.bind(this);
+        this.onSelectFilterBusinessChanged = this.onSelectFilterBusinessChanged.bind(this);
+        this.onSelectFilterTimeChanged = this.onSelectFilterTimeChanged.bind(this);
+        this.onSelectFilterRegionChanged = this.onSelectFilterRegionChanged.bind(this);
+        this.onSelectFilterObjectChanged = this.onSelectFilterObjectChanged.bind(this);
 
         this.onFormSchemaPropertiesFinish = this.onFormSchemaPropertiesFinish.bind(this);
         this.onFormSchemaPropertiesFinishFailed = this.onFormSchemaPropertiesFinishFailed.bind(this);
@@ -480,6 +485,7 @@ export default class ServicePerformance extends React.PureComponent {
                 let schemaClone = lodash.cloneDeep(item);
 
                 schemaClone.schema_id = schemaId;
+                schemaClone.schemaIds = this.splitSchemaId(schemaId);
                 schemaClone.kpis = [];
                 schemaClone.counters = [];
                 myResult.mapDs.set(sid, schemaClone)
@@ -1979,6 +1985,191 @@ export default class ServicePerformance extends React.PureComponent {
         }
     }
 
+    async mapSchemas2AntdTreeData(schemas, conditions) {
+        let myResult = [];
+        let schemasFound = [];
+        let isFirst = true;
+
+        this.gRef.treeKpis.current.state.selectedKeys = [];
+        this.setState({
+            treeDataKpis: []
+        })
+
+        if (conditions === undefined) {
+            schemas.forEach((item) => {
+                let uiSchema = {
+                    key: item.id,
+                    title: item.schema_id + " - " + item.schema_zhname,
+                    children: []
+                };
+
+                myResult.push(uiSchema);
+            });
+        } else {
+            if (conditions.searchValue !== undefined) {
+                let sv = conditions.searchValue.trim().toLowerCase();
+                if (sv !== "") {
+                    if (sv.startsWith("变更：") || sv.startsWith("变更:")) {
+                        let svs = sv.replace(/\s+/g, " ").replace(/[：|:]+\s*/g, "： ").split(" ");
+                        let timeBegin = "";
+                        let timeEnd = "";
+
+                        if (svs.length === 3) {
+                            timeBegin = this.str2Time4ParamTimePairs(svs[1]);
+                            timeEnd = this.str2Time4ParamTimePairs(timeBegin, svs[2]);
+                        } else if (svs.length === 2) {
+                            timeBegin = moment().format("yyyy-MM-DD");
+                            if (svs[1] === "") svs[1] = "0";
+                            timeEnd = this.str2Time4ParamTimePairs(timeBegin, svs[1]);
+                        } else {
+                            this.context.showMessage("error");
+
+                            return
+                        }
+
+                        if ((timeBegin !== "无效") && (timeEnd !== "无效")) {
+                            let paramsKpiOlog = new KpiOlogParams();
+                            if (timeBegin < timeEnd) {
+                                paramsKpiOlog.tb = timeBegin;
+                                paramsKpiOlog.te = timeEnd;
+                            } else {
+                                paramsKpiOlog.tb = timeEnd;
+                                paramsKpiOlog.te = timeBegin;
+                            }
+
+                            paramsKpiOlog.te = moment(paramsKpiOlog.te, "YYYY-MM-DD").add(1, "days").format("YYYY-MM-DD");
+                            isFirst = false;
+                            schemasFound = await this.doGetMySchemasNew(this.context.user.name, paramsKpiOlog);
+                        } else {
+                            this.context.showMessage("error");
+                        }
+                    } else {
+                        isFirst = false;
+                        schemasFound = this.searchKpisNew(sv);
+                    }
+
+                } else {
+                    isFirst = false;
+                    schemasFound = this.searchKpisNew("");
+                }
+            }
+
+            if (conditions.schemaIds !== undefined) {
+                if (conditions.schemaIds.a1 !== undefined && conditions.schemaIds.a1 !== -99999) {
+                    if (isFirst) {
+                        isFirst = false;
+                        schemas.forEach((value) => {
+                            if (value.schemaIds.a1 === conditions.schemaIds.a1) {
+                                schemasFound.push(value);
+                            }
+                        });
+                    } else {
+                        let schemasFoundTemporary = [];
+                        schemasFound.forEach((value) => {
+                            if (value.schemaIds.a1 === conditions.schemaIds.a1) {
+                                schemasFoundTemporary.push(value);
+                            }
+                        });
+                        schemasFound = schemasFoundTemporary;
+                    }
+                }
+
+                if (conditions.schemaIds.a2 !== undefined && conditions.schemaIds.a2 !== -99999) {
+                    if (isFirst) {
+                        isFirst = false;
+                        schemas.forEach((value) => {
+                            if (value.schemaIds.a2 === conditions.schemaIds.a2) {
+                                schemasFound.push(value);
+                            }
+                        });
+                    } else {
+                        let schemasFoundTemporary = [];
+                        schemasFound.forEach((value) => {
+                            if (value.schemaIds.a2 === conditions.schemaIds.a2) {
+                                schemasFoundTemporary.push(value);
+                            }
+                        });
+                        schemasFound = schemasFoundTemporary;
+                    }
+                }
+
+                if (conditions.schemaIds.b1 !== undefined && conditions.schemaIds.b1 !== -99999) {
+                    if (isFirst) {
+                        isFirst = false;
+                        schemas.forEach((value) => {
+                            if (value.schemaIds.hasRegion && value.schemaIds.b1 === conditions.schemaIds.b1) {
+                                schemasFound.push(value);
+                            }
+                        });
+                    } else {
+                        let schemasFoundTemporary = [];
+                        schemasFound.forEach((value) => {
+                            if (value.schemaIds.hasRegion && value.schemaIds.b1 === conditions.schemaIds.b1) {
+                                schemasFoundTemporary.push(value);
+                            }
+                        });
+                        schemasFound = schemasFoundTemporary;
+                    }
+                }
+
+                if (conditions.schemaIds.b2 !== undefined && conditions.schemaIds.b2 !== -99999) {
+                    if (isFirst) {
+                        isFirst = false;
+                        schemas.forEach((value) => {
+                            if (value.schemaIds.hasRegion) {
+                                if (value.schemaIds.b2 === conditions.schemaIds.b2) {
+                                    schemasFound.push(value);
+                                }
+                            } else {
+                                if (value.schemaIds.b1 === conditions.schemaIds.b1) {
+                                    schemasFound.push(value);
+                                }
+                            }
+                        });
+                    } else {
+                        let schemasFoundTemporary = [];
+                        schemasFound.forEach((value) => {
+                            if (value.schemaIds.hasRegion) {
+                                if (value.schemaIds.b2 === conditions.schemaIds.b2) {
+                                    schemasFoundTemporary.push(value);
+                                }
+                            } else {
+                                if (value.schemaIds.b1 === conditions.schemaIds.b1) {
+                                    schemasFoundTemporary.push(value);
+                                }
+                            }
+                        });
+                        schemasFound = schemasFoundTemporary;
+                    }
+                }
+            }
+
+            if (isFirst) {
+                schemas.forEach((item) => {
+                    let uiSchema = {
+                        key: item.id,
+                        title: item.schema_id + " - " + item.schema_zhname,
+                        children: []
+                    };
+
+                    myResult.push(uiSchema);
+                });
+            } else {
+                schemasFound.forEach((item) => {
+                    let uiSchema = {
+                        key: item.id,
+                        title: item.schema_id + " - " + item.schema_zhname,
+                        children: []
+                    };
+
+                    myResult.push(uiSchema);
+                });
+            }
+        }
+
+        return myResult;
+    }
+
 
     // >>>>> on Select SchemaId Changed
     onSelectSchemaIdChanged(e, sender) {
@@ -2047,6 +2238,82 @@ export default class ServicePerformance extends React.PureComponent {
 
         this.gRef.formSchemaProperties.current.setFieldsValue({
             schemaId: schemaId,
+        });
+    }
+
+    // >>>>> on select 筛选：业务分类 changed
+    async onSelectFilterBusinessChanged(v) {
+        this.gCurrent.schemasFilterA1 = v;
+
+        let treeDataKpiSchemas = await this.mapSchemas2AntdTreeData(this.gMap.schemas, {
+            searchValue: this.gCurrent.schemasFilterSearchValue,
+            schemaIds: {
+                a1: this.gCurrent.schemasFilterA1,
+                a2: this.gCurrent.schemasFilterA2,
+                b1: this.gCurrent.schemasFilterB1,
+                b2: this.gCurrent.schemasFilterB2
+            }
+        });
+
+        this.setState({
+            treeDataKpiSchemas: treeDataKpiSchemas
+        });
+    }
+
+    // >>>>> on select 筛选：时间粒度 changed
+    async onSelectFilterTimeChanged(v) {
+        this.gCurrent.schemasFilterA2 = v;
+
+        let treeDataKpiSchemas = await this.mapSchemas2AntdTreeData(this.gMap.schemas, {
+            searchValue: this.gCurrent.schemasFilterSearchValue,
+            schemaIds: {
+                a1: this.gCurrent.schemasFilterA1,
+                a2: this.gCurrent.schemasFilterA2,
+                b1: this.gCurrent.schemasFilterB1,
+                b2: this.gCurrent.schemasFilterB2
+            }
+        });
+
+        this.setState({
+            treeDataKpiSchemas: treeDataKpiSchemas
+        });
+    }
+
+    // >>>>> on select 筛选：空间粒度 changed
+    async onSelectFilterRegionChanged(v) {
+        this.gCurrent.schemasFilterB1 = v;
+
+        let treeDataKpiSchemas = await this.mapSchemas2AntdTreeData(this.gMap.schemas, {
+            searchValue: this.gCurrent.schemasFilterSearchValue,
+            schemaIds: {
+                a1: this.gCurrent.schemasFilterA1,
+                a2: this.gCurrent.schemasFilterA2,
+                b1: this.gCurrent.schemasFilterB1,
+                b2: this.gCurrent.schemasFilterB2
+            }
+        });
+
+        this.setState({
+            treeDataKpiSchemas: treeDataKpiSchemas
+        });
+    }
+
+    // >>>>> on select 筛选：网元类型 changed
+    async onSelectFilterObjectChanged(v) {
+        this.gCurrent.schemasFilterB2 = v;
+
+        let treeDataKpiSchemas = await this.mapSchemas2AntdTreeData(this.gMap.schemas, {
+            searchValue: this.gCurrent.schemasFilterSearchValue,
+            schemaIds: {
+                a1: this.gCurrent.schemasFilterA1,
+                a2: this.gCurrent.schemasFilterA2,
+                b1: this.gCurrent.schemasFilterB1,
+                b2: this.gCurrent.schemasFilterB2
+            }
+        });
+
+        this.setState({
+            treeDataKpiSchemas: treeDataKpiSchemas
         });
     }
 
@@ -3650,7 +3917,7 @@ export default class ServicePerformance extends React.PureComponent {
                                 <div className={"BoxSchemaGroup2"}>
                                     <Form.Item name="schemaObjectClass" className="BoxFormItemInput">
                                         <Form.Item name="schemaObjectClass" className="BoxFormItemInput">
-                                            <Select options={this.state.optionsObjectSubClass}/>
+                                            <Select options={this.state.optionsObjectClass}/>
                                         </Form.Item>
                                     </Form.Item>
                                     <Form.Item name="schemaObjectSubClass" className="BoxFormItemInput">
