@@ -3,15 +3,12 @@ import './MddDataFlow.scss'
 import GCtx from "../GCtx";
 import axios from "axios";
 import lodash from "lodash";
-import moment from 'moment';
-import {Button, Form, Input, Select, Tooltip, Tree} from 'antd'
-import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, CloseOutlined, PlusSquareOutlined, QuestionCircleOutlined,} from '@ant-design/icons'
+import {Button, Form, Input, Select, Tooltip, Tree, Upload} from 'antd'
+import {CaretDownOutlined, CloudUploadOutlined, PlusSquareOutlined, QuestionCircleOutlined,} from '@ant-design/icons'
 import EditableCellTool from "./EditableCellTool";
-import {Graph, Addon, Shape, DataUri} from "@antv/x6";
+import {Addon, DataUri, Graph, Shape} from "@antv/x6";
 import TadMddFlow from "../entity/TadMddFlow";
 import TadMddTree from "../entity/TadMddTree";
-import TadTableErTree from "../entity/TadTableErTree";
-import TadTableEr from "../entity/TadTableEr";
 
 const {Stencil} = Addon;
 const {Rect} = Shape;
@@ -27,6 +24,8 @@ export default class MddDataFlow extends React.PureComponent {
         x6GraphContainerBox: React.createRef(),
         x6GraphContainer: React.createRef(),
         formX6Properties: React.createRef(),
+        treeModelProperties: React.createRef(),
+        treeTransformerProperties: React.createRef(),
     };
     gDynamic = {};
 
@@ -35,6 +34,8 @@ export default class MddDataFlow extends React.PureComponent {
 
         this.state = {
             treeDataMddTree: [],
+            treeDataModels: [],
+            treeDataTransformers: [],
             isMddTreeEditing: false,
         }
 
@@ -74,11 +75,19 @@ export default class MddDataFlow extends React.PureComponent {
         this.onButtonX6Save = this.onButtonX6Save.bind(this);
         this.x6LoadModels = this.x6LoadModels.bind(this);
         this.x6LoadTransformers = this.x6LoadTransformers.bind(this);
+        this.onButtonX6ImportModels = this.onButtonX6ImportModels.bind(this);
+        this.onButtonX6ImportTransformers = this.onButtonX6ImportTransformers.bind(this);
 
         this.onButtonX6FormConfirmClicked = this.onButtonX6FormConfirmClicked.bind(this);
         this.onButtonX6FormCancelClicked = this.onButtonX6FormCancelClicked.bind(this);
         this.onButtonAddMddDirClicked = this.onButtonAddMddDirClicked.bind(this);
         this.onButtonAddMddFlowClicked = this.onButtonAddMddFlowClicked.bind(this);
+
+        this.beforeUploadImportModels = this.beforeUploadImportModels.bind(this);
+        this.beforeUploadImportTransformers = this.beforeUploadImportTransformers.bind(this);
+
+        this.onChangeImportModels = this.onChangeImportModels.bind(this);
+        this.onChangeImportTransformers = this.onChangeImportTransformers.bind(this);
 
         this.onSelectX6TableColumnDataTypeChanged = this.onSelectX6TableColumnDataTypeChanged.bind(this);
         this.onTreeMddTreeSelected = this.onTreeMddTreeSelected.bind(this);
@@ -350,7 +359,7 @@ export default class MddDataFlow extends React.PureComponent {
         })
     }
 
-    //todo <<<<< now >>>> x6 init
+    // now >>>> x6 init
     x6Init() {
         EditableCellTool.config({
             tagName: 'div',
@@ -452,7 +461,7 @@ export default class MddDataFlow extends React.PureComponent {
             this.gCurrent.node = null;
         });
 
-        // >>>>> x6Graph on node:click
+        //todo <<<<< now >>>>> x6Graph on node:click
         this.x6Graph.on('node:click', ({node}) => {
             let nodeData = node.getData();
 
@@ -470,14 +479,23 @@ export default class MddDataFlow extends React.PureComponent {
                 stroke: '#ffa940',
             })
 
-            if (nodeData.nodeType === "table") {
+            console.log(nodeData.nodeType);
+            if (nodeData.nodeType === "NODE_MODEL") {
                 node.toFront({deep: true});
                 this.setState({
-                    nodeType: "table"
+                    nodeType: "NODE_MODEL"
                 });
-            } else if (nodeData.nodeType === "table_column") {
+            } else if (nodeData.nodeType === "NODE_MODEL_PROPERTY") {
                 this.setState({
-                    nodeType: "table_column"
+                    nodeType: "NODE_MODEL_PROPERTY"
+                });
+            } else if (nodeData.nodeType === "NODE_TRANSFORMER") {
+                this.setState({
+                    nodeType: "NODE_TRANSFORMER"
+                });
+            } else if (nodeData.nodeType === "NODE_TRANSFORMER_PROPERTY") {
+                this.setState({
+                    nodeType: "NODE_TRANSFORMER_PROPERTY"
                 });
             } else if (nodeData.nodeType === "table_button_add_column") {
                 this.setState({
@@ -606,7 +624,7 @@ export default class MddDataFlow extends React.PureComponent {
             cell.attr('line/strokeWidth', '1');
         })
 
-        //todo <<<<< now >>>>> x6 on node:dblclick
+        // >>>>> x6 on node:dblclick
         this.x6Graph.on("node:dblclick", ({cell, e}) => {
             let nodeData = cell.getData();
             let tableId = nodeData.nodeId;
@@ -923,7 +941,7 @@ export default class MddDataFlow extends React.PureComponent {
         }
     }
 
-    //todo <<<<< now >>>>> x6 add Entity Table
+    // >>>>> x6 add Entity Table
     x6AddEntityTable(table) {
         let x = 50;
         let y = 50;
@@ -1119,7 +1137,15 @@ export default class MddDataFlow extends React.PureComponent {
         })
     }
 
-    //todo <<<<< now >>>>> on button X6 Save clicked
+    onButtonX6ImportModels(e) {
+
+    }
+
+    onButtonX6ImportTransformers(e) {
+
+    }
+
+    // >>>>> on button X6 Save clicked
     onButtonX6Save(e) {
         this.myJson = this.x6Graph.toJSON();
         let strJson = JSON.stringify(this.myJson);
@@ -1176,7 +1202,7 @@ export default class MddDataFlow extends React.PureComponent {
         }
     }
 
-    //todo <<<<< now >>>>> on button Add Table Er Dir clicked
+    // >>>>> on button Add Table Er Dir clicked
     onButtonAddMddDirClicked(e) {
         let erTree = new TadMddTree();
 
@@ -1251,31 +1277,6 @@ export default class MddDataFlow extends React.PureComponent {
                                 let myJson = JSON.parse(strJson);
                                 this.x6Graph.fromJSON(myJson);
                                 this.x6Graph.scrollToContent();
-
-                                //todo <<<<< now >>>>> 监测表结构是否变化，如果变化，增更新ER图
-                                let tables = [];
-                                const nodes = this.x6Graph.getNodes();
-                                nodes.forEach((itemNode) => {
-                                    let nodeData = itemNode.getData();
-
-                                    if (nodeData.nodeType.toUpperCase() === "TABLE") {
-                                        tables.push({id: nodeData.nodeId, columns: []});
-                                        if (nodeData.nodeId === selectedKeys[0]) {
-                                            // itemNode.setAttrs({
-                                            //     body: { fill: '#f5f5f5' },
-                                            // })
-                                            this.x6Graph.scrollToCell(itemNode);
-                                        }
-                                        const nodeChildren = itemNode.getChildren();
-                                        nodeChildren.forEach((itemNodeChild) => {
-                                            const nodeChildData = itemNodeChild.getData();
-                                            if (nodeChildData.nodeType.toUpperCase() === "TABLE_COLUMN") {
-                                                tables[tables.length - 1].columns.push(nodeChildData.nodeId);
-                                            }
-                                        })
-                                    }
-                                })
-                                console.log("用于检测表格字段是否发生变化", tables);
 
                                 this.context.showMessage("成功，内部ID为：" + result.data.data.id);
                             }
@@ -1395,6 +1396,154 @@ export default class MddDataFlow extends React.PureComponent {
         }
     }
 
+    // >>>>> upload and import excel
+    beforeUploadImportModels(file) {
+        new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    let data = e.target.result;
+                    //console.log(data);
+                    //let re = new RegExp("", "ig")
+                    // let re = /^[\s\t]*def[\s\t]+([\s\t]*\w+,)*([\s\t]*\w+[\s\t]*);$/gm;
+                    // 方法名：
+                    let mapMethod = new Map();
+                    let setMethod = new Set();
+                    let reMethod = /^[\s\t]*private[\s\t]+\w+[\s\t]+\w+\(([\s\t]*\w+[\s\t]+\w+[,]*)*\)[\s\t\n]*{/gm;
+                    let resultMethod = reMethod[Symbol.matchAll](data);
+                    let arrMethod = Array.from(resultMethod, x => x[0]);
+                    arrMethod.forEach((itemMethod) => {
+                        let reName = /^[\s\t]*private[\s\t]+\w+[\s\t]+(\w+)\(([\s\t]*\w+[\s\t]+\w+[,]*)*\)[\s\t\n]*{/g;
+                        let methodName = itemMethod.replace(reName, "$1");
+                        setMethod.add(methodName);
+                    });
+                    let arrMethodNew = Array.from(setMethod);
+                    arrMethodNew.sort();
+
+                    let treeDataTransformers = [];
+                    arrMethodNew.forEach((itemMethod) => {
+                        let uiTree = {
+                            key: itemMethod,
+                            title: itemMethod,
+                            children: []
+                        } ;
+                        treeDataTransformers.push(uiTree);
+                    });
+                    this.setState({
+                        treeDataTransformers: treeDataTransformers
+                    })
+
+                    // let reClass = /^[\s\t]*class[\s\t]+\w+[\s\t\n]*{[\s\t\n]*(.*!(private void).*\n)*[\s\t]+private[\s\t]+void/gm;
+                    // let resultClass = reClass[Symbol.matchAll](data);
+                    // console.log(Array.from(resultClass, x => x[0]));
+
+                    let reDef = /[\s\t]+[oi]+_\w+[\s\t]*[,;]+/gm;
+                    let resultDef = reDef[Symbol.matchAll](data);
+                    let arrDef = Array.from(resultDef, x => x[0]);
+                    let setOutDefs = new Set();
+                    let setInDefs = new Set();
+                    arrDef.forEach((itemDef) => {
+                        let defName = itemDef.replace(/[\s\t]+/g, "");
+                        defName = defName.replace(/[,;]+/g, "");
+                        if (defName.startsWith("o")) {
+                            setOutDefs.add(defName);
+                        } else {
+                            setInDefs.add(defName);
+                        }
+                    });
+                    let arrInDef = Array.from(setInDefs);
+                    let arrOutDef = Array.from(setOutDefs);
+                    arrInDef.sort();
+                    arrOutDef.sort();
+                    let treeDataModels = [];
+                    arrInDef.forEach((itemDef) => {
+                        let uiTree = {
+                            key: itemDef,
+                            title: itemDef,
+                            children: []
+                        } ;
+                        treeDataModels.push(uiTree);
+                    });
+                    arrOutDef.forEach((itemDef) => {
+                        let uiTree = {
+                            key: itemDef,
+                            title: itemDef,
+                            children: []
+                        } ;
+                        treeDataModels.push(uiTree);
+                    });
+                    this.setState({
+                        treeDataModels: treeDataModels
+                    })
+
+
+                    // exp = exp.replace(/^\s+|\s+$/g, "");                // 去除前后端空格
+                    // exp = exp.replace(/[\w.*]*\w[.]*/g, "__KV__$&");    // 标识counter名称，范例：((nmosdb....table_name.field01+nmosdb.test.field + a01 +abce_test 0.0.5) ..100. 100..200))
+                    // exp = exp.replace(/[.]/g, "__KD__");                // 标识符号：“.”
+                    // exp = exp.replace(/\s+/g, "");                      // 清除内部空格
+                    // let arrExp = exp.match(/(\W?\w*)/g);                // 分解出代码段
+
+                    // let wb = XLSX.read(data, {type: "binary"});
+                    // if (wb.SheetNames.length < 3) reject("文件格式不正确-SHEET数量少于3");
+
+                    resolve();
+                } catch (e) {
+                    reject(e.message);
+                }
+            }
+            reader.readAsBinaryString(file);
+        }).then((r) => {
+            this.context.showMessage("文件解析完毕");
+        })
+
+        return Upload.LIST_IGNORE;
+    }
+
+    onChangeImportModels(info) {
+        if (info.file.status !== 'uploading') {
+            console.log("!== uploading");
+        }
+        if (info.file.status === 'done') {
+            console.log("done");
+        } else if (info.file.status === 'error') {
+            console.log("error");
+        }
+    }
+
+    beforeUploadImportTransformers(file) {
+        // new Promise((resolve, reject) => {
+        //     const reader = new FileReader();
+        //     reader.onload = (e) => {
+        //         try {
+        //             let data = e.target.result;
+        //             console.log(data);
+        //             // let wb = XLSX.read(data, {type: "binary"});
+        //             // if (wb.SheetNames.length < 3) reject("文件格式不正确-SHEET数量少于3");
+        //
+        //             resolve();
+        //         } catch (e) {
+        //             reject(e.message);
+        //         }
+        //     }
+        //     reader.readAsBinaryString(file);
+        // }).then((r) => {
+        //     this.context.showMessage("文件解析完毕");
+        // })
+
+        return Upload.LIST_IGNORE;
+    }
+
+    onChangeImportTransformers(info) {
+        // if (info.file.status !== 'uploading') {
+        //     console.log("!== uploading");
+        // }
+        // if (info.file.status === 'done') {
+        //     console.log("done");
+        // } else if (info.file.status === 'error') {
+        //     console.log("error");
+        // }
+    }
+
     //todo >>>>> render
     render() {
         const optionsDataType = [
@@ -1404,6 +1553,9 @@ export default class MddDataFlow extends React.PureComponent {
             {label: "浮点数", value: "double"},
             {label: "日期", value: "datetime"},
         ];
+
+        const {treeTadMddTree, x6StencilContainerBox, treeModelProperties, treeTransformerProperties} = this.gRef;
+        const {treeDataMddTree, treeDataModels, treeDataTransformers, isMddTreeEditing, nodeType} = this.state;
 
         return (
             <div className="MddDataFlow">
@@ -1423,20 +1575,32 @@ export default class MddDataFlow extends React.PureComponent {
                             <div className={"BoxTreeErDiagram"}>
                                 <div className={"BoxTree"}>
                                     <div className={"BoxTreeInstance"}>
-                                        <Tree ref={this.gRef.treeTadMddTree}
-                                              treeData={this.state.treeDataMddTree}
+                                        <Tree ref={treeTadMddTree}
+                                              treeData={treeDataMddTree}
                                               onSelect={this.onTreeMddTreeSelected}
-                                              selectable={!this.state.isMddTreeEditing}
+                                              selectable={!isMddTreeEditing}
                                               className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div ref={this.gRef.x6StencilContainerBox} className="BoxEntities"/>
+                        <div ref={x6StencilContainerBox} className="BoxEntities"/>
                         <div className={"box-box-canvas"}>
                             <div className={"box-box-canvas-toolbar"}>
                                 <div className={"box-box-canvas-toolbar-title"}>&nbsp;</div>
                                 <div className={"box-box-canvas-toolbar-buttons"}>
+                                    <Upload name='file'
+                                            accept=".groovy"
+                                            beforeUpload={this.beforeUploadImportModels}
+                                            onChange={this.onChangeImportModels}>
+                                        <Button size={"small"} type={"primary"} icon={<CloudUploadOutlined/>}>导入对象模型</Button>
+                                    </Upload>
+                                    <Upload name='file'
+                                            accept=".groovy"
+                                            beforeUpload={this.beforeUploadImportTransformers}
+                                            onChange={this.onChangeImportTransformers}>
+                                        <Button size={"small"} type={"primary"} icon={<CloudUploadOutlined/>}>导入转化器</Button>
+                                    </Upload>
                                     <Button size={"small"} type={"primary"} onClick={this.onButtonX6Save}>保存</Button>
                                     <Button size={"small"} type={"primary"} onClick={this.onButtonX6ToPng}>导出</Button>
                                 </div>
@@ -1446,10 +1610,7 @@ export default class MddDataFlow extends React.PureComponent {
                             </div>
                         </div>
                         <div className={"box-properties"}>
-                            <Form ref={this.gRef.formX6Properties}
-                                  initialValues={this.onFormX6PropertiesInitialValues}
-                                  onFinish={this.onFormX6PropertiesFinish}
-                                  className={"form-x6-properties"}>
+                            <div className={"form-x6-properties"}>
                                 <div className="box-properties-title-bar">
                                     <div className="box-properties-title">属性编辑</div>
                                     <div className="box-properties-buttons">
@@ -1460,33 +1621,30 @@ export default class MddDataFlow extends React.PureComponent {
                                     </div>
                                 </div>
                                 <div className={"box-properties-content"}>
-                                    <div className={this.state.nodeType === "table" ? "box-form-items-table" : "BoxHidden"}>
-                                        <Form.Item className="box-form-item-input">
-                                            <Form.Item name="tableName" noStyle><Input/></Form.Item>
-                                            <Tooltip placement="topLeft" title="请输入表名称" arrowPointAtCenter>
-                                                <div className="input-icon"><QuestionCircleOutlined/></div>
-                                            </Tooltip>
-                                        </Form.Item>
+                                    <div className={nodeType === "NODE_MODEL" ? "box-form-items-table" : "BoxHidden"}>
+                                        <div className={"BoxTree"}>
+                                            <div className={"BoxTreeInstance"}>
+                                                <Tree ref={treeModelProperties}
+                                                      treeData={treeDataModels}
+                                                      //onSelect={this.onTreeMddTreeSelected}
+                                                      //selectable={!isMddTreeEditing}
+                                                      className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className={this.state.nodeType === "table_column" ? "box-form-items-table-column" : "BoxHidden"}>
-                                        <Form.Item className="box-form-item-input">
-                                            <Form.Item name="tableColumnName" noStyle><Input/></Form.Item>
-                                            <Tooltip placement="topLeft" title="请输入表字段名称" arrowPointAtCenter>
-                                                <div className="input-icon"><QuestionCircleOutlined/></div>
-                                            </Tooltip>
-                                        </Form.Item>
-                                        <Form.Item className="box-form-item-input">
-                                            {/*<Form.Item name="tableColumnDataType" noStyle><Input/></Form.Item>*/}
-                                            <Form.Item name="tableColumnDataType" noStyle>
-                                                <Select options={optionsDataType} onChange={this.onSelectX6TableColumnDataTypeChanged}/>
-                                            </Form.Item>
-                                            <Tooltip placement="topLeft" title="请选择表字段数据类型" arrowPointAtCenter>
-                                                <div className="input-icon"><QuestionCircleOutlined/></div>
-                                            </Tooltip>
-                                        </Form.Item>
+                                    <div className={nodeType === "NODE_TRANSFORMER" ? "box-form-items-table-column" : "BoxHidden"}>
+                                        <div className={"BoxTree"}>
+                                            <div className={"BoxTreeInstance"}>
+                                                <Tree ref={treeTransformerProperties}
+                                                      treeData={treeDataTransformers}
+                                                      //onSelect={this.onTreeMddTreeSelected}
+                                                      //selectable={!isMddTreeEditing}
+                                                      className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </Form>
+                            </div>
                         </div>
                     </div>
                 </div>

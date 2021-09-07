@@ -27,6 +27,7 @@ $debugBorderColor2: green;
         background: $colorBoxBackground;
         margin: 3px 3px 3px 0;
         grid-template-rows: auto 1fr;
+        overflow: hidden;
 
         .BoxTitleBar {
             border: $debugBorderWidth solid red;
@@ -49,6 +50,7 @@ $debugBorderColor2: green;
             grid-template-columns: 300px 140px 1fr 360px;
             grid-gap: 3px;
             margin: 3px;
+            overflow: hidden;
 
             .BoxUpDown {
                 border: $debugBorderWidth solid green;
@@ -146,11 +148,12 @@ $debugBorderColor2: green;
                 border: 1px solid lighten($colorBoxBackground, 30%);
                 display: grid;
                 grid-template-rows: auto 1fr;
+                overflow: hidden;
 
                 .box-box-canvas-toolbar {
                     border: 1px solid lighten($colorBoxBackground, 30%);
                     display: grid;
-                    grid-template-columns: 1fr auto auto;
+                    grid-template-columns: 1fr auto;
                     align-content: end;
                     background: lighten($colorBoxBackground, 15%);
                     margin: 3px;
@@ -160,6 +163,8 @@ $debugBorderColor2: green;
                     }
 
                     .box-box-canvas-toolbar-buttons {
+                        display: grid;
+                        grid-template-columns: auto auto auto auto;
                         margin: 3px;
 
                         Button {
@@ -177,6 +182,7 @@ $debugBorderColor2: green;
 
             .box-properties {
                 display: grid;
+                overflow: hidden;
 
                 .form-x6-properties {
                     display: grid;
@@ -184,6 +190,7 @@ $debugBorderColor2: green;
                     grid-template-rows: auto 1fr;
                     background: lighten($colorBoxBackground, 15%);
                     grid-gap: 5px;
+                    overflow: hidden;
 
                     .box-properties-title-bar {
                         display: grid;
@@ -210,11 +217,48 @@ $debugBorderColor2: green;
                         grid-template-rows: auto auto 1fr;
                         grid-gap: 3px;
                         margin: 3px;
+                        overflow: hidden;
+
+                        .box-form-items-table {
+                            display: grid;
+                            overflow: hidden;
+
+                            .BoxTree {
+                                border: $debugBorderWidth solid red;
+                                overflow: hidden;
+                                display: grid;
+                                grid-template-rows: 1fr auto auto;
+                                background: rgba(255, 255, 255, 1);
+                                margin: 5px 5px 5px 0;
+
+                                .BoxTreeInstance {
+                                    border: $debugBorderWidth solid red;
+                                    display: grid;
+                                    overflow: auto;
+                                }
+                            }
+                        }
 
                         .box-form-items-table-column{
                             display: grid;
                             grid-template-rows: auto auto 1fr;
                             grid-gap: 3px;
+                            overflow: hidden;
+
+                            .BoxTree {
+                                border: $debugBorderWidth solid red;
+                                overflow: hidden;
+                                display: grid;
+                                grid-template-rows: 1fr auto auto;
+                                background: rgba(255, 255, 255, 1);
+                                margin: 5px 5px 5px 0;
+
+                                .BoxTreeInstance {
+                                    border: $debugBorderWidth solid red;
+                                    display: grid;
+                                    overflow: auto;
+                                }
+                            }
                         }
                         .form-properties {
                             display: grid;

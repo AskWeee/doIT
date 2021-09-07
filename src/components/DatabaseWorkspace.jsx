@@ -468,7 +468,7 @@ export default class DatabaseWorkspace extends React.Component {
         })
     }
 
-    //todo <<<<< now >>>> x6 init
+    // >>>> x6 init
     x6Init() {
         EditableCellTool.config({
             tagName: 'div',
@@ -771,7 +771,7 @@ export default class DatabaseWorkspace extends React.Component {
             )
         });
 
-        // >>>>> x6 on edge:connected
+        //todo <<<<< now >>>>> x6 on edge:connected
         this.x6Graph.on('edge:connected', ({ isNew, edge, currentCell }) => {
             if (isNew) {
                 console.log(edge);
@@ -956,7 +956,7 @@ export default class DatabaseWorkspace extends React.Component {
         }
     }
 
-    //todo <<<<< now >>>>> x6 add Entity Table
+    // >>>>> x6 add Entity Table
     x6AddEntityTable(table) {
         let x = 50;
         let y = 50;
@@ -1154,7 +1154,7 @@ export default class DatabaseWorkspace extends React.Component {
         })
     }
 
-    //todo <<<<< now >>>>> on button X6 Save clicked
+    // >>>>> on button X6 Save clicked
     onButtonX6Save(e) {
         let myJson = this.x6Graph.toJSON();
 
@@ -1181,7 +1181,7 @@ export default class DatabaseWorkspace extends React.Component {
         this.doUpdateTableEr(myTableEr);
     }
 
-    //todo <<<<< now >>>>> on button Add Table Er Dir clicked
+    // >>>>> on button Add Table Er Dir clicked
     onButtonAddTableErDirClicked(e) {
         let erTree = new TadTableErTree();
 
@@ -1199,7 +1199,7 @@ export default class DatabaseWorkspace extends React.Component {
         this.doAddTableErTree(erTree);
     }
 
-    //todo <<<<< nwo >>>>> on button Add Table 2 Er Dialog clicked
+    // >>>>> on button Add Table 2 Er Dialog clicked
     onButtonAddTable2ErDiagramClicked(e) {
         let erTable = new TadTableErTable();
 
@@ -1210,7 +1210,6 @@ export default class DatabaseWorkspace extends React.Component {
                 // 因为erTables没有的话，tables则一定为空（没有）
                 if (!this.gMap.erTables.has(this.gCurrent.erTreeNode.id)) {
                     // 如果表从未被引用
-                    console.log("1");
                     erTable.er_id = this.gCurrent.erTreeNode.id;
                     erTable.table_id = this.gCurrent.tableId;
                     this.doAddTableErTable(erTable);
@@ -1228,7 +1227,6 @@ export default class DatabaseWorkspace extends React.Component {
                     this.doUpdateTableEr(myTableEr);
                 } else if (!this.gMap.erTables.get(this.gCurrent.erTreeNode.id).tables.includes(this.gCurrent.tableId)) {
                     // 该表被引用过，现在确认当前ER图是否引用
-                    console.log("2");
                     erTable.er_id = this.gCurrent.erTreeNode.id;
                     erTable.table_id = this.gCurrent.tableId;
                     this.doAddTableErTable(erTable);
@@ -2598,7 +2596,7 @@ export default class DatabaseWorkspace extends React.Component {
             treeExpandedKeysProducts: expandedKeys
         })
     }
-    //todo <<<<< now >>>>> on Tree 产品 selected
+    // >>>>> on Tree 产品 selected
     onTreeProductsSelected(selectedKeys, info) {
         this.setState({
             treeSelectedKeysProducts: selectedKeys
@@ -2866,7 +2864,7 @@ export default class DatabaseWorkspace extends React.Component {
 
     };
 
-    //todo <<<<< now >>>>> on Tree ErDiagram selected
+    // >>>>> on Tree ErDiagram selected
     onTreeErDiagramSelected(selectedKeys, info) {
         if (info.selected) {
             this.gCurrent.erTreeNode = {
@@ -2990,7 +2988,7 @@ export default class DatabaseWorkspace extends React.Component {
         this.gDynamic.columnDataType = v;
     }
 
-    //todo <<<<< now >>>>> on select X6 Table Column Data Type changed
+    // >>>>> on select X6 Table Column Data Type changed
     onSelectX6TableColumnDataTypeChanged(v) {
         // this.gDynamic.x6TableColumnDataType = v;
         let nodeType = v;
@@ -3121,7 +3119,6 @@ export default class DatabaseWorkspace extends React.Component {
 
     onButtonGetTableDataClicked(e) {
         this.context.showMessage("「获取数据」功能正在开发，请稍后。");
-        console.log(this.gCurrent);
     }
 
     onInputColumnNameChanged(e) {
@@ -4074,7 +4071,6 @@ export default class DatabaseWorkspace extends React.Component {
         ];
 
         const getDataType = (dataType) => {
-            console.log(dataType);
             if (dataType.toUpperCase() === "VARCHAR") dataType = "STRING";
             let myResult = null;
             for (let i = 1; i < optionsDataType.length; i++) {
