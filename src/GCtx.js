@@ -11,7 +11,7 @@ const GCtx = React.createContext({
     ],
     message: "message from global context",
     serviceIp: "10.31.4.7",
-    // serviceIp: "10.50.12.8",
+    // serviceIp: "10.50.5.25",
     servicePort: "8090",
     reactElementKey: 0,
     mapMenus: new Map(),

@@ -226,7 +226,6 @@ export default class MddDataFlow extends React.PureComponent {
     }
 
     restUpdateTadMddFlow(params) {
-        console.log(params);
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/mdd/update_mdd_flow",
             params,
             {headers: {'Content-Type': 'application/json'}})
@@ -401,6 +400,18 @@ export default class MddDataFlow extends React.PureComponent {
                 pageBreak: false,
                 pannable: true,
             },
+            selecting: {
+                enabled: true,
+                className: 'my-selecting',
+                rubberband: true,
+                multiple: true,
+                rubberNode: true,
+                rubberEdge: true,
+                strict: true,
+                modifiers: "shift",
+                showNodeSelectionBox: true,
+            },
+
             connecting: {
                 snap: true,
                 allowBlank: false,
@@ -457,12 +468,12 @@ export default class MddDataFlow extends React.PureComponent {
             });
 
             // 恢复上一次选中 node 的样式
-            if (this.gCurrent.node !== null && this.gCurrent.node !== undefined) {
-                this.gCurrent.node.attr('body', {
-                    // todo 有点问题，不是所有形状都是rect
-                    // stroke: this.gCurrent.nodeAttrs.rect.stroke,
-                })
-            }
+            // if (this.gCurrent.node !== null && this.gCurrent.node !== undefined) {
+            //     this.gCurrent.node.attr('body', {
+            //         // todo 有点问题，不是所有形状都是rect
+            //         // stroke: this.gCurrent.nodeAttrs.rect.stroke,
+            //     })
+            // }
             this.gCurrent.node = null;
         });
 
@@ -471,18 +482,18 @@ export default class MddDataFlow extends React.PureComponent {
             let nodeData = node.getData();
 
             // 恢复上一次选中 node 的样式
-            if (this.gCurrent.node !== null && this.gCurrent.node !== undefined) {
-                this.gCurrent.node.attr('body', {
-                    stroke: this.gCurrent.nodeAttrs.rect.stroke,
-                })
-            }
+            // if (this.gCurrent.node !== null && this.gCurrent.node !== undefined) {
+            //     this.gCurrent.node.attr('body', {
+            //         stroke: this.gCurrent.nodeAttrs.rect.stroke,
+            //     })
+            // }
             this.gCurrent.node = node;
             this.gCurrent.nodeAttrs = node.getAttrs();
 
             // 设置选中 node 的样式
-            node.attr('body', {
-                stroke: '#ffa940',
-            })
+            // node.attr('body', {
+            //     stroke: '#ffa940',
+            // })
 
             console.log(nodeData.nodeType);
             if (nodeData.nodeType === "NODE_MODEL") {
@@ -684,11 +695,11 @@ export default class MddDataFlow extends React.PureComponent {
             // title: '组件库',
             target: this.x6Graph,
             // collapsable: true,
-            stencilGraphWidth: 140,
+            stencilGraphWidth: 160,
             stencilGraphHeight: 200,
             layoutOptions: {
                 columns: 1,
-                columnWidth: 140,
+                columnWidth: 120,
                 rowHeight: 70,
                 center: true,
                 dx: 0,
@@ -708,8 +719,16 @@ export default class MddDataFlow extends React.PureComponent {
                     title: '控制',
                 },
                 {
+                    name: 'groupScripts',
+                    title: '脚本',
+                },
+                {
                     name: 'groupTransformers',
                     title: '运算',
+                },
+                {
+                    name: 'groupCustomMades',
+                    title: '自制',
                 },
             ],
             getDragNode: (node) => {
@@ -1145,9 +1164,11 @@ export default class MddDataFlow extends React.PureComponent {
         this.gRef.x6StencilContainerBox.current.appendChild(this.x6Stencil.container);
 
         this.x6LoadModels();
-        this.x6LoadTransformers();
-        this.x6LoadControllers();
         this.x6LoadEvents();
+        this.x6LoadControllers();
+        this.x6LoadScripts();
+        this.x6LoadTransformers();
+        this.x6LoadCustomMades();
     }
 
     x6LoadModels() {
@@ -1170,50 +1191,6 @@ export default class MddDataFlow extends React.PureComponent {
         nodeModel.setData({nodeName: "MODEL_ALARM", nodeTitle: "告警模型", nodeType: "NODE_MODEL"});
 
         this.x6Stencil.load([nodeModel], 'groupModels')
-    }
-
-    x6LoadTransformers() {
-        const nodeTransformer = new Rect({
-            width: 100,
-            height: 40,
-            attrs: {
-                body: {
-                    fill: '#AFAFAF',
-                    stroke: '#4B4A67',
-                    strokeWidth: 1,
-                },
-                text: {
-                    text: '转化器',
-                    fill: 'black',
-                    fontWeight: "bold",
-                },
-            },
-        })
-        nodeTransformer.setData({nodeName: "TRANSFORMER_UNKNOWN", nodeTitle: "转化器", nodeType: "NODE_TRANSFORMER"});
-
-        this.x6Stencil.load([nodeTransformer], 'groupTransformers')
-    }
-
-    x6LoadControllers() {
-        const nodeIfElse = new Rect({
-            width: 100,
-            height: 40,
-            attrs: {
-                body: {
-                    fill: '#AFAFAF',
-                    stroke: '#4B4A67',
-                    strokeWidth: 1,
-                },
-                text: {
-                    text: '条件判断',
-                    fill: 'black',
-                    fontWeight: "bold",
-                },
-            },
-        })
-        nodeIfElse.setData({nodeName: "CONTROLLER_IF_ELSE", nodeTitle: "条件判断", nodeType: "NODE_CONTROLLER"});
-
-        this.x6Stencil.load([nodeIfElse], 'groupControllers')
     }
 
     x6LoadEvents() {
@@ -1254,6 +1231,108 @@ export default class MddDataFlow extends React.PureComponent {
         nodeEnd.setData({nodeName: "EVENT_END", nodeTitle: "结束", nodeType: "NODE_EVENT"});
 
         this.x6Stencil.load([nodeBegin, nodeEnd], 'groupEvents')
+    }
+
+    x6LoadControllers() {
+        const nodeIfElse = new Shape.Polygon({
+            width: 100,
+            height: 60,
+            points: [
+                [0, 10],
+                [10, 0],
+                [20, 10],
+                [10, 20],
+            ],
+            attrs: {
+                body: {
+                    fill: '#AFAFAF',
+                    stroke: '#4B4A67',
+                    strokeWidth: 1,
+                },
+                text: {
+                    text: '条件判断',
+                    fill: 'black',
+                    fontWeight: "bold",
+                },
+            },
+        });
+
+
+        nodeIfElse.setData({nodeName: "CONTROLLER_IF_ELSE", nodeTitle: "条件判断", nodeType: "NODE_CONTROLLER"});
+
+        this.x6Stencil.load([nodeIfElse], 'groupControllers')
+    }
+
+    x6LoadScripts() {
+        const nodeTransformer = new Rect({
+            width: 100,
+            height: 40,
+            attrs: {
+                body: {
+                    fill: '#AFAFAF',
+                    stroke: '#4B4A67',
+                    strokeWidth: 1,
+                    rx: 10,
+                    ry: 10
+                },
+                text: {
+                    text: '脚本',
+                    fill: 'black',
+                    fontWeight: "bold",
+                },
+            },
+        })
+        nodeTransformer.setData({nodeName: "TRANSFORMER_UNKNOWN", nodeTitle: "脚本", nodeType: "NODE_SCRIPT"});
+
+        this.x6Stencil.load([nodeTransformer], 'groupScripts')
+    }
+
+    x6LoadTransformers() {
+        const nodeTransformer = new Rect({
+            width: 100,
+            height: 40,
+            attrs: {
+                body: {
+                    fill: '#AFAFAF',
+                    stroke: '#4B4A67',
+                    strokeWidth: 1,
+                    rx: 10,
+                    ry: 10
+                },
+                text: {
+                    text: '转化器',
+                    fill: 'black',
+                    fontWeight: "bold",
+                },
+            },
+        })
+        nodeTransformer.setData({nodeName: "TRANSFORMER_UNKNOWN", nodeTitle: "转化器", nodeType: "NODE_TRANSFORMER"});
+
+        this.x6Stencil.load([nodeTransformer], 'groupTransformers')
+    }
+
+    x6LoadCustomMades() {
+        const nodeTransformer = new Rect({
+            width: 100,
+            height: 40,
+            attrs: {
+                body: {
+                    fill: '#AFAFAF',
+                    stroke: '#4B4A67',
+                    strokeWidth: 2,
+                    rx: 10,
+                    ry: 10
+                },
+                text: {
+                    text: '转化器组',
+                    fill: 'black',
+                    fontWeight: "bold",
+                },
+            },
+        })
+        nodeTransformer.setData({nodeName: "TRANSFORMER_UNKNOWN", nodeTitle: "转化器", nodeType: "NODE_CUSTOM_MADE"});
+
+        this.x6Stencil.load([nodeTransformer], 'groupCustomMades')
     }
 
     x6Move() {
@@ -1480,7 +1559,7 @@ export default class MddDataFlow extends React.PureComponent {
 
     }
 
-    // >>>>> on button X6 Save clicked
+    //todo <<<<< now >>>>> on button X6 Save clicked
     onButtonX6Save(e) {
         let myJson = this.x6Graph.toJSON();
         myJson.cells.forEach((cell) => {
@@ -1494,6 +1573,7 @@ export default class MddDataFlow extends React.PureComponent {
         let cache = [];
         let strJson = JSON.stringify(myJson, function(key, value) {
             // console.log(key, value);
+            console.log(key);
             if (typeof value === 'object' && value !== null) {
                 if (cache.indexOf(value) !== -1) {
                     // 移除
@@ -1507,15 +1587,30 @@ export default class MddDataFlow extends React.PureComponent {
         cache = null;
         // 解决循环引用问题，来自网络方案（JerryWang）>>>>>
 
-        // let compressed = pako.deflate(strJson);
+        let fragmentLength = 60000;
+        let nLoop = Math.floor(strJson.length / fragmentLength);
+        let nTail = strJson.length % fragmentLength;
+        let arrJson = [];
+        for(let i = 0; i < nLoop; i++) {
+            arrJson.push(strJson.substr(i*fragmentLength, fragmentLength));
+        }
+        arrJson.push(strJson.substr(nLoop*fragmentLength, nTail));
 
         let myMddFlow = new TadMddFlow();
-        myMddFlow.mdd_flow_id = this.gCurrent.mddTreeNode.id;
-        myMddFlow.mdd_flow_content = JSON.stringify(strJson);
-        // myMddFlow.mdd_flow_content = JSON.stringify(compressed);
-        // console.log(compressed);
-        // console.log("save flow ...", myMddFlow);
-        this.doUpdateTadMddFlow(myMddFlow);
+        myMddFlow.flow_id = this.gCurrent.mddTreeNode.id;
+        this.restDeleteTadMddFlow(myMddFlow).then(() => {
+            let i = 0;
+            arrJson.forEach((itemJson) => {
+                i++;
+                let myMddFlow = new TadMddFlow();
+                myMddFlow.flow_id = this.gCurrent.mddTreeNode.id;
+                myMddFlow.flow_content = itemJson;
+                myMddFlow.content_index = i;
+
+                console.log(myMddFlow);
+                this.doAddTadMddFlow(myMddFlow);
+            })
+        });
     }
 
     onSelectX6TableColumnDataTypeChanged(v) {
@@ -1600,6 +1695,7 @@ export default class MddDataFlow extends React.PureComponent {
         this.doAddTadMddTree(erTree);
     }
 
+    //todo <<<<< now >>>>> on tree Mdd Tree selected
     onTreeMddTreeSelected(selectedKeys, info) {
         if (info.selected) {
             this.gCurrent.mddTreeNode = {
@@ -1627,22 +1723,28 @@ export default class MddDataFlow extends React.PureComponent {
         if (info.selected && info.node.tag.nodeType === "NODE_MDD_FLOW") {
             let nodeId = selectedKeys[0];
             let myMddFlow = new TadMddFlow();
-            myMddFlow.mdd_flow_id = nodeId;
+            myMddFlow.flow_id = nodeId;
             this.restGetTadMddFlow(myMddFlow).then((result) => {
                 if (result.status === 200) {
                     if (result.data.success) {
                         if ((result.data.data !== null) && (result.data.data !== undefined)) {
-                            let content = result.data.data.mdd_flow_content;
-                            if (content !== null) {
-                                let buffer = new Uint8Array(content.data);
-                                let strJson = new TextDecoder('utf-8').decode(buffer);
-                                let myJson = JSON.parse(strJson);
-                                // let myJsonReal = pako.inflate(myJson, {to: "string"});
-                                // let myJsonNew = JSON.parse(myJsonReal);
+                            console.log(result.data.data);
+                            let content = "";
+                            result.data.data.forEach((itemFlow) => {
+                                content += itemFlow.flow_content;
+                            })
+                            if (content !== "") {
+                                // let buffer = new Uint8Array(content.data);
+                                // let strJson = new TextDecoder('utf-8').decode(buffer);
+                                let myJson = JSON.parse(content);
                                 this.x6Graph.fromJSON(myJson);
                                 this.x6Graph.scrollToContent();
 
                                 this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                            } else {
+                                let myJson = JSON.parse("{}");
+                                this.x6Graph.fromJSON(myJson);
+                                this.x6Graph.scrollToContent();
                             }
                         }
                     } else {

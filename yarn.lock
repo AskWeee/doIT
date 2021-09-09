@@ -157,10 +157,10 @@
     probe.gl "^3.1.1"
     reflect-metadata "^0.1.13"
 
-"@antv/g6-core@0.3.4":
-  version "0.3.4"
-  resolved "https://registry.nlark.com/@antv/g6-core/download/@antv/g6-core-0.3.4.tgz#810bf1e1a2b0b14e54e1ca57b3827e2a008dadc5"
-  integrity sha1-gQvx4aKwsU5U4cpXs4J+KgCNrcU=
+"@antv/g6-core@*", "@antv/g6-core@0.3.6":
+  version "0.3.6"
+  resolved "https://registry.nlark.com/@antv/g6-core/download/@antv/g6-core-0.3.6.tgz#8d0095c9ed77721affe7026f52e83c7dd5ec82fb"
+  integrity sha1-jQCVye13chr/5wJvUug8fdXsgvs=
   dependencies:
     "@antv/algorithm" "^0.1.8"
     "@antv/dom-util" "^2.0.1"
@@ -173,19 +173,19 @@
     ml-matrix "^6.5.0"
     tslib "^2.1.0"
 
-"@antv/g6-element@0.3.4":
-  version "0.3.4"
-  resolved "https://registry.nlark.com/@antv/g6-element/download/@antv/g6-element-0.3.4.tgz#b475af8e385c4885c6a46210e22f8c68d4fa268e"
-  integrity sha1-tHWvjjhcSIXGpGIQ4i+MaNT6Jo4=
+"@antv/g6-element@0.3.6":
+  version "0.3.6"
+  resolved "https://registry.nlark.com/@antv/g6-element/download/@antv/g6-element-0.3.6.tgz?cache=0&sync_timestamp=1629789645809&other_urls=https%3A%2F%2Fregistry.nlark.com%2F%40antv%2Fg6-element%2Fdownload%2F%40antv%2Fg6-element-0.3.6.tgz#6c18b200be05d365180a4f69261bf4f800881a92"
+  integrity sha1-bBiyAL4F02UYCk9pJhv0+ACIGpI=
   dependencies:
     "@antv/g-base" "^0.5.1"
-    "@antv/g6-core" "0.3.4"
+    "@antv/g6-core" "*"
     "@antv/util" "~2.0.5"
 
-"@antv/g6-pc@0.3.4":
-  version "0.3.4"
-  resolved "https://registry.nlark.com/@antv/g6-pc/download/@antv/g6-pc-0.3.4.tgz#52e18022ef62f4f932dbb42daceba979d698ac89"
-  integrity sha1-UuGAIu9i9Pky27QtrOupedaYrIk=
+"@antv/g6-pc@0.3.6":
+  version "0.3.6"
+  resolved "https://registry.nlark.com/@antv/g6-pc/download/@antv/g6-pc-0.3.6.tgz?cache=0&sync_timestamp=1629790056229&other_urls=https%3A%2F%2Fregistry.nlark.com%2F%40antv%2Fg6-pc%2Fdownload%2F%40antv%2Fg6-pc-0.3.6.tgz#9106ef773ecbfefc676c038b5c7f2ac52333244a"
+  integrity sha1-kQbvdz7L/vxnbAOLXH8qxSMzJEo=
   dependencies:
     "@ant-design/colors" "^4.0.5"
     "@antv/algorithm" "^0.1.8"
@@ -195,9 +195,9 @@
     "@antv/g-canvas" "^0.5.2"
     "@antv/g-math" "^0.1.1"
     "@antv/g-svg" "^0.5.1"
-    "@antv/g6-core" "0.3.4"
-    "@antv/g6-element" "0.3.4"
-    "@antv/g6-plugin" "0.3.4"
+    "@antv/g6-core" "0.3.6"
+    "@antv/g6-element" "0.3.6"
+    "@antv/g6-plugin" "0.3.6"
     "@antv/hierarchy" "^0.6.7"
     "@antv/layout" "^0.1.14"
     "@antv/matrix-util" "^3.0.4"
@@ -209,27 +209,27 @@
     insert-css "^2.0.0"
     ml-matrix "^6.5.0"
 
-"@antv/g6-plugin@0.3.4":
-  version "0.3.4"
-  resolved "https://registry.nlark.com/@antv/g6-plugin/download/@antv/g6-plugin-0.3.4.tgz#42cbe79bfdcfef63a3a02162944a766e5d231adc"
-  integrity sha1-Qsvnm/3P72OjoCFilEp2bl0jGtw=
+"@antv/g6-plugin@0.3.6":
+  version "0.3.6"
+  resolved "https://registry.nlark.com/@antv/g6-plugin/download/@antv/g6-plugin-0.3.6.tgz#2272cfd43dc7c00dc7ce245ad987e5fda7dd5db9"
+  integrity sha1-InLP1D3HwA3HziRa2Yfl/afdXbk=
   dependencies:
     "@antv/dom-util" "^2.0.2"
     "@antv/g-base" "^0.5.1"
     "@antv/g-canvas" "^0.5.2"
     "@antv/g-svg" "^0.5.2"
-    "@antv/g6-core" "0.3.4"
+    "@antv/g6-core" "0.3.6"
     "@antv/matrix-util" "^3.0.4"
     "@antv/scale" "^0.3.4"
     "@antv/util" "^2.0.9"
     insert-css "^2.0.0"
 
-"@antv/g6@^4.3.4":
-  version "4.3.4"
-  resolved "https://registry.nlark.com/@antv/g6/download/@antv/g6-4.3.4.tgz?cache=0&sync_timestamp=1625124474310&other_urls=https%3A%2F%2Fregistry.nlark.com%2F%40antv%2Fg6%2Fdownload%2F%40antv%2Fg6-4.3.4.tgz#5d4faf453ff077463388adf5d613083a4f637277"
-  integrity sha1-XU+vRT/wd0YziK311hMIOk9jcnc=
+"@antv/g6@^4.3.6":
+  version "4.3.6"
+  resolved "https://registry.nlark.com/@antv/g6/download/@antv/g6-4.3.6.tgz#ad86d50590a34c00dcee2be16e927b66f081eb6b"
+  integrity sha1-rYbVBZCjTADc7ivhbpJ7ZvCB62s=
   dependencies:
-    "@antv/g6-pc" "0.3.4"
+    "@antv/g6-pc" "0.3.6"
 
 "@antv/hierarchy@^0.6.7":
   version "0.6.7"
@@ -5508,11 +5508,6 @@ fast-levenshtein@^2.0.6, fast-levenshtein@~2.0.6:
   resolved "https://registry.npm.taobao.org/fast-levenshtein/download/fast-levenshtein-2.0.6.tgz"
   integrity sha1-PYpcZog6FqMMqGQ+hR8Zuqd5eRc=
 
-fastjson@^2.0.1:
-  version "2.0.1"
-  resolved "https://registry.nlark.com/fastjson/download/fastjson-2.0.1.tgz#a271b09376dfd227a9e28a0a0b70756368d7e05d"
-  integrity sha1-onGwk3bf0iep4ooKC3B1Y2jX4F0=
-
 fastq@^1.6.0:
   version "1.11.0"
   resolved "https://registry.npm.taobao.org/fastq/download/fastq-1.11.0.tgz?cache=0&sync_timestamp=1614183553351&other_urls=https%3A%2F%2Fregistry.npm.taobao.org%2Ffastq%2Fdownload%2Ffastq-1.11.0.tgz"
@@ -8785,6 +8780,11 @@ p-try@^2.0.0:
   version "2.2.0"
   resolved "https://registry.npm.taobao.org/p-try/download/p-try-2.2.0.tgz"
   integrity sha1-yyhoVA4xPWHeWPr741zpAE1VQOY=
+
+pako@^2.0.4:
+  version "2.0.4"
+  resolved "https://registry.nlark.com/pako/download/pako-2.0.4.tgz?cache=0&sync_timestamp=1627560187062&other_urls=https%3A%2F%2Fregistry.nlark.com%2Fpako%2Fdownload%2Fpako-2.0.4.tgz#6cebc4bbb0b6c73b0d5b8d7e8476e2b2fbea576d"
+  integrity sha1-bOvEu7C2xzsNW41+hHbisvvqV20=
 
 pako@~1.0.2, pako@~1.0.5:
   version "1.0.11"

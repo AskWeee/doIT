@@ -8,6 +8,7 @@ import {Button, Form, Input, Select, Tooltip, Tree} from 'antd'
 import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, CloseOutlined, PlusSquareOutlined, QuestionCircleOutlined,} from '@ant-design/icons'
 import EditableCellTool from "./EditableCellTool";
 import {Graph, Addon, Shape, DataUri} from "@antv/x6";
+import G6 from '@antv/g6';
 import TadMddFlow from "../entity/TadMddFlow";
 import TadMddTree from "../entity/TadMddTree";
 import TadTableErTree from "../entity/TadTableErTree";
@@ -94,7 +95,8 @@ export default class OperationKafka extends React.PureComponent {
     }
 
     doInit() {
-        this.x6Init();
+        // this.x6Init();
+        this.g6Init();
     }
 
     //todo >>>>> do Get All
@@ -349,6 +351,41 @@ export default class OperationKafka extends React.PureComponent {
             })
         })
     }
+
+    g6Init() {
+        const data = {
+            // 点集
+            nodes: [
+                {
+                    id: 'node1', // String，该节点存在则必须，节点的唯一标识
+                    x: 100, // Number，可选，节点位置的 x 值
+                    y: 200, // Number，可选，节点位置的 y 值
+                },
+                {
+                    id: 'node2', // String，该节点存在则必须，节点的唯一标识
+                    x: 300, // Number，可选，节点位置的 x 值
+                    y: 200, // Number，可选，节点位置的 y 值
+                },
+            ],
+            // 边集
+            edges: [
+                {
+                    source: 'node1', // String，必须，起始点 id
+                    target: 'node2', // String，必须，目标点 id
+                },
+            ],
+        };
+
+        const graph = new G6.Graph({
+            container: this.gRef.x6GraphContainer.current,
+            width: 400, // Number，必须，图的宽度
+            height: 300, // Number，必须，图的高度
+        });
+
+        graph.data(data);
+        graph.render();
+    }
+
 
     //todo <<<<< now >>>> x6 init
     x6Init() {
@@ -1406,38 +1443,38 @@ export default class OperationKafka extends React.PureComponent {
         ];
 
         return (
-            <div className="MddDataFlow">
+            <div className="OperationKafka">
                 <div className={"BoxErDiagram"}>
                     <div className="BoxTitleBar">
                         <div className="BoxTitle" />
                     </div>
                     <div className="BoxContent">
+                        <div className={"BoxKafkas"}>
                         <div className={"BoxUpDown"}>
                             <div className="BoxToolbarErDiagram">
+                                <div className="box-properties-title-bar">
+                                    <div className="box-properties-title">监控对象列表</div>
+                                </div>
                                 <div className={"BoxSearch"}>
                                     <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
                                 </div>
-                                <Button onClick={this.onButtonAddMddDirClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>建目录</Button>
-                                <Button onClick={this.onButtonAddMddFlowClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>建流程</Button>
                             </div>
                             <div className={"BoxTreeErDiagram"}>
                                 <div className={"BoxTree"}>
                                     <div className={"BoxTreeInstance"}>
                                         <Tree ref={this.gRef.treeTadMddTree}
                                               treeData={this.state.treeDataMddTree}
-                                              onSelect={this.onTreeMddTreeSelected}
+                                              // onSelect={this.onTreeMddTreeSelected}
                                               selectable={!this.state.isMddTreeEditing}
                                               className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div ref={this.gRef.x6StencilContainerBox} className="BoxEntities"/>
                         <div className={"box-box-canvas"}>
                             <div className={"box-box-canvas-toolbar"}>
                                 <div className={"box-box-canvas-toolbar-title"}>&nbsp;</div>
                                 <div className={"box-box-canvas-toolbar-buttons"}>
-                                    <Button size={"small"} type={"primary"} onClick={this.onButtonX6Save}>保存</Button>
                                     <Button size={"small"} type={"primary"} onClick={this.onButtonX6ToPng}>导出</Button>
                                 </div>
                             </div>
@@ -1446,18 +1483,15 @@ export default class OperationKafka extends React.PureComponent {
                             </div>
                         </div>
                         <div className={"box-properties"}>
-                            <Form ref={this.gRef.formX6Properties}
-                                  initialValues={this.onFormX6PropertiesInitialValues}
-                                  onFinish={this.onFormX6PropertiesFinish}
+                            <div
                                   className={"form-x6-properties"}>
+                                <div className="BoxToolbarErDiagram">
                                 <div className="box-properties-title-bar">
-                                    <div className="box-properties-title">属性编辑</div>
-                                    <div className="box-properties-buttons">
-                                        <Button htmlType="submit" disabled={false}
-                                                icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>确认</Button>
-                                        <Button onClick={this.onButtonX6FormCancelClicked} disabled={false}
-                                                icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>放弃</Button>
-                                    </div>
+                                    <div className="box-properties-title">对象属性列表</div>
+                                </div>
+                                <div className={"BoxSearch"}>
+                                    <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
+                                </div>
                                 </div>
                                 <div className={"box-properties-content"}>
                                     <div className={this.state.nodeType === "table" ? "box-form-items-table" : "BoxHidden"}>
@@ -1486,8 +1520,21 @@ export default class OperationKafka extends React.PureComponent {
                                         </Form.Item>
                                     </div>
                                 </div>
-                            </Form>
+                            </div>
                         </div>
+                        </div>
+                        <div className={"BoxAlarms"}>
+                            <div className="BoxToolbarErDiagram">
+                                <div className="box-properties-title-bar">
+                                    <div className="box-properties-title">活动告警列表</div>
+                                </div>
+                                <div className={"BoxSearch"}>
+                                    <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
+                                </div>
+                            </div>
+                            <div className={"box-properties-content"}>
+                            </div>
+                            </div>
                     </div>
                 </div>
             </div>

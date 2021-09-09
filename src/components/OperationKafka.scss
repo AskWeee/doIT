@@ -44,153 +44,245 @@ $debugBorderColor2: green;
         }
 
         .BoxContent {
-            border: $debugBorderWidth solid red;
             display: grid;
-            grid-template-columns: 300px 140px 1fr 360px;
-            grid-gap: 3px;
-            margin: 3px;
+            grid-template-rows: 1fr 200px;
 
-            .BoxUpDown {
-                border: $debugBorderWidth solid green;
-                overflow: hidden;
+            .BoxKafkas {
+                border: $debugBorderWidth solid red;
                 display: grid;
-                grid-template-rows: auto 1fr;
-                background: lighten(lightgray, 10%);
+                grid-template-columns: 300px 1fr 300px;
+                grid-gap: 3px;
+                margin: 3px;
 
-                .BoxLeftRight {
-                    border: $debugBorderWidth solid red;
+                .BoxUpDown {
+                    border: $debugBorderWidth solid green;
                     overflow: hidden;
                     display: grid;
-                    grid-template-columns: 80px 1fr;
-                    background: white;
-                    margin: 0 0 3px 0;
+                    grid-template-rows: auto 1fr;
+                    background: lighten(lightgray, 10%);
 
-                    .BoxList {
-                        border: $debugBorderWidth solid red;
-                        overflow: auto;
-                        display: grid;
-                        background: rgba(255, 255, 255, 1);
-                        margin: 5px;
-                    }
-
-                    .BoxTree {
+                    .BoxLeftRight {
                         border: $debugBorderWidth solid red;
                         overflow: hidden;
                         display: grid;
-                        grid-template-rows: 1fr auto auto;
-                        background: rgba(255, 255, 255, 1);
-                        margin: 5px 5px 5px 0;
+                        grid-template-columns: 80px 1fr;
+                        background: white;
+                        margin: 0 0 3px 0;
 
-                        .BoxTreeInstance {
+                        .BoxList {
                             border: $debugBorderWidth solid red;
-                            display: grid;
                             overflow: auto;
+                            display: grid;
+                            background: rgba(255, 255, 255, 1);
+                            margin: 5px;
+                        }
+
+                        .BoxTree {
+                            border: $debugBorderWidth solid red;
+                            overflow: hidden;
+                            display: grid;
+                            grid-template-rows: 1fr auto auto;
+                            background: rgba(255, 255, 255, 1);
+                            margin: 5px 5px 5px 0;
+
+                            .BoxTreeInstance {
+                                border: $debugBorderWidth solid red;
+                                display: grid;
+                                overflow: auto;
+                            }
+                        }
+                    }
+
+                    .BoxToolbarErDiagram {
+                        border: $debugBorderWidth solid red;
+                        background: rgba(255, 255, 255, 1);
+                        margin: 0 0 3px 0;
+                        display: grid;
+                        grid-template-rows: auto auto;
+
+                        .box-properties-title-bar {
+                            border: 1px solid darkgray;
+                            background: lightgray;
+                            margin: 3px;
+                            display: grid;
+                            justify-content: center;
+                            align-content: center;
+
+
+                            .box-properties-title {
+                                display: grid;
+                                color: black;
+                                justify-content: center;
+                            }
+                        }
+
+
+                            .BoxSearch {
+                            margin: 3px 2px 3px 3px;
+                        }
+
+                        Button {
+                            margin: 3px 3px 3px 0;
+
+                            &:first-child {
+                                margin: 0;
+                            }
+                        }
+                    }
+
+                    .BoxTreeErDiagram {
+                        border: $debugBorderWidth solid red;
+
+                        overflow: hidden;
+                        display: grid;
+                        grid-template-rows: 1fr auto auto;
+                        background: white;
+
+                        .BoxTree {
+                            overflow: hidden;
+                            display: grid;
+                            background: white;
+                            margin: 5px;
+                            border: 1px solid darkgray;
+
+                            .BoxTreeInstance {
+                                border: $debugBorderWidth solid red;
+                                display: grid;
+                                overflow: auto;
+                            }
                         }
                     }
                 }
+
+                .BoxEntities {
+                    border: 1px solid lighten($colorBoxBackground, 30%);
+                    display: grid;
+                    background: lighten(lightgray, 15%);
+
+                    .x6-widget-stencil {
+                        border: $debugBorderWidth solid red;
+                        position: relative;
+                    }
+                }
+
+                .box-box-canvas {
+                    border: 1px solid lighten($colorBoxBackground, 30%);
+                    display: grid;
+                    grid-template-rows: auto 1fr;
+
+                    .box-box-canvas-toolbar {
+                        // border: 1px solid lighten($colorBoxBackground, 30%);
+                        display: grid;
+                        grid-template-columns: 1fr auto auto;
+                        align-content: end;
+                        // background: lighten($colorBoxBackground, 15%);
+                        margin: 3px;
+
+                        .box-box-canvas-toolbar-title {
+
+                        }
+
+                        .box-box-canvas-toolbar-buttons {
+                            margin: 3px;
+
+                            Button {
+                                margin-left: 3px;
+                            }
+                        }
+                    }
+
+                    .box-canvas {
+                        // border: 1px solid lighten($colorBoxBackground, 30%);
+                        display: grid;
+                        margin: 0 3px 3px 3px;
+                    }
+                }
+
+                .box-properties {
+                    display: grid;
+
+                    .form-x6-properties {
+                        display: grid;
+                        border: 1px solid lighten($colorBoxBackground, 30%);
+                        grid-template-rows: auto 1fr;
+                        background: lighten($colorBoxBackground, 15%);
+                        grid-gap: 5px;
+
+                        .BoxToolbarErDiagram {
+                            border: $debugBorderWidth solid red;
+                            background: rgba(255, 255, 255, 1);
+                            margin: 0 0 3px 0;
+                            display: grid;
+                            grid-template-rows: auto auto;
+
+                            .box-properties-title-bar {
+                                border: 1px solid darkgray;
+                                background: lightgray;
+                                margin: 3px;
+                                display: grid;
+                                justify-content: center;
+                                align-content: center;
+
+
+                                .box-properties-title {
+                                    display: grid;
+                                    color: black;
+                                    justify-content: center;
+                                }
+
+                                .box-properties-buttons {
+                                    display: grid;
+                                    grid-template-columns: auto auto;
+                                    grid-gap: 3px;
+                                }
+                            }
+                        }
+
+                        .box-properties-content {
+                            display: grid;
+                            grid-template-rows: auto auto 1fr;
+                            grid-gap: 3px;
+                            margin: 3px;
+                            border: 1px solid darkgray;
+
+                            .box-form-items-table-column {
+                                display: grid;
+                                grid-template-rows: auto auto 1fr;
+                                grid-gap: 3px;
+                            }
+
+                            .form-properties {
+                                display: grid;
+                                grid-template-rows: auto auto;
+                            }
+
+                        }
+                    }
+                }
+            }
+
+            .BoxAlarms {
+                display: grid;
+                border: 1px solid lighten($colorBoxBackground, 30%);
+                grid-template-rows: auto 1fr;
+                background: lighten($colorBoxBackground, 15%);
+                grid-gap: 5px;
 
                 .BoxToolbarErDiagram {
                     border: $debugBorderWidth solid red;
                     background: rgba(255, 255, 255, 1);
                     margin: 0 0 3px 0;
                     display: grid;
-                    grid-template-columns: 1fr auto auto auto auto;
-
-                    .BoxSearch {
-                        margin: 3px 2px 3px 3px;
-                    }
-
-                    Button {
-                        margin: 3px 3px 3px 0;
-
-                        &:first-child {
-                            margin: 0;
-                        }
-                    }
-                }
-
-                .BoxTreeErDiagram {
-                    border: $debugBorderWidth solid red;
-                    overflow: hidden;
-                    display: grid;
-                    grid-template-rows: 1fr auto auto;
-                    background: white;
-
-                    .BoxTree {
-                        overflow: hidden;
-                        display: grid;
-                        background: white;
-                        margin: 5px;
-
-                        .BoxTreeInstance {
-                            border: $debugBorderWidth solid red;
-                            display: grid;
-                            overflow: auto;
-                        }
-                    }
-                }
-            }
-
-            .BoxEntities {
-                border: 1px solid lighten($colorBoxBackground, 30%);
-                display: grid;
-                background: lighten(lightgray, 15%);
-
-                .x6-widget-stencil {
-                    border: $debugBorderWidth solid red;
-                    position: relative;
-                }
-            }
-
-            .box-box-canvas {
-                border: 1px solid lighten($colorBoxBackground, 30%);
-                display: grid;
-                grid-template-rows: auto 1fr;
-
-                .box-box-canvas-toolbar {
-                    border: 1px solid lighten($colorBoxBackground, 30%);
-                    display: grid;
-                    grid-template-columns: 1fr auto auto;
-                    align-content: end;
-                    background: lighten($colorBoxBackground, 15%);
-                    margin: 3px;
-
-                    .box-box-canvas-toolbar-title {
-
-                    }
-
-                    .box-box-canvas-toolbar-buttons {
-                        margin: 3px;
-
-                        Button {
-                            margin-left: 3px;
-                        }
-                    }
-                }
-
-                .box-canvas {
-                    border: 1px solid lighten($colorBoxBackground, 30%);
-                    display: grid;
-                    margin: 0 3px 3px 3px;
-                }
-            }
-
-            .box-properties {
-                display: grid;
-
-                .form-x6-properties {
-                    display: grid;
-                    border: 1px solid lighten($colorBoxBackground, 30%);
-                    grid-template-rows: auto 1fr;
-                    background: lighten($colorBoxBackground, 15%);
-                    grid-gap: 5px;
+                    grid-template-rows: auto auto;
 
                     .box-properties-title-bar {
+                        border: 1px solid darkgray;
+                        background: lightgray;
+                        margin: 3px;
                         display: grid;
-                        grid-template-rows: auto auto;
                         justify-content: center;
                         align-content: center;
-                        grid-gap: 5px;
+
 
                         .box-properties-title {
                             display: grid;
@@ -204,24 +296,12 @@ $debugBorderColor2: green;
                             grid-gap: 3px;
                         }
                     }
+                }
 
-                    .box-properties-content {
-                        display: grid;
-                        grid-template-rows: auto auto 1fr;
-                        grid-gap: 3px;
-                        margin: 3px;
-
-                        .box-form-items-table-column{
-                            display: grid;
-                            grid-template-rows: auto auto 1fr;
-                            grid-gap: 3px;
-                        }
-                        .form-properties {
-                            display: grid;
-                            grid-template-rows: auto auto;
-                        }
-
-                    }
+                .box-properties-content {
+                    display: grid;
+                    margin: 3px;
+                    border: 1px solid darkgray;
                 }
             }
         }
