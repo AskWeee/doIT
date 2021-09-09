@@ -141,6 +141,22 @@ $debugBorderColor2: green;
                 .x6-widget-stencil {
                     border: $debugBorderWidth solid red;
                     position: relative;
+
+                    .x6-widget-stencil-group[data-name=groupModels] {
+                        height: 120px;
+                    }
+
+                    .x6-widget-stencil-group[data-name=groupEvents] {
+                        height: 200px;
+                    }
+
+                    .x6-widget-stencil-group[data-name=groupControllers] {
+                        height: 120px;
+                    }
+
+                    .x6-widget-stencil-group[data-name=groupTransformers] {
+                        height: 120px;
+                    }
                 }
             }
 
