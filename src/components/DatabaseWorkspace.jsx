@@ -177,6 +177,19 @@ export default class DatabaseWorkspace extends React.Component {
         //todo >>>>> bind
         this.doInit = this.doInit.bind(this);
 
+        this.restGetTableRelations = this.restGetTableRelations.bind(this);
+        this.restGetTableRelation = this.restGetTableRelation.bind(this);
+        this.restAddTableRelation = this.restAddTableRelation.bind(this);
+        this.restUpdateTableRelation = this.restUpdateTableRelation.bind(this);
+        this.restDeleteTableRelation = this.restDeleteTableRelation.bind(this);
+        this.restTestTableRelation = this.restTestTableRelation.bind(this);
+        this.doGetTableRelations = this.doGetTableRelations.bind(this);
+        this.doGetTableRelation = this.doGetTableRelation.bind(this);
+        this.doAddTableRelation = this.doAddTableRelation.bind(this);
+        this.doUpdateTableRelation = this.doUpdateTableRelation.bind(this);
+        this.doDeleteTableRelation = this.doDeleteTableRelation.bind(this);
+        this.doTestTableRelation = this.doTestTableRelation.bind(this);
+
         this.restGetTableErTables = this.restGetTableErTables.bind(this);
         this.restAddTableErTable = this.restAddTableErTable.bind(this);
         this.restDeleteTableErTable = this.restDeleteTableErTable.bind(this);
@@ -773,11 +786,23 @@ export default class DatabaseWorkspace extends React.Component {
 
         //todo <<<<< now >>>>> x6 on edge:connected
         this.x6Graph.on('edge:connected', ({ isNew, edge, currentCell }) => {
+            console.log("x6 on edge:connected");
             if (isNew) {
                 console.log(edge);
                 const nodeSource = edge.getSourceCell();
                 // const nodeCurrent = edge.getCurrentCell();
                 console.log(nodeSource.getData(), currentCell.getData());
+                let sNodeData = nodeSource.getData();
+                let aNodeData = currentCell.getData();
+                let sTableId = this.gMap.columns.get(sNodeData.nodeId).table_id;
+                let aTableId = this.gMap.columns.get(aNodeData.nodeId).table_id;
+                let tableRelation = new TadTableRelation();
+                tableRelation.s_table_id = sTableId;
+                tableRelation.s_column_id = sNodeData.nodeId;
+                tableRelation.a_table_id = aTableId;
+                tableRelation.a_column_id = aNodeData.nodeId;
+                tableRelation.relation_type = "1-1";
+                this.doAddTableRelation(tableRelation);
             }
         })
 
@@ -1199,7 +1224,7 @@ export default class DatabaseWorkspace extends React.Component {
         this.doAddTableErTree(erTree);
     }
 
-    // >>>>> on button Add Table 2 Er Dialog clicked
+    //todo <<<<< now >>>>> on button 将表加入ER图 clicked
     onButtonAddTable2ErDiagramClicked(e) {
         let erTable = new TadTableErTable();
 
@@ -1225,6 +1250,11 @@ export default class DatabaseWorkspace extends React.Component {
                     myTableEr.er_id = this.gCurrent.erTreeNode.id;
                     myTableEr.er_content = strJson;
                     this.doUpdateTableEr(myTableEr);
+
+                    let tableRelation = new TadTableRelation();
+                    tableRelation.s_table_id = this.gCurrent.tableId;
+                    tableRelation.relation_type = "TEST";
+                    this.doGetTableRelation(tableRelation);
                 } else if (!this.gMap.erTables.get(this.gCurrent.erTreeNode.id).tables.includes(this.gCurrent.tableId)) {
                     // 该表被引用过，现在确认当前ER图是否引用
                     erTable.er_id = this.gCurrent.erTreeNode.id;
@@ -1242,6 +1272,11 @@ export default class DatabaseWorkspace extends React.Component {
                     myTableEr.er_id = this.gCurrent.erTreeNode.id;
                     myTableEr.er_content = strJson;
                     this.doUpdateTableEr(myTableEr);
+
+                    let tableRelation = new TadTableRelation();
+                    tableRelation.s_table_id = this.gCurrent.tableId;
+                    tableRelation.relation_type = "TEST";
+                    this.doGetTableRelation(tableRelation);
                 }
             }
         }
@@ -1263,6 +1298,138 @@ export default class DatabaseWorkspace extends React.Component {
         erTree.node_type = "NODE_ER_DIAGRAM";
 
         this.doAddTableErTree(erTree);
+    }
+
+    restGetTableRelations() {
+        let params = {};
+
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_relations",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restGetTableRelation(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_relation",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restAddTableRelation(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_relation",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restUpdateTableRelation(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/update_table_relation",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restDeleteTableRelation(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table_relation",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restTestTableRelation(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/test_table_relation",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetTableRelations() {
+        this.restGetTableRelations().then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    //todo <<<<< now >>>>> get 表关系
+    doGetTableRelation(params) {
+        this.restGetTableRelation(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    console.log(result.data.data);
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    //todo <<<<< now >>>>> do 添加表关系
+    doAddTableRelation(params) {
+        this.restAddTableRelation(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    // result.data.data.uuid = result.data.data.table_id;
+                    // result.data.data.node_zhname = this.gMap.tables.get(result.data.data.table_id).table_name;
+                    // result.data.data.node_type = "NODE_ER_TABLE";
+                    // this.uiUpdateTableErTree(result.data.data, "add");
+                    this.onButtonX6Save();
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doUpdateTableRelation(params) {
+        this.restUpdateTableRelation(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doDeleteTableRelation(params) {
+        this.restDeleteTableRelation(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    //todo <<<<< now >>>>> do 检测表关系是否存在
+    doTestTableRelation(params) {
+        this.restTestTableRelation(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    console.log(result.data.data);
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
     }
 
     restGetTableErTables() {
@@ -1887,7 +2054,6 @@ export default class DatabaseWorkspace extends React.Component {
     }
 
     doGetTablePropertyRelations(params) {
-
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_relation", params,
             {headers: {'Content-Type': 'application/json'}})
     }
@@ -3516,33 +3682,34 @@ export default class DatabaseWorkspace extends React.Component {
 
     }
 
+    //todo <<<<< now >>>>> on button 添加表关系 clicked
     onButtonAddRelationClicked() {
-        let tableId = this.gCurrent.tableId;
-        let relationId = undefined;
-
-        let myRelation = new TadTableRelation();
-        myRelation.s_table_id = tableId;
-
-        axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_relation",
-            myRelation,
-            {headers: {'Content-Type': 'application/json'}}
-        ).then((response) => {
-            let data = response.data;
-
-            if (data.success) {
-                relationId = data.data.id;
-                let uiRelation = data.data;
-                uiRelation.key = relationId;
-
-                let dsRelations = JSON.parse(JSON.stringify(this.state.dsRelations));
-
-                dsRelations.push(uiRelation);
-                this.setState({
-                    pageSizeRelations: this.state.pageSizeRelations + 1,
-                    dsRelations: dsRelations
-                })
-            }
-        });
+        // let tableId = this.gCurrent.tableId;
+        // let relationId = undefined;
+        //
+        // let myRelation = new TadTableRelation();
+        // myRelation.s_table_id = tableId;
+        //
+        // axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/add_table_relation",
+        //     myRelation,
+        //     {headers: {'Content-Type': 'application/json'}}
+        // ).then((response) => {
+        //     let data = response.data;
+        //
+        //     if (data.success) {
+        //         relationId = data.data.id;
+        //         let uiRelation = data.data;
+        //         uiRelation.key = relationId;
+        //
+        //         let dsRelations = JSON.parse(JSON.stringify(this.state.dsRelations));
+        //
+        //         dsRelations.push(uiRelation);
+        //         this.setState({
+        //             pageSizeRelations: this.state.pageSizeRelations + 1,
+        //             dsRelations: dsRelations
+        //         })
+        //     }
+        // });
     }
 
     onButtonAlterRelationClicked() {

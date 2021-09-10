@@ -3,7 +3,6 @@ import './MddDataFlow.scss'
 import GCtx from "../GCtx";
 import axios from "axios";
 import lodash from "lodash";
-import pako from "pako";
 import {Button, Form, Input, Select, Tooltip, Tree, Upload} from 'antd'
 import {CaretDownOutlined, CloudUploadOutlined, PlusSquareOutlined, QuestionCircleOutlined,} from '@ant-design/icons'
 import EditableCellTool from "./EditableCellTool";
@@ -732,10 +731,7 @@ export default class MddDataFlow extends React.PureComponent {
                 },
             ],
             getDragNode: (node) => {
-                // let myNode = node.clone();
-                // this.x6Graph.addNode(myNode);
-                console.log(node.markup, node.shape, node.size(), typeof node);
-                let myNode = this.x6Graph.createNode({
+                let nodeShadow = this.x6Graph.createNode({
                     width: node.size().width,
                     height: node.size().height,
                     shape: node.shape,
@@ -747,24 +743,20 @@ export default class MddDataFlow extends React.PureComponent {
                         }
                     },
                 });
-
-                myNode.setData({
+                nodeShadow.setData({
                     x: 0,
                     y: 0,
                     nodeType: "NODE_SHADOW",
                 });
-
-                this.x6Graph.addNode(myNode);
-
-                myNode.on('change:position', this.x6Update);
+                this.x6Graph.addNode(nodeShadow);
+                nodeShadow.on('change:position', this.x6Update);
+                this.gDynamic.nodeShadow = nodeShadow;
 
                 let nodeClone = node.clone();
-                this.gDynamic.nodeShadow = myNode;
                 nodeClone.on("change:position", (args) => {
                     this.gDynamic.x = args.current.x;
                     this.gDynamic.y = args.current.y;
                 });
-
                 this.gDynamic.timerMove = setInterval(() => {
                     this.gDynamic.nodeShadow.position(this.gDynamic.x, this.gDynamic.y)
                 }, 10);
@@ -776,7 +768,6 @@ export default class MddDataFlow extends React.PureComponent {
 
                 let nodeData = node.getData();
                 let nodeAttrs = node.getAttrs();
-                console.log(nodeAttrs);
                 switch (nodeData.nodeType) {
                     case "NODE_MODEL":
                         this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
@@ -1041,6 +1032,91 @@ export default class MddDataFlow extends React.PureComponent {
                         );
 
                         break
+                    case "NODE_SCRIPT":
+                        this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
+                        this.gDynamic.nodeShadow.setProp({ports: {
+                                groups: {
+                                    groupTop: {
+                                        position: {
+                                            name: "top",
+                                        },
+                                        attrs: {
+                                            circle: {
+                                                fill: '#ffffff',
+                                                stroke: '#31d0c6',
+                                                strokeWidth: 1,
+                                                r: 6,
+                                                magnet: true,
+                                            },
+                                            text: {
+                                                fill: '#6a6c8a',
+                                                fontSize: 12,
+                                            },
+                                        },
+                                    },
+                                    groupRight: {
+                                        position: {
+                                            name: "right",
+                                        },
+                                        attrs: {
+                                            circle: {
+                                                fill: '#ffffff',
+                                                stroke: '#31d0c6',
+                                                strokeWidth: 1,
+                                                r: 6,
+                                                magnet: true,
+                                            },
+                                            text: {
+                                                fill: '#6a6c8a',
+                                                fontSize: 12,
+                                            },
+                                        },
+                                    },
+                                    groupBottom: {
+                                        position: {
+                                            name: "bottom",
+                                        },
+                                        attrs: {
+                                            circle: {
+                                                fill: '#ffffff',
+                                                stroke: '#31d0c6',
+                                                strokeWidth: 1,
+                                                r: 6,
+                                                magnet: true,
+                                            },
+                                            text: {
+                                                fill: '#6a6c8a',
+                                                fontSize: 12,
+                                            },
+                                        },
+                                    },
+                                    groupLeft: {
+                                        position: {
+                                            name: "left",
+                                        },
+                                        attrs: {
+                                            circle: {
+                                                fill: '#ffffff',
+                                                stroke: '#31d0c6',
+                                                strokeWidth: 1,
+                                                r: 6,
+                                                magnet: true,
+                                            },
+                                            text: {
+                                                fill: '#6a6c8a',
+                                                fontSize: 12,
+                                            },
+                                        },
+                                    }
+                                },
+                            }});
+                        this.gDynamic.nodeShadow.addPorts([
+                                { group: "groupTop" },
+                                { group: "groupBottom" },
+                            ]
+                        );
+
+                        break
                     case "NODE_TRANSFORMER":
                         this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
                         this.gDynamic.nodeShadow.setProp({ports: {
@@ -1121,9 +1197,92 @@ export default class MddDataFlow extends React.PureComponent {
                             }});
                         this.gDynamic.nodeShadow.addPorts([
                                 { group: "groupTop" },
-                                { group: "groupRight" },
                                 { group: "groupBottom" },
-                                { group: "groupLeft" }
+                            ]
+                        );
+
+                        break
+                    case "NODE_CUSTOMMADE":
+                        this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
+                        this.gDynamic.nodeShadow.setProp({ports: {
+                                groups: {
+                                    groupTop: {
+                                        position: {
+                                            name: "top",
+                                        },
+                                        attrs: {
+                                            circle: {
+                                                fill: '#ffffff',
+                                                stroke: '#31d0c6',
+                                                strokeWidth: 1,
+                                                r: 6,
+                                                magnet: true,
+                                            },
+                                            text: {
+                                                fill: '#6a6c8a',
+                                                fontSize: 12,
+                                            },
+                                        },
+                                    },
+                                    groupRight: {
+                                        position: {
+                                            name: "right",
+                                        },
+                                        attrs: {
+                                            circle: {
+                                                fill: '#ffffff',
+                                                stroke: '#31d0c6',
+                                                strokeWidth: 1,
+                                                r: 6,
+                                                magnet: true,
+                                            },
+                                            text: {
+                                                fill: '#6a6c8a',
+                                                fontSize: 12,
+                                            },
+                                        },
+                                    },
+                                    groupBottom: {
+                                        position: {
+                                            name: "bottom",
+                                        },
+                                        attrs: {
+                                            circle: {
+                                                fill: '#ffffff',
+                                                stroke: '#31d0c6',
+                                                strokeWidth: 1,
+                                                r: 6,
+                                                magnet: true,
+                                            },
+                                            text: {
+                                                fill: '#6a6c8a',
+                                                fontSize: 12,
+                                            },
+                                        },
+                                    },
+                                    groupLeft: {
+                                        position: {
+                                            name: "left",
+                                        },
+                                        attrs: {
+                                            circle: {
+                                                fill: '#ffffff',
+                                                stroke: '#31d0c6',
+                                                strokeWidth: 1,
+                                                r: 6,
+                                                magnet: true,
+                                            },
+                                            text: {
+                                                fill: '#6a6c8a',
+                                                fontSize: 12,
+                                            },
+                                        },
+                                    }
+                                },
+                            }});
+                        this.gDynamic.nodeShadow.addPorts([
+                                { group: "groupTop" },
+                                { group: "groupBottom" },
                             ]
                         );
 
@@ -1330,7 +1489,7 @@ export default class MddDataFlow extends React.PureComponent {
                 },
             },
         })
-        nodeTransformer.setData({nodeName: "TRANSFORMER_UNKNOWN", nodeTitle: "转化器", nodeType: "NODE_CUSTOM_MADE"});
+        nodeTransformer.setData({nodeName: "TRANSFORMER_UNKNOWN", nodeTitle: "转化器", nodeType: "NODE_CUSTOMMADE"});
 
         this.x6Stencil.load([nodeTransformer], 'groupCustomMades')
     }
