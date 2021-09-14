@@ -238,6 +238,8 @@ export default class ServicePerformance extends React.PureComponent {
         this.onCheckboxExportEnableChanged = this.onCheckboxExportEnableChanged.bind(this);
         this.onCheckboxSchemasChanged = this.onCheckboxSchemasChanged.bind(this);
         this.onCheckboxKpisChanged = this.onCheckboxKpisChanged.bind(this);
+        this.onButtonKpisUp = this.onButtonKpisUp.bind(this);
+        this.onButtonKpisDown = this.onButtonKpisDown.bind(this);
 
         this.onInputSchemaZhNameChanged = this.onInputSchemaZhNameChanged.bind(this);
         this.onInputSearchSchemasSearched = this.onInputSearchSchemasSearched.bind(this);
@@ -2694,6 +2696,41 @@ export default class ServicePerformance extends React.PureComponent {
         this.context.showMessage("移除原始指标，开发中...");
     }
 
+    //todo <<<<< now >>>>> on button 调整KPI位置 UP clicked
+    onButtonKpisUp() {
+        console.log(this.gCurrent);
+        let treeDataKpis = lodash.cloneDeep(this.state.treeDataKpis);
+        let nodeUp, nodeCurrent, indexUp;
+        for(let i = 0; i < treeDataKpis.length; i++) {
+            if (treeDataKpis[i].key === this.gCurrent.kpi.id) {
+                if (i>0) {
+                    indexUp = i - 1;
+                    nodeUp = lodash.cloneDeep(treeDataKpis[i - 1]);
+                    nodeCurrent = lodash.cloneDeep(treeDataKpis[i]);
+                    treeDataKpis.splice(i, 1);
+                    break
+                }
+            }
+        }
+
+        if (nodeUp !== undefined && nodeCurrent !== undefined) {
+            treeDataKpis.splice(indexUp, 0, nodeCurrent);
+            console.log(treeDataKpis);
+            this.setState({
+                treeDataKpis: treeDataKpis
+            })
+        }
+
+
+        console.log(treeDataKpis);
+    }
+
+    onButtonKpisDown() {
+        console.log(this.gCurrent);
+        let treeDataKpis = lodash.cloneDeep(this.state.treeDataKpis);
+        console.log(treeDataKpis);
+    }
+
     // >>>>> 移入指标组
     onButtonIndicatorsCopy2CountersClicked(e) {
         if (this.gCurrent.schema) {
@@ -3742,6 +3779,8 @@ export default class ServicePerformance extends React.PureComponent {
     //todo >>>>> render
     render() {
 
+        const { treeDataKpis } = this.state;
+
         return (
             <div className={this.state.styleLayout === "NN" ? "ServicePerformance" : "ServicePerformance ServicePerformanceSmall"}>
                 <div className={"BoxSchemasAndIndicators"}>
@@ -3829,7 +3868,7 @@ export default class ServicePerformance extends React.PureComponent {
                             <div className={"BoxTree"}>
                                 <div className={"BoxTreeInstance"}>
                                     <Tree ref={this.gRef.treeKpis}
-                                          treeData={this.state.treeDataKpis}
+                                          treeData={treeDataKpis}
                                           onSelect={this.onTreeKpisSelected}
                                           onCheck={this.onTreeKpisChecked}
                                           checkedKeys={this.state.checkedKeysKpis}

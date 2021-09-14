@@ -30,7 +30,9 @@ export default class DatabaseWorkspace extends React.Component {
     x6Stencil = null;
 
     gUi = {};
-    gMap = {};
+    gMap = {
+        erTables: new Map()
+    };
     gData = {};
     gCurrent = {
         productLineId: undefined,
@@ -56,6 +58,10 @@ export default class DatabaseWorkspace extends React.Component {
         x6GraphContainerBox: React.createRef(),
         x6GraphContainer: React.createRef(),
         selectDbUser: React.createRef(),
+    }
+    x6Data = {
+        tables: [],
+        relations: []
     }
 
     constructor(props) {
@@ -233,6 +239,7 @@ export default class DatabaseWorkspace extends React.Component {
         this.onButtonX6Save = this.onButtonX6Save.bind(this);
         this.uiUpdateTableErTree = this.uiUpdateTableErTree.bind(this);
         this.getCommTreeNode = this.getCommTreeNode.bind(this);
+        this.x6DrawTable = this.x6DrawTable.bind(this);
 
         this.erTrees2antdTree = this.erTrees2antdTree.bind(this);
 
@@ -806,6 +813,20 @@ export default class DatabaseWorkspace extends React.Component {
             }
         })
 
+        //todo <<<<< now >>>>> on change 节点位置
+        this.x6Graph.on("node:change:position", (args) => {
+            let nodeData = args.cell.getData();
+            console.log(nodeData);
+            for(let i = 0; i < this.x6Data.tables.length; i++) {
+                if (this.x6Data.tables[i].id === nodeData.nodeId) {
+                    this.x6Data.tables[i].x = args.current.x;
+                    this.x6Data.tables[i].y = args.current.y;
+                    break
+                }
+            }
+        });
+
+
         this.x6Graph.centerContent();
 
         this.x6Stencil = new Stencil({
@@ -982,7 +1003,7 @@ export default class DatabaseWorkspace extends React.Component {
     }
 
     // >>>>> x6 add Entity Table
-    x6AddEntityTable(table) {
+    x6AddEntityTable(table, id) {
         let x = 50;
         let y = 50;
         let hTitle = 30;
@@ -991,7 +1012,7 @@ export default class DatabaseWorkspace extends React.Component {
         let wt = wc + 20;
         let ht = hc + 20;
 
-        let enTable = this.x6Graph.addNode({
+        let node = {
             x: x,
             y: y,
             width: wt,
@@ -1015,7 +1036,11 @@ export default class DatabaseWorkspace extends React.Component {
                     textVerticalAnchor: 'top',
                 },
             },
-        })
+        }
+        if (id !== undefined) {
+            node.id = id;
+        }
+        let enTable = this.x6Graph.addNode(node);
         enTable.on('change:position', this.x6Update);
 
         let n = 0;
@@ -1103,42 +1128,12 @@ export default class DatabaseWorkspace extends React.Component {
             }
         });
 
-
-        // let columnButton = this.x6Graph.addNode({
-        //     x: x,
-        //     y: y + n * (hc + 2),
-        //     width: wc,
-        //     height: hc,
-        //     label: "+",
-        //     attrs: {
-        //         body: {
-        //             connectionCount: 0,
-        //             stroke: "#2F2F2F",
-        //             strokeWidth: 1,
-        //             fill: '#8F8F8F',
-        //             magnet: true,
-        //         },
-        //         label: {
-        //             fill: '#fff',
-        //             fontSize: 12,
-        //         },
-        //     },
-        // });
-        //
-        // columnButton.setData({
-        //     nodeType: "table_column_button_add",
-        //     nodeId: "column_button_add",
-        // });
-        //
-        // columnButton.position(0, 0, {relative: true});
-        // enTable.addChild(columnButton);
-
-        enTable.fit({padding: {top: hTitle + 10, bottom: 10, left: 10, right: 10}});
-
         enTable.setData({
             nodeType: "table",
             nodeId: table.table_id
         });
+
+        enTable.fit({padding: {top: hTitle + 10, bottom: 10, left: 10, right: 10}});
 
         return enTable;
     }
@@ -1179,31 +1174,68 @@ export default class DatabaseWorkspace extends React.Component {
         })
     }
 
-    // >>>>> on button X6 Save clicked
-    onButtonX6Save(e) {
-        let myJson = this.x6Graph.toJSON();
+    //todo <<<<< now >>>>> on button 保存ER图 clicked
 
-        // 解决循环引用问题，来自网络方案（JerryWang）<<<<<
-        let cache = [];
-        let strJson = JSON.stringify(myJson, function(key, value) {
-            if (typeof value === 'object' && value !== null) {
-                if (cache.indexOf(value) !== -1) {
-                    // 移除
-                    return;
-                }
-                // 收集所有的值
-                cache.push(value);
+    x6DrawTable(table) {
+        console.log(table);
+
+        let myTable = lodash.cloneDeep(this.gMap.tables.get(table.tableId));
+        this.x6AddEntityTable(myTable, table.id);
+    }
+
+    x6DrawRelation(relation) {
+        let nodeSource = this.x6Graph.getCellById(relation.nodeSource)
+        let nodeDataSource = nodeSource.getData();
+        let nodeTarget = this.x6Graph.getCellById(relation.nodeTarget)
+        let nodeDataTarget = nodeTarget.getData();
+        this.x6Graph.addEdge({
+            source: {
+                cell: nodeSource,
+                port: nodeDataSource.portId
+            },
+            target: {
+                cell: nodeTarget,
+                port: nodeDataTarget.portId
+            },
+            router: {
+                name: 'er',
             }
-            return value;
         });
-        cache = null;
-        // 解决循环引用问题，来自网络方案（JerryWang）>>>>>
+    }
 
-        let myTableEr = new TadTableEr();
-        myTableEr.er_id = this.gCurrent.erTreeNode.id;
-        myTableEr.er_content = strJson;
-        // this.doAddTableEr(myTableEr);
-        this.doUpdateTableEr(myTableEr);
+    onButtonX6Save(e) {
+        console.log(this.x6Data);
+        this.x6Graph.clearCells();
+        this.x6Data.tables.forEach((itemTable) => {
+            this.x6DrawTable(itemTable);
+        })
+        this.x6Data.relations.forEach((itemRelation) => {
+            this.x6DrawRelation(itemRelation);
+        })
+
+        // let myJson = this.x6Graph.toJSON();
+        //
+        // // 解决循环引用问题，来自网络方案（JerryWang）<<<<<
+        // let cache = [];
+        // let strJson = JSON.stringify(myJson, function(key, value) {
+        //     if (typeof value === 'object' && value !== null) {
+        //         if (cache.indexOf(value) !== -1) {
+        //             // 移除
+        //             return;
+        //         }
+        //         // 收集所有的值
+        //         cache.push(value);
+        //     }
+        //     return value;
+        // });
+        // cache = null;
+        // // 解决循环引用问题，来自网络方案（JerryWang）>>>>>
+        //
+        // let myTableEr = new TadTableEr();
+        // myTableEr.er_id = this.gCurrent.erTreeNode.id;
+        // myTableEr.er_content = strJson;
+        // // this.doAddTableEr(myTableEr);
+        // this.doUpdateTableEr(myTableEr);
     }
 
     // >>>>> on button Add Table Er Dir clicked
@@ -1231,53 +1263,61 @@ export default class DatabaseWorkspace extends React.Component {
         if ((this.gCurrent.erTreeNode !== null) && (this.gCurrent.erTreeNode !== undefined)) {
             if (this.gCurrent.erTreeNode.nodeType === "NODE_ER_DIAGRAM") {
 
-                // 这里两个判断是可以合并的，目前只是为了快
-                // 因为erTables没有的话，tables则一定为空（没有）
+                if (this.gMap.erTables.has(this.gCurrent.erTreeNode.id)) {
+                    if (this.gMap.erTables.get(this.gCurrent.erTreeNode.id).tables.includes(this.gCurrent.tableId)) {
+                        console.log("引用过，且被当前ER图引用");
+                        return
+                    }
+                }
+
                 if (!this.gMap.erTables.has(this.gCurrent.erTreeNode.id)) {
                     // 如果表从未被引用
-                    erTable.er_id = this.gCurrent.erTreeNode.id;
-                    erTable.table_id = this.gCurrent.tableId;
-                    this.doAddTableErTable(erTable);
-
+                    console.log("表从未被引用");
                     this.gMap.erTables.set(this.gCurrent.erTreeNode.id, {isLoaded: true, tables: [erTable.table_id]});
 
-                    let myTable = lodash.cloneDeep(this.gMap.tables.get(erTable.table_id));
-                    this.x6AddEntityTable(myTable);
-
-                    this.myJson = this.x6Graph.toJSON();
-                    let strJson = JSON.stringify(this.myJson);
-                    let myTableEr = new TadTableEr();
-                    myTableEr.er_id = this.gCurrent.erTreeNode.id;
-                    myTableEr.er_content = strJson;
-                    this.doUpdateTableEr(myTableEr);
-
-                    let tableRelation = new TadTableRelation();
-                    tableRelation.s_table_id = this.gCurrent.tableId;
-                    tableRelation.relation_type = "TEST";
-                    this.doGetTableRelation(tableRelation);
-                } else if (!this.gMap.erTables.get(this.gCurrent.erTreeNode.id).tables.includes(this.gCurrent.tableId)) {
+                    // erTable.er_id = this.gCurrent.erTreeNode.id;
+                    // erTable.table_id = this.gCurrent.tableId;
+                    // this.doAddTableErTable(erTable);
+                    // let myTable = lodash.cloneDeep(this.gMap.tables.get(erTable.table_id));
+                    // this.x6AddEntityTable(myTable);
+                    // this.myJson = this.x6Graph.toJSON();
+                    // let strJson = JSON.stringify(this.myJson);
+                    // let myTableEr = new TadTableEr();
+                    // myTableEr.er_id = this.gCurrent.erTreeNode.id;
+                    // myTableEr.er_content = strJson;
+                    // this.doUpdateTableEr(myTableEr);
+                    // let tableRelation = new TadTableRelation();
+                    // tableRelation.s_table_id = this.gCurrent.tableId;
+                    // tableRelation.relation_type = "TEST";
+                    // this.doGetTableRelation(tableRelation);
+                } else {
                     // 该表被引用过，现在确认当前ER图是否引用
-                    erTable.er_id = this.gCurrent.erTreeNode.id;
-                    erTable.table_id = this.gCurrent.tableId;
-                    this.doAddTableErTable(erTable);
-
                     this.gMap.erTables.get(this.gCurrent.erTreeNode.id).tables.push(erTable.table_id);
-
-                    let myTable = lodash.cloneDeep(this.gMap.tables.get(erTable.table_id));
-                    this.x6AddEntityTable(myTable);
-
-                    this.myJson = this.x6Graph.toJSON();
-                    let strJson = JSON.stringify(this.myJson);
-                    let myTableEr = new TadTableEr();
-                    myTableEr.er_id = this.gCurrent.erTreeNode.id;
-                    myTableEr.er_content = strJson;
-                    this.doUpdateTableEr(myTableEr);
-
-                    let tableRelation = new TadTableRelation();
-                    tableRelation.s_table_id = this.gCurrent.tableId;
-                    tableRelation.relation_type = "TEST";
-                    this.doGetTableRelation(tableRelation);
+                    console.log("该表被引用过，但当前ER图没有引用");
                 }
+
+                this.x6Data.tables.push({
+                    id: "",
+                    tableId: this.gCurrent.tableId,
+                    x: 50,
+                    y: 50
+                });
+
+                erTable.er_id = this.gCurrent.erTreeNode.id;
+                erTable.table_id = this.gCurrent.tableId;
+                this.doAddTableErTable(erTable);
+                let myTable = lodash.cloneDeep(this.gMap.tables.get(erTable.table_id));
+                this.x6AddEntityTable(myTable);
+                this.myJson = this.x6Graph.toJSON();
+                let strJson = JSON.stringify(this.myJson);
+                let myTableEr = new TadTableEr();
+                myTableEr.er_id = this.gCurrent.erTreeNode.id;
+                myTableEr.er_content = strJson;
+                this.doUpdateTableEr(myTableEr);
+                let tableRelation = new TadTableRelation();
+                tableRelation.s_table_id = this.gCurrent.tableId;
+                tableRelation.relation_type = "TEST";
+                this.doGetTableRelation(tableRelation);
             }
         }
     }
@@ -1307,7 +1347,6 @@ export default class DatabaseWorkspace extends React.Component {
             params,
             {headers: {'Content-Type': 'application/json'}})
     }
-
     restGetTableRelation(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_relation",
             params,

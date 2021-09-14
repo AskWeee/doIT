@@ -9,6 +9,7 @@ import EditableCellTool from "./EditableCellTool";
 import {Addon, DataUri, Graph, Shape} from "@antv/x6";
 import TadMddFlow from "../entity/TadMddFlow";
 import TadMddTree from "../entity/TadMddTree";
+import TadTableRelation from "../entity/TadTableRelation";
 
 const {Stencil} = Addon;
 const {Rect, Circle} = Shape;
@@ -28,6 +29,15 @@ export default class MddDataFlow extends React.PureComponent {
         treeTransformerProperties: React.createRef(),
     };
     gDynamic = {};
+    x6Data = {
+        models: [],
+        events: [],
+        controllers: [],
+        scripts: [],
+        transformers: [],
+        custommades: [],
+        relations: []
+    };
 
     constructor(props) {
         super(props);
@@ -81,7 +91,8 @@ export default class MddDataFlow extends React.PureComponent {
         this.x6Move = this.x6Move.bind(this);
         this.x6SetFormItems = this.x6SetFormItems.bind(this);
         this.x6Update = this.x6Update.bind(this);
-
+        this.x6DrawEvent = this.x6DrawEvent.bind(this);
+        this.x6DrawRelation = this.x6DrawRelation.bind(this);
 
         this.onButtonAddMddDirClicked = this.onButtonAddMddDirClicked.bind(this);
         this.onButtonAddMddFlowClicked = this.onButtonAddMddFlowClicked.bind(this);
@@ -494,7 +505,7 @@ export default class MddDataFlow extends React.PureComponent {
             //     stroke: '#ffa940',
             // })
 
-            console.log(nodeData.nodeType);
+            console.log(node.id, nodeData.nodeType);
             if (nodeData.nodeType === "NODE_MODEL") {
                 node.toFront({deep: true});
                 this.setState({
@@ -688,6 +699,36 @@ export default class MddDataFlow extends React.PureComponent {
             )
         });
 
+        this.x6Graph.on('edge:connected', ({ isNew, edge, currentCell }) => {
+            console.log("x6 on edge:connected");
+            if (isNew) {
+                const nodeSource = edge.getSourceCell();
+                console.log(nodeSource);
+                // const nodeCurrent = edge.getCurrentCell();
+                console.log(nodeSource.getData(), currentCell.getData());
+                let sNodeData = nodeSource.getData();
+                let aNodeData = currentCell.getData();
+                console.log(sNodeData, aNodeData, nodeSource.id);
+                this.x6Data.relations.push(
+                    {
+                        nodeSource: nodeSource.id,
+                        nodeTarget: currentCell.id,
+                        relationType: "1-N"
+                    }
+                )
+            }
+        })
+
+        this.x6Graph.on("node:change:position", (args) => {
+            for(let i = 0; i < this.x6Data.events.length; i++) {
+                if (this.x6Data.events[i].id === args.cell.id) {
+                    this.x6Data.events[i].x = args.current.x;
+                    this.x6Data.events[i].y = args.current.y;
+                    break
+                }
+            }
+        });
+
         this.x6Graph.centerContent();
 
         this.x6Stencil = new Stencil({
@@ -731,6 +772,7 @@ export default class MddDataFlow extends React.PureComponent {
                 },
             ],
             getDragNode: (node) => {
+                console.log(node.shape);
                 let nodeShadow = this.x6Graph.createNode({
                     width: node.size().width,
                     height: node.size().height,
@@ -763,15 +805,19 @@ export default class MddDataFlow extends React.PureComponent {
 
                 return nodeClone
             },
+            //todo <<<<< now >>>>> 拖放节点
             getDropNode: (node) => {
                 clearInterval(this.gDynamic.timerMove);
+                console.log(this.gDynamic.nodeShadow);
 
                 let nodeData = node.getData();
                 let nodeAttrs = node.getAttrs();
                 switch (nodeData.nodeType) {
                     case "NODE_MODEL":
+                        this.x6Data.models.push({id: this.gDynamic.nodeShadow.id, nodeType: nodeData.nodeType, nodeName: nodeData.nodeName});
                         this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
-                        this.gDynamic.nodeShadow.setProp({ports: {
+                        this.gDynamic.nodeShadow.setProp({
+                            ports: {
                                 groups: {
                                     groupTop: {
                                         position: {
@@ -846,17 +892,19 @@ export default class MddDataFlow extends React.PureComponent {
                                         },
                                     }
                                 },
-                            }});
+                            }
+                        });
                         this.gDynamic.nodeShadow.addPorts([
-                                { group: "groupTop" },
-                                { group: "groupBottom" },
+                                {group: "groupTop"},
+                                {group: "groupBottom"},
                             ]
                         );
 
                         break
                     case "NODE_EVENT":
                         this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
-                        this.gDynamic.nodeShadow.setProp({ports: {
+                        this.gDynamic.nodeShadow.setProp({
+                            ports: {
                                 groups: {
                                     groupTop: {
                                         position: {
@@ -931,24 +979,44 @@ export default class MddDataFlow extends React.PureComponent {
                                         },
                                     }
                                 },
-                            }});
+                            }
+                        });
 
+                        let portId;
                         if (nodeData.nodeName === "EVENT_BEGIN") {
                             this.gDynamic.nodeShadow.addPorts([
-                                    { group: "groupBottom" },
+                                    {group: "groupBottom"},
                                 ]
                             );
-                        } else if (nodeData.nodeName === "EVENT_END"){
+                            console.log(this.gDynamic.nodeShadow.getPortsByGroup("groupTop"))
+                            let ports = this.gDynamic.nodeShadow.getPortsByGroup("groupBottom");
+                            portId = ports[0].id;
+                        } else if (nodeData.nodeName === "EVENT_END") {
                             this.gDynamic.nodeShadow.addPorts([
-                                    { group: "groupTop" },
+                                    {group: "groupTop"},
                                 ]
                             );
+                            console.log(this.gDynamic.nodeShadow.getPortsByGroup("groupTop"))
+                            let ports = this.gDynamic.nodeShadow.getPortsByGroup("groupTop");
+                            portId = ports[0].id;
                         }
 
+
+                        this.x6Data.events.push({
+                            id: this.gDynamic.nodeShadow.id,
+                            nodeType: nodeData.nodeType,
+                            nodeName: nodeData.nodeName,
+                            portId: portId,
+                            x: this.gDynamic.nodeShadow.position().x,
+                            y: this.gDynamic.nodeShadow.position().y
+                        });
+                        console.log(this.x6Data.events);
                         break
                     case "NODE_CONTROLLER":
+                        this.x6Data.controllers.push({id: this.gDynamic.nodeShadow.id, nodeType: nodeData.nodeType, nodeName: nodeData.nodeName});
                         this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
-                        this.gDynamic.nodeShadow.setProp({ports: {
+                        this.gDynamic.nodeShadow.setProp({
+                            ports: {
                                 groups: {
                                     groupTop: {
                                         position: {
@@ -1023,18 +1091,21 @@ export default class MddDataFlow extends React.PureComponent {
                                         },
                                     }
                                 },
-                            }});
+                            }
+                        });
                         this.gDynamic.nodeShadow.addPorts([
-                                { group: "groupTop" },
-                                { group: "groupRight" },
-                                { group: "groupLeft" }
+                                {group: "groupTop"},
+                                {group: "groupRight"},
+                                {group: "groupLeft"}
                             ]
                         );
 
                         break
                     case "NODE_SCRIPT":
+                        this.x6Data.scripts.push({id: this.gDynamic.nodeShadow.id, nodeType: nodeData.nodeType, nodeName: nodeData.nodeName});
                         this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
-                        this.gDynamic.nodeShadow.setProp({ports: {
+                        this.gDynamic.nodeShadow.setProp({
+                            ports: {
                                 groups: {
                                     groupTop: {
                                         position: {
@@ -1109,17 +1180,20 @@ export default class MddDataFlow extends React.PureComponent {
                                         },
                                     }
                                 },
-                            }});
+                            }
+                        });
                         this.gDynamic.nodeShadow.addPorts([
-                                { group: "groupTop" },
-                                { group: "groupBottom" },
+                                {group: "groupTop"},
+                                {group: "groupBottom"},
                             ]
                         );
 
                         break
                     case "NODE_TRANSFORMER":
+                        this.x6Data.transformers.push({id: this.gDynamic.nodeShadow.id, nodeType: nodeData.nodeType, nodeName: nodeData.nodeName});
                         this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
-                        this.gDynamic.nodeShadow.setProp({ports: {
+                        this.gDynamic.nodeShadow.setProp({
+                            ports: {
                                 groups: {
                                     groupTop: {
                                         position: {
@@ -1194,17 +1268,20 @@ export default class MddDataFlow extends React.PureComponent {
                                         },
                                     }
                                 },
-                            }});
+                            }
+                        });
                         this.gDynamic.nodeShadow.addPorts([
-                                { group: "groupTop" },
-                                { group: "groupBottom" },
+                                {group: "groupTop"},
+                                {group: "groupBottom"},
                             ]
                         );
 
                         break
                     case "NODE_CUSTOMMADE":
+                        this.x6Data.custommades.push({id: this.gDynamic.nodeShadow.id, nodeType: nodeData.nodeType, nodeName: nodeData.nodeName});
                         this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
-                        this.gDynamic.nodeShadow.setProp({ports: {
+                        this.gDynamic.nodeShadow.setProp({
+                            ports: {
                                 groups: {
                                     groupTop: {
                                         position: {
@@ -1279,10 +1356,11 @@ export default class MddDataFlow extends React.PureComponent {
                                         },
                                     }
                                 },
-                            }});
+                            }
+                        });
                         this.gDynamic.nodeShadow.addPorts([
-                                { group: "groupTop" },
-                                { group: "groupBottom" },
+                                {group: "groupTop"},
+                                {group: "groupBottom"},
                             ]
                         );
 
@@ -1306,6 +1384,7 @@ export default class MddDataFlow extends React.PureComponent {
 
                 this.x6SetFormItems();
 
+                console.log(this.x6Data);
                 return node.clone();
             },
             validateNode: (node, options) => {
@@ -1730,7 +1809,7 @@ export default class MddDataFlow extends React.PureComponent {
         // let strJson = JSON.stringify(this.myJson);
         // 解决循环引用问题，来自网络方案（JerryWang）<<<<<
         let cache = [];
-        let strJson = JSON.stringify(myJson, function(key, value) {
+        let strJson = JSON.stringify(myJson, function (key, value) {
             // console.log(key, value);
             console.log(key);
             if (typeof value === 'object' && value !== null) {
@@ -1750,10 +1829,10 @@ export default class MddDataFlow extends React.PureComponent {
         let nLoop = Math.floor(strJson.length / fragmentLength);
         let nTail = strJson.length % fragmentLength;
         let arrJson = [];
-        for(let i = 0; i < nLoop; i++) {
-            arrJson.push(strJson.substr(i*fragmentLength, fragmentLength));
+        for (let i = 0; i < nLoop; i++) {
+            arrJson.push(strJson.substr(i * fragmentLength, fragmentLength));
         }
-        arrJson.push(strJson.substr(nLoop*fragmentLength, nTail));
+        arrJson.push(strJson.substr(nLoop * fragmentLength, nTail));
 
         let myMddFlow = new TadMddFlow();
         myMddFlow.flow_id = this.gCurrent.mddTreeNode.id;
@@ -1854,7 +1933,154 @@ export default class MddDataFlow extends React.PureComponent {
         this.doAddTadMddTree(erTree);
     }
 
-    //todo <<<<< now >>>>> on tree Mdd Tree selected
+    //todo <<<<< now >>>>> on tree 流程树 selected
+
+
+    x6DrawEvent(event) {
+        console.log(event);
+        let nodeEvent = this.x6Graph.createNode({
+            id: event.id,
+            width: 50,
+            height: 50,
+            shape: "circle",
+            x: event.x,
+            y: event.y,
+            attrs: {
+                body: {
+                    fill: "gray",
+                    stroke: 'black',
+                    strokeWidth: 1,
+                }
+            },
+        });
+        nodeEvent.setData({
+            x: 0,
+            y: 0,
+            nodeType: "NODE_EVENT",
+            nodeName: event.nodeName,
+            portId: event.portId
+        });
+        this.x6Graph.addNode(nodeEvent);
+        nodeEvent.setProp({
+            ports: {
+                groups: {
+                    groupTop: {
+                        position: {
+                            name: "top",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    },
+                    groupRight: {
+                        position: {
+                            name: "right",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    },
+                    groupBottom: {
+                        position: {
+                            name: "bottom",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    },
+                    groupLeft: {
+                        position: {
+                            name: "left",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    }
+                },
+            }
+        });
+        switch (event.nodeName) {
+            case "EVENT_BEGIN":
+                nodeEvent.addPorts([
+                    {
+                        id: event.portId,
+                        group: "groupBottom"
+                    },
+                ]);
+                break
+            case "EVENT_END":
+                nodeEvent.addPorts([
+                    {
+                        id: event.portId,
+                        group: "groupTop"
+                    },
+                ]);
+                break
+            default:
+                break
+        }
+    }
+
+    x6DrawRelation(relation) {
+        let nodeSource = this.x6Graph.getCellById(relation.nodeSource)
+        let nodeDataSource = nodeSource.getData();
+        let nodeTarget = this.x6Graph.getCellById(relation.nodeTarget)
+        let nodeDataTarget = nodeTarget.getData();
+        this.x6Graph.addEdge({
+            source: {
+                cell: nodeSource,
+                port: nodeDataSource.portId
+            },
+            target: {
+                cell: nodeTarget,
+                port: nodeDataTarget.portId
+            },
+            router: {
+                name: 'er',
+            }
+        });
+    }
+
     onTreeMddTreeSelected(selectedKeys, info) {
         if (info.selected) {
             this.gCurrent.mddTreeNode = {
@@ -1866,53 +2092,49 @@ export default class MddDataFlow extends React.PureComponent {
         console.log(this.gCurrent);
 
         if (info.selected && info.node.tag.nodeType === "NODE_MDD_MODEL") {
-            /*
-            const nodes = this.x6Graph.getNodes();
-            nodes.forEach((itemNode) => {
-                let nodeData = itemNode.getData();
-                if (nodeData.nodeType.toUpperCase() === "TABLE") {
-                    if (nodeData.nodeId === selectedKeys[0]) {
-                        this.x6Graph.scrollToCell(itemNode);
-                    }
-                }
-            })
-             */
         }
 
         if (info.selected && info.node.tag.nodeType === "NODE_MDD_FLOW") {
-            let nodeId = selectedKeys[0];
-            let myMddFlow = new TadMddFlow();
-            myMddFlow.flow_id = nodeId;
-            this.restGetTadMddFlow(myMddFlow).then((result) => {
-                if (result.status === 200) {
-                    if (result.data.success) {
-                        if ((result.data.data !== null) && (result.data.data !== undefined)) {
-                            console.log(result.data.data);
-                            let content = "";
-                            result.data.data.forEach((itemFlow) => {
-                                content += itemFlow.flow_content;
-                            })
-                            if (content !== "") {
-                                // let buffer = new Uint8Array(content.data);
-                                // let strJson = new TextDecoder('utf-8').decode(buffer);
-                                let myJson = JSON.parse(content);
-                                this.x6Graph.fromJSON(myJson);
-                                this.x6Graph.scrollToContent();
-
-                                this.context.showMessage("成功，内部ID为：" + result.data.data.id);
-                            } else {
-                                let myJson = JSON.parse("{}");
-                                this.x6Graph.fromJSON(myJson);
-                                this.x6Graph.scrollToContent();
-                            }
-                        }
-                    } else {
-                        this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
-                    }
-                } else {
-                    this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
-                }
-            });
+            this.x6Graph.clearCells();
+            this.x6Data.events.forEach((itemEvent) => {
+                this.x6DrawEvent(itemEvent);
+            })
+            this.x6Data.relations.forEach((itemRelation) => {
+                this.x6DrawRelation(itemRelation);
+            })
+            // let nodeId = selectedKeys[0];
+            // let myMddFlow = new TadMddFlow();
+            // myMddFlow.flow_id = nodeId;
+            // this.restGetTadMddFlow(myMddFlow).then((result) => {
+            //     if (result.status === 200) {
+            //         if (result.data.success) {
+            //             if ((result.data.data !== null) && (result.data.data !== undefined)) {
+            //                 console.log(result.data.data);
+            //                 let content = "";
+            //                 result.data.data.forEach((itemFlow) => {
+            //                     content += itemFlow.flow_content;
+            //                 })
+            //                 if (content !== "") {
+            //                     // let buffer = new Uint8Array(content.data);
+            //                     // let strJson = new TextDecoder('utf-8').decode(buffer);
+            //                     let myJson = JSON.parse(content);
+            //                     this.x6Graph.fromJSON(myJson);
+            //                     this.x6Graph.scrollToContent();
+            //
+            //                     this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+            //                 } else {
+            //                     let myJson = JSON.parse("{}");
+            //                     this.x6Graph.fromJSON(myJson);
+            //                     this.x6Graph.scrollToContent();
+            //                 }
+            //             }
+            //         } else {
+            //             this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+            //         }
+            //     } else {
+            //         this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            //     }
+            // });
         }
     };
 
@@ -2184,10 +2406,14 @@ export default class MddDataFlow extends React.PureComponent {
                         <div className={"BoxUpDown"}>
                             <div className="BoxToolbarErDiagram">
                                 <div className={"BoxSearch"}>
-                                    <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
+                                    <Input.Search placeholder="Search" size="small" enterButton
+                                                  onChange={this.onInputSearchSchemasChanged}
+                                                  onSearch={this.onInputSearchSchemasSearched}/>
                                 </div>
-                                <Button onClick={this.onButtonAddMddDirClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>建目录</Button>
-                                <Button onClick={this.onButtonAddMddFlowClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>建流程</Button>
+                                <Button onClick={this.onButtonAddMddDirClicked} icon={<PlusSquareOutlined/>}
+                                        size={"small"} type={"primary"}>建目录</Button>
+                                <Button onClick={this.onButtonAddMddFlowClicked} icon={<PlusSquareOutlined/>}
+                                        size={"small"} type={"primary"}>建流程</Button>
                             </div>
                             <div className={"BoxTreeErDiagram"}>
                                 <div className={"BoxTree"}>
@@ -2196,7 +2422,8 @@ export default class MddDataFlow extends React.PureComponent {
                                               treeData={treeDataMddTree}
                                               onSelect={this.onTreeMddTreeSelected}
                                               selectable={!isMddTreeEditing}
-                                              className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
+                                              className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>}
+                                              blockNode={true} showLine={true} showIcon={true}/>
                                     </div>
                                 </div>
                             </div>
@@ -2210,13 +2437,15 @@ export default class MddDataFlow extends React.PureComponent {
                                             accept=".groovy"
                                             beforeUpload={this.beforeUploadImportModels}
                                             onChange={this.onChangeImportModels}>
-                                        <Button size={"small"} type={"primary"} icon={<CloudUploadOutlined/>}>导入对象模型</Button>
+                                        <Button size={"small"} type={"primary"}
+                                                icon={<CloudUploadOutlined/>}>导入对象模型</Button>
                                     </Upload>
                                     <Upload name='file'
                                             accept=".groovy"
                                             beforeUpload={this.beforeUploadImportTransformers}
                                             onChange={this.onChangeImportTransformers}>
-                                        <Button size={"small"} type={"primary"} icon={<CloudUploadOutlined/>}>导入转化器</Button>
+                                        <Button size={"small"} type={"primary"}
+                                                icon={<CloudUploadOutlined/>}>导入转化器</Button>
                                     </Upload>
                                     <Button size={"small"} type={"primary"} onClick={this.onButtonX6Save}>保存</Button>
                                     <Button size={"small"} type={"primary"} onClick={this.onButtonX6ToPng}>导出</Button>
@@ -2245,18 +2474,21 @@ export default class MddDataFlow extends React.PureComponent {
                                                       treeData={treeDataModels}
                                                     //onSelect={this.onTreeMddTreeSelected}
                                                     //selectable={!isMddTreeEditing}
-                                                      className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
+                                                      className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>}
+                                                      blockNode={true} showLine={true} showIcon={true}/>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className={nodeType === "NODE_TRANSFORMER" ? "box-form-items-table-column" : "BoxHidden"}>
+                                    <div
+                                        className={nodeType === "NODE_TRANSFORMER" ? "box-form-items-table-column" : "BoxHidden"}>
                                         <div className={"BoxTree"}>
                                             <div className={"BoxTreeInstance"}>
                                                 <Tree ref={treeTransformerProperties}
                                                       treeData={treeDataTransformers}
                                                     //onSelect={this.onTreeMddTreeSelected}
                                                     //selectable={!isMddTreeEditing}
-                                                      className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
+                                                      className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>}
+                                                      blockNode={true} showLine={true} showIcon={true}/>
                                             </div>
                                         </div>
                                     </div>
