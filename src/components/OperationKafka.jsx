@@ -1,73 +1,146 @@
 import React from 'react'
 import './OperationKafka.scss'
 import GCtx from "../GCtx";
+import K3 from "../utils/k3";
 import axios from "axios";
 import lodash from "lodash";
 import moment from 'moment';
 import {Button, Form, Input, Select, Tooltip, Tree} from 'antd'
 import {
     CaretDownOutlined,
-    CaretLeftOutlined,
-    CaretRightOutlined,
-    CloseOutlined,
-    PlusSquareOutlined,
     QuestionCircleOutlined,
 } from '@ant-design/icons'
-import EditableCellTool from "./EditableCellTool";
-import {Graph, Addon, Shape, DataUri} from "@antv/x6";
 import G6 from '@antv/g6';
-import TadMddFlow from "../entity/TadMddFlow";
 import TadMddTree from "../entity/TadMddTree";
-import TadTableErTree from "../entity/TadTableErTree";
-import TadTableEr from "../entity/TadTableEr";
-
-const {Stencil} = Addon;
-const {Rect} = Shape;
 
 export default class OperationKafka extends React.PureComponent {
     static contextType = GCtx;
 
-    gMap = {};
+    gMap = {
+        containers: new Map(),
+        zookeepers: new Map(),
+        brokers: new Map(),
+        topics: new Map(),
+        partitions: new Map(),
+        consumers: new Map(),
+        consumerGroups: new Map(),
+        producers: new Map()
+    };
     gData = {};
     gCurrent = {};
     gRef = {
-        x6StencilContainerBox: React.createRef(),
-        x6GraphContainerBox: React.createRef(),
-        x6GraphContainer: React.createRef(),
-        formX6Properties: React.createRef(),
+        g6GraphContainerBox: React.createRef(),
+        g6GraphContainer: React.createRef(),
+        formG6Properties: React.createRef(),
     };
     gDynamic = {};
 
     g6Graph = null;
     g6Data = {};
+    g6Config = {
+        s: 10
+    }
     g6DataContainers = [
         {
-            name: "container_1",
-            type: "brokers"
+            name: "brokers",
+            children: [],
+            position: {
+                x: 100,
+                y: 100 + 100 + 50
+            },
+            size: {
+                w: 100,
+                h: 50
+            }
         },
         {
-            name: "container_2",
-            type: "zookeepers"
+            name: "zookeepers",
+            children: [],
+            position: {
+                x: 1000,
+                y: (100 + 100 + 50) + (( 300 + 10 * (1+1)) - (200 + 10*2))/2
+            },
+            size: {
+                w: 200,
+                h: 200 + 10*2
+            }
         },
         {
-            name: "container_3",
-            type: "consumers"
+            name: "consumers",
+            children: [],
+            position: {
+                x: 100,
+                y: 100 + 100 + 50 + 300 + 10 * (1+1) + 50
+            },
+            size: {
+                w: 500,
+                h: 100
+            }
         },
         {
-            name: "container_4",
-            type: "producers"
+            name: "producers",
+            children: [],
+            position: {
+                x: 100,
+                y: 100
+            },
+            size: {
+                w: 150*3 + 10*(3+1),
+                h: 100
+            }
         },
     ];
     g6DataBrokers = [
         {
             name: "broker_1",
+            children: [],
+            position: {
+                x: 0,
+                y: 0
+            },
+            size: {
+                w: 200,
+                h: 300
+            }
         },
         {
             name: "broker_2",
+            children: [],
+            position: {
+                x: 0,
+                y: 0
+            },
+            size: {
+                w: 200,
+                h: 300
+            }
         },
         {
             name: "broker_3",
+            children: [],
+            position: {
+                x: 0,
+                y: 0
+            },
+            size: {
+                w: 200,
+                h: 300
+            }
         },
+    ];
+    g6DataBrokers2 = [
+        {
+            name: "broker_4",
+            children: [],
+            position: {
+                x: 0,
+                y: 0
+            },
+            size: {
+                w: 200,
+                h: 300
+            }
+        }
     ];
     g6DataTopics = [
         {
@@ -78,33 +151,109 @@ export default class OperationKafka extends React.PureComponent {
     g6DataPartitions = [
         {
             name: "topic_a-part_0",
-            broker: "broker1",
-            type: "leader"
+            broker: "broker_1",
+            type: "leader",
+            position: {
+                x: 0,
+                y: 0
+            },
+            size: {
+                w: 180,
+                h: 30
+            }
         },
         {
-            name: "topic_a-part_0",
-            broker: "broker2",
-            type: "follower"
+            name: "topic_d-part_0",
+            broker: "broker_1",
+            type: "follower",
+            position: {
+                x: 0,
+                y: 0
+            },
+            size: {
+                w: 180,
+                h: 30
+            }
         },
         {
             name: "topic_a-part_1",
-            broker: "broker2",
-            type: "leader"
+            broker: "broker_2",
+            type: "follower",
+            position: {
+                x: 0,
+                y: 0
+            },
+            size: {
+                w: 100,
+                h: 30
+            }
         },
         {
-            name: "topic_a-part_1",
-            broker: "broker3",
-            type: "follower"
+            name: "topic_b-part_0",
+            broker: "broker_2",
+            type: "leader",
+            position: {
+                x: 0,
+                y: 0
+            },
+            size: {
+                w: 180,
+                h: 30
+            }
         },
         {
-            name: "topic_b-part_2",
-            broker: "broker3",
-            type: "leader"
+            name: "topic_b-part_1",
+            broker: "broker_3",
+            type: "follower",
+            position: {
+                x: 0,
+                y: 0
+            },
+            size: {
+                w: 160,
+                h: 30
+            }
         },
         {
-            name: "topic_b-part_2",
-            broker: "broker1",
-            type: "follower"
+            name: "topic_c-part_0",
+            broker: "broker_3",
+            type: "leader",
+            position: {
+                x: 0,
+                y: 0
+            },
+            size: {
+                w: 180,
+                h: 30
+            }
+        },
+        {
+            name: "topic_c-part_1",
+            broker: "broker_1",
+            type: "follower",
+            position: {
+                x: 0,
+                y: 0
+            },
+            size: {
+                w: 120,
+                h: 30
+            }
+        },
+    ];
+    g6DataPartitions2 = [
+        {
+            name: "topic_a-part_2",
+            broker: "broker_4",
+            type: "follower",
+            position: {
+                x: 0,
+                y: 0
+            },
+            size: {
+                w: 180,
+                h: 30
+            }
         },
     ];
     g6DataProducers = [
@@ -152,12 +301,6 @@ export default class OperationKafka extends React.PureComponent {
         {
             name: "zookeeper_1"
         },
-        {
-            name: "zookeeper_2"
-        },
-        {
-            name: "zookeeper_3"
-        }
     ]
 
     constructor(props) {
@@ -173,6 +316,8 @@ export default class OperationKafka extends React.PureComponent {
         this.doInit = this.doInit.bind(this);
 
         this.doGetAll = this.doGetAll.bind(this);
+        this.doGetRecords = this.doGetRecords.bind(this);
+        this.doGetRecords2 = this.doGetRecords2.bind(this);
 
         this.commTrees2antdTree = this.commTrees2antdTree.bind(this);
 
@@ -195,27 +340,26 @@ export default class OperationKafka extends React.PureComponent {
         this.doUpdateTadMddFlow = this.doUpdateTadMddFlow.bind(this);
         this.doDeleteTadMddFlow = this.doDeleteTadMddFlow.bind(this);
 
+        this.addContainers = this.addContainers.bind(this);
         this.addContainer = this.addContainer.bind(this);
         this.updateContainer = this.updateContainer.bind(this);
         this.addBroker = this.addBroker.bind(this);
+        this.updateBroker = this.updateBroker.bind(this);
         this.addZookeeper = this.addZookeeper.bind(this);
         this.addProducer = this.addProducer.bind(this);
         this.addConsumer = this.addConsumer.bind(this);
-        this.addTopicPartition = this.addTopicPartition.bind(this);
+        this.addPartition = this.addPartition.bind(this);
+        this.updatePartition = this.updatePartition.bind(this);
 
         this.onG6ButtonAddBroker = this.onG6ButtonAddBroker.bind(this);
 
-        this.x6SetFormItems = this.x6SetFormItems.bind(this);
-        this.onFormX6PropertiesFinish = this.onFormX6PropertiesFinish.bind(this);
-        this.onButtonX6ToPng = this.onButtonX6ToPng.bind(this);
-        this.onButtonX6Save = this.onButtonX6Save.bind(this);
+        this.onButtonG6ToPng = this.onButtonG6ToPng.bind(this);
+        this.onButtonG6Save = this.onButtonG6Save.bind(this);
 
-        this.onButtonX6FormConfirmClicked = this.onButtonX6FormConfirmClicked.bind(this);
-        this.onButtonX6FormCancelClicked = this.onButtonX6FormCancelClicked.bind(this);
         this.onButtonAddMddDirClicked = this.onButtonAddMddDirClicked.bind(this);
         this.onButtonAddMddFlowClicked = this.onButtonAddMddFlowClicked.bind(this);
 
-        this.onSelectX6TableColumnDataTypeChanged = this.onSelectX6TableColumnDataTypeChanged.bind(this);
+        this.onSelectG6TableColumnDataTypeChanged = this.onSelectG6TableColumnDataTypeChanged.bind(this);
         this.onTreeMddTreeSelected = this.onTreeMddTreeSelected.bind(this);
     }
 
@@ -228,9 +372,32 @@ export default class OperationKafka extends React.PureComponent {
 
     }
 
-    doInit() {
-        // this.x6Init();
+    async doInit() {
         this.g6Init();
+
+        this.g6DataContainers.forEach((c) => {
+            this.gMap.containers.set(c.name, c);
+        })
+
+        this.addContainers();
+        this.g6Graph.changeData(this.g6Data);
+        this.g6Graph.fitCenter();
+        this.g6Graph.fitView();
+
+        await K3.sleep(1000);
+        this.doGetRecords();
+        this.g6Graph.changeData(this.g6Data);
+        this.g6Graph.fitCenter();
+        this.g6Graph.fitView();
+
+        await K3.sleep(1000);
+        this.doGetRecords2();
+        this.g6Graph.changeData(this.g6Data);
+        this.g6Graph.fitCenter();
+        this.g6Graph.fitView();
+
+        await K3.sleep(1000);
+        this.updatePartition("topic_a-part_0");
     }
 
     //todo >>>>> do Get All
@@ -265,6 +432,49 @@ export default class OperationKafka extends React.PureComponent {
         })).then(() => {
             this.doInit();
         });
+    }
+
+    doGetRecords() {
+        this.g6DataBrokers.forEach((b) => {
+            if (!this.gMap.brokers.has(b.name)) {
+                this.gMap.brokers.set(b.name, b);
+                this.addBroker(b);
+            } else {
+                // do ...
+            }
+        })
+        this.updateContainer("brokers");
+
+        this.g6DataPartitions.forEach((p) => {
+            if (!this.gMap.partitions.has(p.name)) {
+                this.gMap.partitions.set(p.name, p);
+                this.addPartition(p);
+            } else {
+                // do ...
+            }
+        })
+    }
+
+    doGetRecords2() {
+        this.g6DataBrokers2.forEach((b) => {
+            if (!this.gMap.brokers.has(b.name)) {
+                this.gMap.brokers.set(b.name, b);
+                this.addBroker(b);
+            } else {
+                // do ...
+            }
+        })
+
+        this.updateContainer("brokers");
+
+        this.g6DataPartitions2.forEach((p) => {
+            if (!this.gMap.partitions.has(p.name)) {
+                this.gMap.partitions.set(p.name, p);
+                this.addPartition(p);
+            } else {
+                // do ...
+            }
+        })
     }
 
     restGetTadMddTrees() {
@@ -349,7 +559,6 @@ export default class OperationKafka extends React.PureComponent {
     }
 
     restUpdateTadMddFlow(params) {
-        console.log(params);
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/mdd/update_mdd_flow",
             params,
             {headers: {'Content-Type': 'application/json'}})
@@ -417,83 +626,12 @@ export default class OperationKafka extends React.PureComponent {
         });
     }
 
-
-    onButtonX6FormConfirmClicked() {
-
-    }
-
-    onButtonX6FormCancelClicked() {
-
-    }
-
-    onFormX6PropertiesInitialValues() {
-
-    }
-
-    onFormX6PropertiesFinish(values) {
-        let nodeData = this.gCurrent.node.getData();
-
-        if (nodeData.nodeType === "table") {
-            let newTableName = values.tableName;
-
-            this.gCurrent.node.attr('label/text', newTableName);
-            this.gCurrent.node.setData({tableName: newTableName})
-        } else if (nodeData.nodeType === "table_column") {
-            let newColumnName = values.tableColumnName;
-
-            this.gCurrent.node.attr('label/text', newColumnName);
-            this.gCurrent.node.setData({columnName: newColumnName});
-        }
-    }
-
-    x6SetFormItems() {
-        let nodeData = this.gCurrent.node.getData();
-
-        if (nodeData.nodeType === "table") {
-            let tableName = this.gCurrent.nodeAttrs.label.text;
-
-            this.gRef.formX6Properties.current.setFieldsValue({
-                tableName: tableName,
-            });
-        } else if (nodeData.nodeType === "table_column") {
-            let columnName = nodeData.columnName;
-            let dataType = nodeData.dataType === undefined ? -99999 : nodeData.dataType;
-
-            this.gRef.formX6Properties.current.setFieldsValue({
-                tableColumnName: columnName,
-                tableColumnDataType: dataType,
-            });
-        }
-    }
-
-    x6ElementsStyleReset() {
-        const nodes = this.x6Graph.getNodes();
-        const edges = this.x6Graph.getEdges();
-
-        nodes.forEach(node => {
-            node.attr('body/stroke', '#000')
-        })
-
-        edges.forEach(edge => {
-            edge.attr('line/stroke', 'black')
-            edge.prop('labels/0', {
-                attrs: {
-                    body: {
-                        stroke: 'black'
-                    }
-                }
-            })
-        })
-    }
-
     //todo <<<<< now >>>>> G6 初始化
     g6Init() {
-
-
-        let wg = this.gRef.x6GraphContainer.current.scrollWidth;
-        let hg = this.gRef.x6GraphContainer.current.scrollHeight || 500;
+        let wg = this.gRef.g6GraphContainer.current.scrollWidth;
+        let hg = this.gRef.g6GraphContainer.current.scrollHeight || 500;
         this.g6Graph = new G6.Graph({
-            container: this.gRef.x6GraphContainer.current,
+            container: this.gRef.g6GraphContainer.current,
             width: wg,
             height: hg,
             groupByTypes: false,
@@ -505,81 +643,46 @@ export default class OperationKafka extends React.PureComponent {
         this.g6Graph.on('combo:click', (evt) => {
             const item = evt.item;
             const target = evt.target;
-            console.log(item, target);
         });
 
         this.g6Data.combos = [];
         this.g6Data.nodes = [];
         this.g6Data.edges = [];
 
-        this.g6DataContainers.forEach((itemContainer) => {
-            let position = {
-                x: 0,
-                y: 0
-            };
-            let size = {
-                width: 100,
-                height: 100
-            }
-            switch (itemContainer.type) {
-                case "producers":
-                    position.x = 100;
-                    position.y = 100;
-                    size.width = 150*3 + 10*(3+1);
-                    size.height = 100;
-                    break
-                case "brokers":
-                    position.x = 100;
-                    position.y = 100 + 100 + 50;
-                    size.width = 150*3 + 10*(3+1);
-                    size.height = 300 + 10 * (1+1);
-                    break
-                case "zookeepers":
-                    position.x = 100 + 500 + 50;
-                    position.y = (100 + 100 + 50) + (( 300 + 10 * (1+1)) - (200 + 10*2))/2;
-                    size.width = 100*3 + 10*4;
-                    size.height = 200 + 10*2;
-                    break
-                case "consumers":
-                    position.x = 100;
-                    position.y = 100 + 100 + 50 + 300 + 10 * (1+1) + 50;
-                    size.width = 500;
-                    size.height = 100;
-                    break
-                default:
-                    break
-            }
-            this.addContainer(itemContainer, position, size);
-        })
-
         this.g6Graph.data(this.g6Data);
         this.g6Graph.render();
         this.g6Graph.fitCenter();
         this.g6Graph.fitView();
 
-        let indexOfBrokers = 0;
-        this.g6DataBrokers.forEach((itemBroker) => {
-            this.addBroker(itemBroker, indexOfBrokers);
-            indexOfBrokers++;
-        })
+        // let indexOfBrokers = 0;
+        // this.g6DataBrokers.forEach((itemBroker) => {
+        //     this.addBroker(itemBroker, indexOfBrokers);
+        //     indexOfBrokers++;
+        // })
+        //
+        // let indexOfZookeepers = 0;
+        // this.g6DataZookeepers.forEach((itemZookeeper) => {
+        //     this.addZookeeper(itemZookeeper, indexOfZookeepers);
+        //     indexOfZookeepers++;
+        // })
+        // this.g6Graph.changeData(this.g6Data);
+    }
 
-        let indexOfZookeepers = 0;
-        this.g6DataZookeepers.forEach((itemZookeeper) => {
-            this.addZookeeper(itemZookeeper, indexOfZookeepers);
-            indexOfZookeepers++;
-        })
-        this.g6Graph.changeData(this.g6Data);
+    addContainers() {
+        this.gMap.containers.forEach((value) => {
+            this.addContainer(value);
+        });
     }
 
     //todo <<<<< now >>>>> 添加容器
-    addContainer(container, position, size) {
+    addContainer(container) {
         let modelContainer = {
             id: container.name,
             type: "rect",
             label: container.name,
-            size: [size.width, size.height],
-            x: position.x + size.width/2,
-            y: position.y + size.height/2,
+            size: [container.size.w, container.size.h],
+            x: container.position.x + container.size.w/2,
+            y: container.position.y + container.size.h/2,
             style: {
                 fill: "darkgray",
                 radius: 10,
@@ -590,6 +693,9 @@ export default class OperationKafka extends React.PureComponent {
                     fill: "white",
                     fontSize: 16,
                 }
+            },
+            tag: {
+                name: container.name
             }
         }
 
@@ -597,26 +703,41 @@ export default class OperationKafka extends React.PureComponent {
         this.g6Data.nodes.push(modelContainer);
     }
 
-
     updateContainer(containerId) {
-
+        this.g6Data.nodes.forEach((node) => {
+            if (node.tag.name === containerId) {
+                let container = this.gMap.containers.get(containerId);
+                let wNew = 0;
+                let hNew = 0;
+                container.children.forEach((b) => {
+                    let broker = this.gMap.brokers.get(b);
+                    wNew += broker.size.w
+                    if (hNew < broker.size.h) hNew = broker.size.h;
+                })
+                wNew += (container.children.length + 1) * this.g6Config.s;
+                hNew += 2 * this.g6Config.s;
+                let w = node.size[0];
+                let h = node.size[1];
+                node.x += (wNew - w)/2;
+                node.y += (hNew - h)/2;
+                node.size[0] = wNew;
+                node.size[1] = hNew;
+            }
+        })
     }
 
     //todo <<<<< now >>>>> 绘制 broker
-    addBroker(broker, index) {
-        let container = this.g6Graph.findById("container_1");
-        let containerModel = container.getModel();
-        let s = 10;
-        let xb = containerModel.x - containerModel.size[0]/2 + 10, yb = containerModel.y - containerModel.size[1]/2 + 10;
-        let w = 150, h = 300;
+    addBroker(broker) {
+        let container = this.gMap.containers.get("brokers");
+        let index = container.children.length;
+        let xb = container.position.x + this.g6Config.s, yb = container.position.y + this.g6Config.s;
         let modelBroker = {
             id: broker.name,
-            comboId: "comboBrokers",
             type: "rect",
             label: broker.name,
-            size: [w, h],
-            x: xb + w/2 + (w + s) * index,
-            y: yb + h/2,
+            size: [broker.size.w, broker.size.h],
+            x: xb + broker.size.w/2 + (broker.size.w + this.g6Config.s) * index,
+            y: yb + broker.size.h/2,
             style: {
                 fill: "darkgreen",
                 radius: 10,
@@ -627,20 +748,29 @@ export default class OperationKafka extends React.PureComponent {
                     fill: "white",
                     fontSize: 16,
                 }
+            },
+            tag: {
+                name: broker.name
             }
         }
 
+        broker.position.x = modelBroker.x - broker.size.w/2;
+        broker.position.y = modelBroker.y - broker.size.h/2;
         // this.g6Graph.addItem("node", modelBroker);
         this.g6Data.nodes.push(modelBroker);
+        this.gMap.containers.get("brokers").children.push(broker.name);
+    }
+
+    updateBroker(broker) {
+
     }
 
     //todo <<<<< now >>>>> 绘制 zookeeper
     addZookeeper(broker, index) {
-        let container = this.g6Graph.findById("container_2");
+        let container = this.g6Graph.findById("zookeepers");
         let containerModel = container.getModel();
         console.log(containerModel);
-        let s = 10;
-        let xb = containerModel.x - containerModel.size[0]/2 + 10, yb = containerModel.y - containerModel.size[1]/2 + 10;
+        let xb = containerModel.x - containerModel.size[0]/2 + this.g6Config.s, yb = containerModel.y - containerModel.size[1]/2 + this.g6Config.s;
         let w = 100, h = 200;
         let modelZookeeper = {
             id: broker.name,
@@ -648,7 +778,7 @@ export default class OperationKafka extends React.PureComponent {
             type: "rect",
             label: broker.name,
             size: [w, h],
-            x: xb + w / 2 + (w + s) * index,
+            x: xb + w / 2 + (w + this.g6Config.s) * index,
             y: yb + h / 2,
             style: {
                 fill: "darkgreen",
@@ -675,8 +805,56 @@ export default class OperationKafka extends React.PureComponent {
 
     }
 
-    addTopicPartition(partition, index) {
+    //todo <<<<< now >>>>> add partition
+    addPartition(partition) {
+        let broker = this.gMap.brokers.get(partition.broker);
+        let index = broker.children.length;
+        let xb = broker.position.x + this.g6Config.s, yb = broker.position.y + this.g6Config.s;
+        let modelPartition = {
+            id: partition.name,
+            type: "rect",
+            label: partition.name,
+            size: [partition.size.w, partition.size.h],
+            x: xb + partition.size.w / 2,
+            y: yb + (partition.size.h + this.g6Config.s) * index + partition.size.h / 2,
+            style: {
+                fill: "lightblue",
+                radius: 2,
+            },
+            labelCfg: {
+                offset: 100,
+                style: {
+                    fill: "black",
+                    fontSize: 12,
+                }
+            },
+            tag: {
+                name: broker.name
+            }
+        }
 
+        partition.position.x = modelPartition.x - partition.size.w/2;
+        partition.position.y = modelPartition.y - partition.size.h/2;
+        // this.g6Graph.addItem("node", modelBroker);
+        this.g6Data.nodes.push(modelPartition);
+        this.gMap.brokers.get(partition.broker).children.push(partition.name);
+    }
+
+    updatePartition(partitionId) {
+        let nodePartition = this.g6Graph.findById(partitionId);
+        console.log(nodePartition.getContainer().get("children")[0]);
+        // this.g6Graph.setItemState(partitionId, 'selected', true);
+        nodePartition.getContainer().get("children")[0].animate(
+            {
+                opacity: 0.1,
+            },
+            {
+                repeat: true, // 循环
+                duration: 1000,
+                easing: 'easeCubic',
+                delay: 0, // 无延迟
+            },
+        );
     }
 
     //todo <<<<< now >>>>> 新增 broker
@@ -694,32 +872,16 @@ export default class OperationKafka extends React.PureComponent {
         })
     }
 
-    onButtonX6ToPng(e) {
-        this.x6Graph.toPNG((dataUri) => {
-            DataUri.downloadDataUri(dataUri, "x6ErInstance.png");
-        }, {
-            padding: {
-                top: 20,
-                right: 20,
-                bottom: 20,
-                left: 20
-            }
-        })
+    //todo <<<<< now >>>>> on button G6 Save clicked
+    onButtonG6Save(e) {
+
     }
 
-    //todo <<<<< now >>>>> on button X6 Save clicked
-    onButtonX6Save(e) {
-        this.myJson = this.x6Graph.toJSON();
-        let strJson = JSON.stringify(this.myJson);
-        let myMddFlow = new TadMddFlow();
-        myMddFlow.mdd_flow_id = this.gCurrent.mddTreeNode.id;
-        myMddFlow.mdd_flow_content = strJson;
-        console.log(myMddFlow);
-        this.doUpdateTadMddFlow(myMddFlow);
+    onButtonG6ToPng(e) {
+
     }
 
-    onSelectX6TableColumnDataTypeChanged(v) {
-        // this.gDynamic.x6TableColumnDataType = v;
+    onSelectG6TableColumnDataTypeChanged(v) {
         let nodeType = v;
         this.gCurrent.node.setData({
             dataType: v
@@ -806,75 +968,6 @@ export default class OperationKafka extends React.PureComponent {
                 id: selectedKeys[0],
                 nodeType: info.node.tag.nodeType,
             }
-        }
-
-        console.log(this.gCurrent);
-
-        if (info.selected && info.node.tag.nodeType === "NODE_MDD_MODEL") {
-            /*
-            const nodes = this.x6Graph.getNodes();
-            nodes.forEach((itemNode) => {
-                let nodeData = itemNode.getData();
-                if (nodeData.nodeType.toUpperCase() === "TABLE") {
-                    if (nodeData.nodeId === selectedKeys[0]) {
-                        this.x6Graph.scrollToCell(itemNode);
-                    }
-                }
-            })
-             */
-        }
-
-        if (info.selected && info.node.tag.nodeType === "NODE_MDD_FLOW") {
-            let nodeId = selectedKeys[0];
-            let myMddFlow = new TadMddFlow();
-            myMddFlow.mdd_flow_id = nodeId;
-            this.restGetTadMddFlow(myMddFlow).then((result) => {
-                if (result.status === 200) {
-                    if (result.data.success) {
-                        if ((result.data.data !== null) && (result.data.data !== undefined)) {
-                            let content = result.data.data.mdd_flow_content;
-                            if (content !== null) {
-                                let buffer = new Uint8Array(content.data);
-                                let strJson = new TextDecoder('utf-8').decode(buffer);
-                                let myJson = JSON.parse(strJson);
-                                this.x6Graph.fromJSON(myJson);
-                                this.x6Graph.scrollToContent();
-
-                                //todo <<<<< now >>>>> 监测表结构是否变化，如果变化，增更新ER图
-                                let tables = [];
-                                const nodes = this.x6Graph.getNodes();
-                                nodes.forEach((itemNode) => {
-                                    let nodeData = itemNode.getData();
-
-                                    if (nodeData.nodeType.toUpperCase() === "TABLE") {
-                                        tables.push({id: nodeData.nodeId, columns: []});
-                                        if (nodeData.nodeId === selectedKeys[0]) {
-                                            // itemNode.setAttrs({
-                                            //     body: { fill: '#f5f5f5' },
-                                            // })
-                                            this.x6Graph.scrollToCell(itemNode);
-                                        }
-                                        const nodeChildren = itemNode.getChildren();
-                                        nodeChildren.forEach((itemNodeChild) => {
-                                            const nodeChildData = itemNodeChild.getData();
-                                            if (nodeChildData.nodeType.toUpperCase() === "TABLE_COLUMN") {
-                                                tables[tables.length - 1].columns.push(nodeChildData.nodeId);
-                                            }
-                                        })
-                                    }
-                                })
-                                console.log("用于检测表格字段是否发生变化", tables);
-
-                                this.context.showMessage("成功，内部ID为：" + result.data.data.id);
-                            }
-                        }
-                    } else {
-                        this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
-                    }
-                } else {
-                    this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
-                }
-            });
         }
     };
 
@@ -1032,16 +1125,16 @@ export default class OperationKafka extends React.PureComponent {
                                         <Button size={"small"} type={"primary"}
                                                 onClick={this.onG6ButtonAddBroker}>新增Broker</Button>
                                         <Button size={"small"} type={"primary"}
-                                                onClick={this.onButtonX6ToPng}>导出</Button>
+                                                onClick={this.onButtonG6ToPng}>导出</Button>
                                     </div>
                                 </div>
-                                <div ref={this.gRef.x6GraphContainerBox} className="box-canvas">
-                                    <div ref={this.gRef.x6GraphContainer}/>
+                                <div ref={this.gRef.g6GraphContainerBox} className="box-canvas">
+                                    <div ref={this.gRef.g6GraphContainer}/>
                                 </div>
                             </div>
                             <div className={"box-properties"}>
                                 <div
-                                    className={"form-x6-properties"}>
+                                    className={"form-g6-properties"}>
                                     <div className="BoxToolbarErDiagram">
                                         <div className="box-properties-title-bar">
                                             <div className="box-properties-title">对象属性列表</div>
@@ -1074,7 +1167,7 @@ export default class OperationKafka extends React.PureComponent {
                                                 {/*<Form.Item name="tableColumnDataType" noStyle><Input/></Form.Item>*/}
                                                 <Form.Item name="tableColumnDataType" noStyle>
                                                     <Select options={optionsDataType}
-                                                            onChange={this.onSelectX6TableColumnDataTypeChanged}/>
+                                                            onChange={this.onSelectG6TableColumnDataTypeChanged}/>
                                                 </Form.Item>
                                                 <Tooltip placement="topLeft" title="请选择表字段数据类型" arrowPointAtCenter>
                                                     <div className="input-icon"><QuestionCircleOutlined/></div>

@@ -158,11 +158,6 @@ $debugBorderColor2: green;
                     border: 1px solid lighten($colorBoxBackground, 30%);
                     display: grid;
                     background: lighten(lightgray, 15%);
-
-                    .x6-widget-stencil {
-                        border: $debugBorderWidth solid red;
-                        position: relative;
-                    }
                 }
 
                 .box-box-canvas {
@@ -201,7 +196,7 @@ $debugBorderColor2: green;
                 .box-properties {
                     display: grid;
 
-                    .form-x6-properties {
+                    .form-g6-properties {
                         display: grid;
                         border: 1px solid lighten($colorBoxBackground, 30%);
                         grid-template-rows: auto 1fr;
