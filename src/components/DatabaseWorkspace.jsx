@@ -198,9 +198,11 @@ export default class DatabaseWorkspace extends React.Component {
 
         this.restGetTableErTables = this.restGetTableErTables.bind(this);
         this.restAddTableErTable = this.restAddTableErTable.bind(this);
+        this.restUpdateTableErTable = this.restUpdateTableErTable.bind(this);
         this.restDeleteTableErTable = this.restDeleteTableErTable.bind(this);
         this.doGetTableErTables = this.doGetTableErTables.bind(this);
         this.doAddTableErTable = this.doAddTableErTable.bind(this);
+        this.doUpdateTableErTable = this.restUpdateTableErTable.bind(this);
         this.doDeleteTableErTable = this.doDeleteTableErTable.bind(this);
 
         this.restAddTable = this.restAddTable.bind(this);
@@ -239,7 +241,6 @@ export default class DatabaseWorkspace extends React.Component {
         this.onButtonX6Save = this.onButtonX6Save.bind(this);
         this.uiUpdateTableErTree = this.uiUpdateTableErTree.bind(this);
         this.getCommTreeNode = this.getCommTreeNode.bind(this);
-        this.x6DrawTable = this.x6DrawTable.bind(this);
 
         this.erTrees2antdTree = this.erTrees2antdTree.bind(this);
 
@@ -816,14 +817,21 @@ export default class DatabaseWorkspace extends React.Component {
         //todo <<<<< now >>>>> on change 节点位置
         this.x6Graph.on("node:change:position", (args) => {
             let nodeData = args.cell.getData();
-            console.log(nodeData);
-            for(let i = 0; i < this.x6Data.tables.length; i++) {
-                if (this.x6Data.tables[i].id === nodeData.nodeId) {
-                    this.x6Data.tables[i].x = args.current.x;
-                    this.x6Data.tables[i].y = args.current.y;
-                    break
-                }
+
+            if (nodeData.nodeType.toUpperCase() === "TABLE") {
+                let erTables = this.gMap.erTablesByDiagram.get(this.gCurrent.erDiagramId);
+                let attrs = erTables.attrs.get(nodeData.nodeId);
+                attrs.position_x = args.current.x;
+                attrs.position_y = args.current.y;
             }
+
+            // for(let i = 0; i < this.x6Data.tables.length; i++) {
+            //     if (this.x6Data.tables[i].id === nodeData.nodeId) {
+            //         this.x6Data.tables[i].x = args.current.x;
+            //         this.x6Data.tables[i].y = args.current.y;
+            //         break
+            //     }
+            // }
         });
 
 
@@ -1004,8 +1012,8 @@ export default class DatabaseWorkspace extends React.Component {
 
     // >>>>> x6 add Entity Table
     x6AddEntityTable(table, id) {
-        let x = 50;
-        let y = 50;
+        let x = table.positionX === undefined ? 50 : table.positionX;
+        let y = table.positionY=== undefined ? 50 : table.positionY;
         let hTitle = 30;
         let wc = 120;
         let hc = 30;
@@ -1176,13 +1184,6 @@ export default class DatabaseWorkspace extends React.Component {
 
     //todo <<<<< now >>>>> on button 保存ER图 clicked
 
-    x6DrawTable(table) {
-        console.log(table);
-
-        let myTable = lodash.cloneDeep(this.gMap.tables.get(table.tableId));
-        this.x6AddEntityTable(myTable, table.id);
-    }
-
     x6DrawRelation(relation) {
         let nodeSource = this.x6Graph.getCellById(relation.nodeSource)
         let nodeDataSource = nodeSource.getData();
@@ -1204,38 +1205,22 @@ export default class DatabaseWorkspace extends React.Component {
     }
 
     onButtonX6Save(e) {
-        console.log(this.x6Data);
-        this.x6Graph.clearCells();
-        this.x6Data.tables.forEach((itemTable) => {
-            this.x6DrawTable(itemTable);
-        })
-        this.x6Data.relations.forEach((itemRelation) => {
-            this.x6DrawRelation(itemRelation);
-        })
+        const nodes = this.x6Graph.getNodes();
+        console.log(this.gCurrent);
+        const erTables = this.gMap.erTablesByDiagram.get(this.gCurrent.erTreeNode.id);
 
-        // let myJson = this.x6Graph.toJSON();
-        //
-        // // 解决循环引用问题，来自网络方案（JerryWang）<<<<<
-        // let cache = [];
-        // let strJson = JSON.stringify(myJson, function(key, value) {
-        //     if (typeof value === 'object' && value !== null) {
-        //         if (cache.indexOf(value) !== -1) {
-        //             // 移除
-        //             return;
-        //         }
-        //         // 收集所有的值
-        //         cache.push(value);
-        //     }
-        //     return value;
-        // });
-        // cache = null;
-        // // 解决循环引用问题，来自网络方案（JerryWang）>>>>>
-        //
-        // let myTableEr = new TadTableEr();
-        // myTableEr.er_id = this.gCurrent.erTreeNode.id;
-        // myTableEr.er_content = strJson;
-        // // this.doAddTableEr(myTableEr);
-        // this.doUpdateTableEr(myTableEr);
+        console.log(erTables);
+        nodes.forEach((itemNode) => {
+            let nodeData = itemNode.getData();
+            if (nodeData.nodeType.toUpperCase() === "TABLE") {
+                let erTable = new TadTableErTable();
+                let attrs = erTables.attrs.get(nodeData.nodeId);
+                erTable.uuid = attrs.uuid;
+                erTable.position_x = Math.floor(attrs.position_x);
+                erTable.position_y = Math.floor(attrs.position_y);
+                this.doUpdateTableErTable(erTable);
+            }
+        })
     }
 
     // >>>>> on button Add Table Er Dir clicked
@@ -1263,17 +1248,17 @@ export default class DatabaseWorkspace extends React.Component {
         if ((this.gCurrent.erTreeNode !== null) && (this.gCurrent.erTreeNode !== undefined)) {
             if (this.gCurrent.erTreeNode.nodeType === "NODE_ER_DIAGRAM") {
 
-                if (this.gMap.erTables.has(this.gCurrent.erTreeNode.id)) {
-                    if (this.gMap.erTables.get(this.gCurrent.erTreeNode.id).tables.includes(this.gCurrent.tableId)) {
+                if (this.gMap.erTablesByDiagram.has(this.gCurrent.erTreeNode.id)) {
+                    if (this.gMap.erTablesByDiagram.get(this.gCurrent.erTreeNode.id).tables.includes(this.gCurrent.tableId)) {
                         console.log("引用过，且被当前ER图引用");
                         return
                     }
                 }
 
-                if (!this.gMap.erTables.has(this.gCurrent.erTreeNode.id)) {
+                if (!this.gMap.erTablesByDiagram.has(this.gCurrent.erTreeNode.id)) {
                     // 如果表从未被引用
                     console.log("表从未被引用");
-                    this.gMap.erTables.set(this.gCurrent.erTreeNode.id, {isLoaded: true, tables: [erTable.table_id]});
+                    this.gMap.erTablesByDiagram.set(this.gCurrent.erTreeNode.id, {isLoaded: true, tables: [erTable.table_id]});
 
                     // erTable.er_id = this.gCurrent.erTreeNode.id;
                     // erTable.table_id = this.gCurrent.tableId;
@@ -1292,7 +1277,7 @@ export default class DatabaseWorkspace extends React.Component {
                     // this.doGetTableRelation(tableRelation);
                 } else {
                     // 该表被引用过，现在确认当前ER图是否引用
-                    this.gMap.erTables.get(this.gCurrent.erTreeNode.id).tables.push(erTable.table_id);
+                    this.gMap.erTablesByDiagram.get(this.gCurrent.erTreeNode.id).tables.push(erTable.table_id);
                     console.log("该表被引用过，但当前ER图没有引用");
                 }
 
@@ -1308,12 +1293,12 @@ export default class DatabaseWorkspace extends React.Component {
                 this.doAddTableErTable(erTable);
                 let myTable = lodash.cloneDeep(this.gMap.tables.get(erTable.table_id));
                 this.x6AddEntityTable(myTable);
-                this.myJson = this.x6Graph.toJSON();
-                let strJson = JSON.stringify(this.myJson);
-                let myTableEr = new TadTableEr();
-                myTableEr.er_id = this.gCurrent.erTreeNode.id;
-                myTableEr.er_content = strJson;
-                this.doUpdateTableEr(myTableEr);
+                // this.myJson = this.x6Graph.toJSON();
+                // let strJson = JSON.stringify(this.myJson);
+                // let myTableEr = new TadTableEr();
+                // myTableEr.er_id = this.gCurrent.erTreeNode.id;
+                // myTableEr.er_content = strJson;
+                // this.doUpdateTableEr(myTableEr);
                 let tableRelation = new TadTableRelation();
                 tableRelation.s_table_id = this.gCurrent.tableId;
                 tableRelation.relation_type = "TEST";
@@ -1485,24 +1470,19 @@ export default class DatabaseWorkspace extends React.Component {
             {headers: {'Content-Type': 'application/json'}})
     }
 
+    restUpdateTableErTable(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/update_table_er_table",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
     restDeleteTableErTable(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table_er_table",
             params,
             {headers: {'Content-Type': 'application/json'}})
     }
 
-    doGetTableErTables(params) {
-        this.restGetTableErTables(params).then((result) => {
-            if (result.status === 200) {
-                if (result.data.success) {
-                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
-                } else {
-                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
-                }
-            } else {
-                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
-            }
-        });
+    async doGetTableErTables(params) {
+        return await this.restGetTableErTables(params);
     }
 
     doAddTableErTable(params) {
@@ -1513,6 +1493,19 @@ export default class DatabaseWorkspace extends React.Component {
                     result.data.data.node_zhname = this.gMap.tables.get(result.data.data.table_id).table_name;
                     result.data.data.node_type = "NODE_ER_TABLE";
                     this.uiUpdateTableErTree(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+    doUpdateTableErTable(params) {
+        this.restUpdateTableErTable(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
                     this.context.showMessage("成功，内部ID为：" + result.data.data.id);
                 } else {
                     this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
@@ -1768,6 +1761,7 @@ export default class DatabaseWorkspace extends React.Component {
             let mapColumns = new Map();
             let mapTypes = new Map();
             let mapErTables = new Map();
+            let mapErTablesByDiagram = new Map();
             let mapConnections = new Map();
 
             this.gData.productRelations = productRelations.data.data;
@@ -1804,10 +1798,21 @@ export default class DatabaseWorkspace extends React.Component {
 
             erTables.data.data.forEach(function (itemErTable) {
                 let myKey = itemErTable.er_id;
-                if (!mapErTables.has(myKey)) {
-                    mapErTables.set(myKey, {isLoaded: false, tables: [itemErTable.table_id]});
+                if (!mapErTablesByDiagram.has(myKey)) {
+                    let attrs = new Map();
+                    attrs.set(itemErTable.table_id, itemErTable);
+                    mapErTablesByDiagram.set(myKey, {
+                        isLoaded: false,
+                        tables: [itemErTable.table_id],
+                        attrs: attrs
+                    });
                 } else {
-                    mapErTables.get(myKey).tables.push(itemErTable.table_id);
+                    mapErTablesByDiagram.get(myKey).tables.push(itemErTable.table_id);
+                    mapErTablesByDiagram.get(myKey).attrs.set(itemErTable.table_id, itemErTable);
+                }
+
+                if (!mapErTables.has(itemErTable.uuid)) {
+                    mapErTables.set(itemErTable.uuid, itemErTable);
                 }
             });
 
@@ -2001,6 +2006,7 @@ export default class DatabaseWorkspace extends React.Component {
             this.gMap.columns = mapColumns;
             this.gMap.types = mapTypes;
             this.gMap.erTables = mapErTables;
+            this.gMap.erTablesByDiagram = mapErTablesByDiagram;
             this.gMap.connections = mapConnections;
 
         })).then(() => {
@@ -3069,7 +3075,7 @@ export default class DatabaseWorkspace extends React.Component {
 
     };
 
-    // >>>>> on Tree ErDiagram selected
+    //todo <<<<< now >>>>> on Tree ER图树 selected
     onTreeErDiagramSelected(selectedKeys, info) {
         if (info.selected) {
             this.gCurrent.erTreeNode = {
@@ -3093,10 +3099,11 @@ export default class DatabaseWorkspace extends React.Component {
 
         if (info.selected && info.node.tag.nodeType === "NODE_ER_DIAGRAM") {
             let nodeId = selectedKeys[0];
+            this.gCurrent.erDiagramId = nodeId;
 
-
-            if (this.gMap.erTables.has(nodeId)) {
-                let erTables = this.gMap.erTables.get(nodeId);
+            // 更新树节点中ER图所包含的表
+            if (this.gMap.erTablesByDiagram.has(nodeId)) {
+                let erTables = this.gMap.erTablesByDiagram.get(nodeId);
                 this.gCurrent.erTablesSelected = erTables;
                 if (!erTables.isLoaded) {
                     let myErTreeNodes = [];
@@ -3109,64 +3116,81 @@ export default class DatabaseWorkspace extends React.Component {
                             node_type: "NODE_ER_TABLE"
                         }
                         myErTreeNodes.push(myErTreeNode);
+
+                        let attrs = erTables.attrs.get(itemErTable);
+                        if (!attrs.position_x) attrs.position_x = Math.random()*1000;
+                        if (!attrs.position_y) attrs.position_y = Math.random()*1000;
+                        myTable.positionX = attrs.position_x;
+                        myTable.positionY = attrs.position_y;
+
+                        this.x6AddEntityTable(myTable);
+
                     });
                     this.uiUpdateTableErTree(myErTreeNodes, "adds");
                     erTables.isLoaded = true;
                 }
+
+                this.x6Graph.clearCells();
+                erTables.tables.forEach((itemErTable) => {
+                    let myTable = this.gMap.tables.get(itemErTable);
+                    let attrs = erTables.attrs.get(itemErTable);
+                    if (attrs.position_x === null) attrs.position_x = Math.random()*1000;
+                    if (attrs.position_y === null) attrs.position_y = Math.random()*1000;
+                    myTable.positionX = attrs.position_x;
+                    myTable.positionY = attrs.position_y;
+                    this.x6AddEntityTable(myTable);
+                });
             }
 
-            let myTableEr = new TadTableEr();
-            myTableEr.er_id = nodeId;
-            this.restGetTableEr(myTableEr).then((result) => {
-                if (result.status === 200) {
-                    if (result.data.success) {
-                        if ((result.data.data !== null) && (result.data.data !== undefined)) {
-                            let content = result.data.data.er_content;
-                            if (content !== null) {
-                                let buffer = new Uint8Array(content.data);
-                                let strJson = new TextDecoder('utf-8').decode(buffer);
-                                let myJson = JSON.parse(strJson);
-                                this.x6Graph.fromJSON(myJson);
-                                this.x6Graph.scrollToContent();
-
-                                //todo <<<<< now >>>>> 监测表结构是否变化，如果变化，增更新ER图
-                                let tables = [];
-                                const nodes = this.x6Graph.getNodes();
-                                nodes.forEach((itemNode) => {
-                                    let nodeData = itemNode.getData();
-
-                                    if (nodeData.nodeType.toUpperCase() === "TABLE") {
-                                        tables.push({id: nodeData.nodeId, columns: []});
-                                        if (nodeData.nodeId === selectedKeys[0]) {
-                                            // itemNode.setAttrs({
-                                            //     body: { fill: '#f5f5f5' },
-                                            // })
-                                            this.x6Graph.scrollToCell(itemNode);
-                                        }
-                                        const nodeChildren = itemNode.getChildren();
-                                        nodeChildren.forEach((itemNodeChild) => {
-                                            const nodeChildData = itemNodeChild.getData();
-                                            if (nodeChildData.nodeType.toUpperCase() === "TABLE_COLUMN") {
-                                                tables[tables.length - 1].columns.push(nodeChildData.nodeId);
-                                            }
-                                        })
-                                    }
-                                })
-                                console.log("用于检测表格字段是否发生变化", tables);
-
-                                this.context.showMessage("成功，内部ID为：" + result.data.data.id);
-                            }
-                        }
-                    } else {
-                        this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
-                    }
-                } else {
-                    this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
-                }
-            });
-
-
-
+            // let myTableEr = new TadTableEr();
+            // myTableEr.er_id = nodeId;
+            // this.restGetTableEr(myTableEr).then((result) => {
+            //     if (result.status === 200) {
+            //         if (result.data.success) {
+            //             if ((result.data.data !== null) && (result.data.data !== undefined)) {
+            //                 let content = result.data.data.er_content;
+            //                 if (content !== null) {
+            //                     let buffer = new Uint8Array(content.data);
+            //                     let strJson = new TextDecoder('utf-8').decode(buffer);
+            //                     let myJson = JSON.parse(strJson);
+            //                     this.x6Graph.fromJSON(myJson);
+            //                     this.x6Graph.scrollToContent();
+            //
+            //                     //todo <<<<< now >>>>> 监测表结构是否变化，如果变化，增更新ER图
+            //                     let tables = [];
+            //                     const nodes = this.x6Graph.getNodes();
+            //                     nodes.forEach((itemNode) => {
+            //                         let nodeData = itemNode.getData();
+            //
+            //                         if (nodeData.nodeType.toUpperCase() === "TABLE") {
+            //                             tables.push({id: nodeData.nodeId, columns: []});
+            //                             if (nodeData.nodeId === selectedKeys[0]) {
+            //                                 // itemNode.setAttrs({
+            //                                 //     body: { fill: '#f5f5f5' },
+            //                                 // })
+            //                                 this.x6Graph.scrollToCell(itemNode);
+            //                             }
+            //                             const nodeChildren = itemNode.getChildren();
+            //                             nodeChildren.forEach((itemNodeChild) => {
+            //                                 const nodeChildData = itemNodeChild.getData();
+            //                                 if (nodeChildData.nodeType.toUpperCase() === "TABLE_COLUMN") {
+            //                                     tables[tables.length - 1].columns.push(nodeChildData.nodeId);
+            //                                 }
+            //                             })
+            //                         }
+            //                     })
+            //                     console.log("用于检测表格字段是否发生变化", tables);
+            //
+            //                     this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+            //                 }
+            //             }
+            //         } else {
+            //             this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+            //         }
+            //     } else {
+            //         this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            //     }
+            // });
         }
     };
 

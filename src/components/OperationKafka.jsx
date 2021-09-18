@@ -38,11 +38,50 @@ export default class OperationKafka extends React.PureComponent {
     g6Graph = null;
     g6Data = {};
     g6Config = {
-        s: 10
+        s: 10,
+        sH: 80,
+        sV: 100,
+        workflow: [
+            {name: "app_alarms_center", type: "NODE_APPLICATION", parentNode: "ROOT", direction: "BEGIN"},
+            {name: "queue_alarms_collector", type: "NODE_QUEUE", parentNode: "app_alarms_center", direction: "RIGHT"},
+            {
+                name: "service_alarms_transfer",
+                type: "NODE_SERVICE",
+                parentNode: "queue_alarms_collector",
+                direction: "RIGHT"
+            },
+            {
+                name: "queue_alarms_transfer",
+                type: "NODE_QUEUE",
+                parentNode: "service_alarms_transfer",
+                direction: "RIGHT"
+            },
+            {name: "service_alarms_filter", type: "NODE_SERVICE", parentNode: "queue_alarms_transfer", direction: "UP"},
+            {name: "service_alarms_eoms", type: "NODE_SERVICE", parentNode: "service_alarms_filter", direction: "UP"},
+            // {name: "service_alarms_filter2", type: "NODE_SERVICE", parentNode: "queue_alarms_transfer", direction: "DOWN"},
+            {name: "app_eoms", type: "NODE_APPLICATION", parentNode: "service_alarms_eoms", direction: "UP"},
+            {name: "queue_alarms_matcher", type: "NODE_QUEUE", parentNode: "service_alarms_filter", direction: "LEFT"},
+            {name: "service_alarms_cache", type: "NODE_SERVICE", parentNode: "queue_alarms_matcher", direction: "LEFT"},
+            {
+                name: "queue_alarms_client_worker",
+                type: "NODE_QUEUE",
+                parentNode: "service_alarms_cache",
+                direction: "LEFT"
+            },
+            {
+                name: "service_alarms_view",
+                type: "NODE_SERVICE",
+                parentNode: "queue_alarms_client_worker",
+                direction: "UP"
+            },
+            {name: "app_alarms_monitor", type: "NODE_APPLICATION", parentNode: "service_alarms_view", direction: "UP"},
+        ]
     }
-    g6DataContainers = [
+    g6DataApplications = [
         {
-            name: "brokers",
+            name: "app_alarms_monitor",
+            label: "告警流水窗",
+            type: "NODE_APPLICATION",
             children: [],
             position: {
                 x: 100,
@@ -54,23 +93,200 @@ export default class OperationKafka extends React.PureComponent {
             }
         },
         {
-            name: "zookeepers",
+            name: "app_alarms_center",
+            label: "故障中心",
+            type: "NODE_APPLICATION",
             children: [],
             position: {
-                x: 1000,
-                y: (100 + 100 + 50) + (( 300 + 10 * (1+1)) - (200 + 10*2))/2
+                x: 100,
+                y: 100 + 100 + 50
             },
             size: {
-                w: 200,
-                h: 200 + 10*2
+                w: 100,
+                h: 50
+            }
+        },
+        {
+            name: "app_eoms",
+            label: "电子运维",
+            type: "NODE_APPLICATION",
+            children: [],
+            position: {
+                x: 100,
+                y: 100 + 100 + 50
+            },
+            size: {
+                w: 100,
+                h: 50
+            }
+        },
+    ];
+    g6DataServices = [
+        {
+            name: "service_alarms_transfer",
+            label: "告警接入服务",
+            type: "NODE_SERVICE",
+            children: [],
+            position: {
+                x: 100,
+                y: 100 + 100 + 50
+            },
+            size: {
+                w: 100,
+                h: 50
+            }
+        },
+        {
+            name: "service_alarms_filter",
+            label: "告警过滤服务",
+            type: "NODE_SERVICE",
+            children: [],
+            position: {
+                x: 100,
+                y: 100 + 100 + 50
+            },
+            size: {
+                w: 100,
+                h: 50
+            }
+        },
+        {
+            name: "service_alarms_filter2",
+            label: "告警过滤服务-2",
+            type: "NODE_SERVICE",
+            children: [],
+            position: {
+                x: 100,
+                y: 100 + 100 + 50
+            },
+            size: {
+                w: 100,
+                h: 50
+            }
+        },
+        {
+            name: "service_alarms_eoms",
+            label: "告警派单服务",
+            type: "NODE_SERVICE",
+            children: [],
+            position: {
+                x: 100,
+                y: 100 + 100 + 50
+            },
+            size: {
+                w: 100,
+                h: 50
+            }
+        },
+        {
+            name: "service_alarms_cache",
+            label: "告警缓存服务",
+            type: "NODE_SERVICE",
+            children: [],
+            position: {
+                x: 100,
+                y: 100 + 100 + 50
+            },
+            size: {
+                w: 100,
+                h: 50
+            }
+        },
+        {
+            name: "service_alarms_view",
+            label: "告警视图服务",
+            type: "NODE_SERVICE",
+            children: [],
+            position: {
+                x: 100,
+                y: 100 + 100 + 50
+            },
+            size: {
+                w: 100,
+                h: 50
+            }
+        },
+    ];
+    g6DataQueues = [
+        {
+            name: "queue_alarms_collector",
+            label: "告警接入队列",
+            type: "NODE_QUEUE",
+            children: [],
+            position: {
+                x: 100,
+                y: 100 + 100 + 50
+            },
+            size: {
+                w: 400,
+                h: 200
+            }
+        },
+        {
+            name: "queue_alarms_transfer",
+            label: "TRANS.Q",
+            type: "NODE_QUEUE",
+            children: [],
+            position: {
+                x: 100,
+                y: 100 + 100 + 50
+            },
+            size: {
+                w: 400,
+                h: 200
+            }
+        },
+        {
+            name: "queue_alarms_matcher",
+            label: "MAT_AGENT.Q",
+            type: "NODE_QUEUE",
+            children: [],
+            position: {
+                x: 100,
+                y: 100 + 100 + 50
+            },
+            size: {
+                w: 400,
+                h: 200
+            }
+        },
+        {
+            name: "queue_alarms_client_worker",
+            label: "CW_1.Q",
+            type: "NODE_QUEUE",
+            children: [],
+            position: {
+                x: 100,
+                y: 100 + 100 + 50
+            },
+            size: {
+                w: 400,
+                h: 200
+            }
+        },
+    ]
+
+    g6DataContainers = [
+        {
+            name: "brokers",
+            type: "brokers",
+            children: [],
+            position: {
+                x: 100,
+                y: 100 + 100 + 50
+            },
+            size: {
+                w: 100,
+                h: 50
             }
         },
         {
             name: "consumers",
+            type: "consumers",
             children: [],
             position: {
                 x: 100,
-                y: 100 + 100 + 50 + 300 + 10 * (1+1) + 50
+                y: 100 + 100 + 50 + 300 + 10 * (1 + 1) + 50
             },
             size: {
                 w: 500,
@@ -79,13 +295,14 @@ export default class OperationKafka extends React.PureComponent {
         },
         {
             name: "producers",
+            types: "producers",
             children: [],
             position: {
                 x: 100,
                 y: 100
             },
             size: {
-                w: 150*3 + 10*(3+1),
+                w: 150 * 3 + 10 * (3 + 1),
                 h: 100
             }
         },
@@ -93,6 +310,7 @@ export default class OperationKafka extends React.PureComponent {
     g6DataBrokers = [
         {
             name: "broker_1",
+            label: "KAFKA broker 1",
             children: [],
             position: {
                 x: 0,
@@ -101,10 +319,11 @@ export default class OperationKafka extends React.PureComponent {
             size: {
                 w: 200,
                 h: 300
-            }
+            },
         },
         {
             name: "broker_2",
+            label: "KAFKA broker 2",
             children: [],
             position: {
                 x: 0,
@@ -117,6 +336,7 @@ export default class OperationKafka extends React.PureComponent {
         },
         {
             name: "broker_3",
+            label: "KAFKA broker 3",
             children: [],
             position: {
                 x: 0,
@@ -131,6 +351,7 @@ export default class OperationKafka extends React.PureComponent {
     g6DataBrokers2 = [
         {
             name: "broker_4",
+            label: "KAFKA broker 4",
             children: [],
             position: {
                 x: 0,
@@ -297,11 +518,6 @@ export default class OperationKafka extends React.PureComponent {
             name: "consumer_5"
         },
     ]
-    g6DataZookeepers = [
-        {
-            name: "zookeeper_1"
-        },
-    ]
 
     constructor(props) {
         super(props);
@@ -340,12 +556,21 @@ export default class OperationKafka extends React.PureComponent {
         this.doUpdateTadMddFlow = this.doUpdateTadMddFlow.bind(this);
         this.doDeleteTadMddFlow = this.doDeleteTadMddFlow.bind(this);
 
+        this.getApplication = this.getApplication.bind(this);
+        this.getService = this.getService.bind(this);
+        this.getQueue = this.getQueue.bind(this);
+        this.addLine = this.addLine.bind(this);
+
+        this.g6ChangeData = this.g6ChangeData.bind(this);
+        this.drawWorkflow = this.drawWorkflow.bind(this);
+        this.addApplication = this.addApplication.bind(this);
+        this.addService = this.addService.bind(this);
+        this.addQueue = this.addQueue.bind(this);
         this.addContainers = this.addContainers.bind(this);
         this.addContainer = this.addContainer.bind(this);
         this.updateContainer = this.updateContainer.bind(this);
         this.addBroker = this.addBroker.bind(this);
         this.updateBroker = this.updateBroker.bind(this);
-        this.addZookeeper = this.addZookeeper.bind(this);
         this.addProducer = this.addProducer.bind(this);
         this.addConsumer = this.addConsumer.bind(this);
         this.addPartition = this.addPartition.bind(this);
@@ -379,25 +604,11 @@ export default class OperationKafka extends React.PureComponent {
             this.gMap.containers.set(c.name, c);
         })
 
-        this.addContainers();
-        this.g6Graph.changeData(this.g6Data);
-        this.g6Graph.fitCenter();
-        this.g6Graph.fitView();
+        // this.addContainers();
+        // this.g6ChangeData();
 
-        await K3.sleep(1000);
-        this.doGetRecords();
-        this.g6Graph.changeData(this.g6Data);
-        this.g6Graph.fitCenter();
-        this.g6Graph.fitView();
-
-        await K3.sleep(1000);
-        this.doGetRecords2();
-        this.g6Graph.changeData(this.g6Data);
-        this.g6Graph.fitCenter();
-        this.g6Graph.fitView();
-
-        await K3.sleep(1000);
-        this.updatePartition("topic_a-part_0");
+        this.drawWorkflow();
+        this.g6ChangeData();
     }
 
     //todo >>>>> do Get All
@@ -430,8 +641,361 @@ export default class OperationKafka extends React.PureComponent {
             })
 
         })).then(() => {
-            this.doInit();
+            this.doInit().then(async (r) => {
+                this.context.showMessage("KAFKA监控模块初始化完成");
+
+                await K3.sleep(1000);
+                this.doGetRecords();
+                this.g6ChangeData();
+                //
+                // await K3.sleep(1000);
+                // this.doGetRecords2();
+                // this.g6ChangeData();
+                //
+                await K3.sleep(1000);
+                this.updatePartition("topic_a-part_0");
+            });
         });
+    }
+
+    drawWorkflow() {
+        let xd = 1;
+        let yd = 1;
+        let wSelf = 0;
+        let hSelf = 0;
+        let wParent = 0;
+        let hParent = 0;
+        let node1, node2, anchor1, anchor2;
+
+        let mapNodes = new Map();
+        this.g6DataApplications.forEach((itemApplication) => {
+            mapNodes.set(itemApplication.name, itemApplication)
+        })
+
+        this.g6DataServices.forEach((itemService) => {
+            mapNodes.set(itemService.name, itemService)
+        })
+
+        this.g6DataQueues.forEach((itemQueue) => {
+            mapNodes.set(itemQueue.name, itemQueue)
+        })
+
+        this.gMap.nodes = mapNodes;
+
+        this.g6Config.workflow.forEach((itemNode) => {
+            switch (itemNode.direction) {
+                case "BEGIN":
+                    xd = 0;
+                    yd = 0;
+                    wSelf = 0;
+                    hSelf = 0;
+                    wParent = 0;
+                    hParent = 0;
+                    break
+                case "LEFT":
+                    xd = -1;
+                    yd = 0;
+                    wSelf = 1;
+                    hSelf = 0;
+                    wParent = 1;
+                    hParent = 0;
+                    break
+                case "RIGHT":
+                    xd = 1;
+                    yd = 0;
+                    wSelf = 1;
+                    hSelf = 0;
+                    wParent = 1;
+                    hParent = 1;
+                    break
+                case "UP":
+                    xd = 0;
+                    yd = -1;
+                    wSelf = 0;
+                    hSelf = 1;
+                    wParent = 0;
+                    hParent = 1;
+                    break
+                case "DOWN":
+                    xd = 0;
+                    yd = 1;
+                    wSelf = 0;
+                    hSelf = 1;
+                    wParent = 0;
+                    hParent = 1;
+                    break
+                default:
+                    break
+            }
+
+            let nodeParent = this.gMap.nodes.get(itemNode.parentNode);
+            if (nodeParent === undefined) {
+                nodeParent = {
+                    position: {
+                        x: 0,
+                        y: 0
+                    },
+                    size: {
+                        w: 0,
+                        h: 0
+                    }
+                }
+            }
+
+            switch (itemNode.type) {
+                case "NODE_APPLICATION":
+                    let app = this.gMap.nodes.get(itemNode.name);
+                    app.position.x = nodeParent.position.x + xd * wSelf * app.size.w / 2 + xd * wParent * nodeParent.size.w / 2 + xd * this.g6Config.sH;
+                    app.position.y = nodeParent.position.y + yd * hSelf * app.size.h / 2 + yd * hParent * nodeParent.size.h / 2 + yd * this.g6Config.sV;
+                    // xbLast = xb;
+                    // xb += xd * (app.size.w + 100);
+                    this.addApplication(app);
+                    break
+                case "NODE_SERVICE":
+                    let service = this.gMap.nodes.get(itemNode.name);
+                    service.position.x = nodeParent.position.x + xd * wSelf * service.size.w / 2 + xd * wParent * nodeParent.size.w / 2 + xd * this.g6Config.sH;
+                    service.position.y = nodeParent.position.y + yd * hSelf * service.size.h / 2 + yd * hParent * nodeParent.size.h / 2 + yd * this.g6Config.sV;
+                    // xbLast = xb;
+                    // xb += direction * (service.size.w + 100);
+                    this.addService(service);
+                    break
+                case "NODE_QUEUE":
+                    let queue = this.gMap.nodes.get(itemNode.name);
+                    queue.position.x = nodeParent.position.x + xd * wSelf * queue.size.w / 2 + xd * wParent * nodeParent.size.w / 2 + xd * this.g6Config.sH;
+                    queue.position.y = nodeParent.position.y + yd * hSelf * queue.size.h / 2 + yd * hParent * nodeParent.size.h / 2 + yd * this.g6Config.sV;
+                    // xbLast = xb;
+                    // xb += direction * (queue.size.w + 100);
+                    this.addQueue(queue);
+                    break
+                default:
+                    break
+            }
+
+            if (itemNode.parentNode !== "ROOT") {
+                node1 = itemNode.parentNode;
+                node2 = itemNode.name;
+                switch (itemNode.direction) {
+                    case "UP":
+                        anchor1 = 0;
+                        anchor2 = 2;
+                        break
+                    case "RIGHT":
+                        anchor1 = 1;
+                        anchor2 = 3;
+                        break
+                    case "DOWN":
+                        anchor1 = 2;
+                        anchor2 = 0;
+                        break
+                    case "LEFT":
+                        anchor1 = 3;
+                        anchor2 = 1;
+                        break
+                    default:
+                        break
+                }
+
+                this.addLine(node1, node2, anchor1, anchor2);
+            }
+        })
+    }
+
+    getApplication(name) {
+        let myResult;
+
+        for (let i = 0; i < this.g6DataApplications.length; i++) {
+            if (this.g6DataApplications[i].name === name) {
+                myResult = this.g6DataApplications[i];
+                break
+            }
+        }
+
+        return myResult
+    }
+
+    getService(name) {
+        let myResult;
+
+        for (let i = 0; i < this.g6DataServices.length; i++) {
+            if (this.g6DataServices[i].name === name) {
+                myResult = this.g6DataServices[i];
+                break
+            }
+        }
+
+        return myResult
+    }
+
+    getQueue(name) {
+        let myResult;
+
+        for (let i = 0; i < this.g6DataQueues.length; i++) {
+            if (this.g6DataQueues[i].name === name) {
+                myResult = this.g6DataQueues[i];
+                break
+            }
+        }
+
+        return myResult
+    }
+
+    //todo <<<<<< now >>>>> 绘制 应用 节点
+    addApplication(app) {
+        let modelApp = {
+            id: app.name,
+            type: "rect",
+            label: app.label,
+            size: [app.size.w, app.size.h],
+            x: app.position.x, // + app.size.w / 2,
+            y: app.position.y, // + app.size.h / 2,
+            anchorPoints: [
+                [0.5, 0],
+                [1, 0.5],
+                [0.5, 1],
+                [0, 0.5],
+            ],
+            style: {
+                fill: "darkgray",
+                radius: 10,
+            },
+            // labelCfg: {
+            //     position: "top",
+            //     offset: 50,
+            //     style: {
+            //         fill: "white",
+            //         fontSize: 16,
+            //     }
+            // },
+            tag: {
+                name: app.name,
+                type: app.type,
+            }
+        }
+
+        this.g6Data.nodes.push(modelApp);
+    }
+
+    addService(app) {
+        let modelApp = {
+            id: app.name,
+            type: "rect",
+            label: app.label,
+            size: [app.size.w, app.size.h],
+            x: app.position.x, // + app.size.w / 2,
+            y: app.position.y, // + app.size.h / 2,
+            anchorPoints: [
+                [0.5, 0],
+                [1, 0.5],
+                [0.5, 1],
+                [0, 0.5],
+            ],
+            style: {
+                fill: "darkgray",
+                radius: 10,
+            },
+            // labelCfg: {
+            //     position: "top",
+            //     offset: 50,
+            //     style: {
+            //         fill: "white",
+            //         fontSize: 16,
+            //     }
+            // },
+            tag: {
+                name: app.name,
+                type: app.type,
+            }
+        }
+
+        // this.g6Graph.addItem("node", modelBroker);
+        this.g6Data.nodes.push(modelApp);
+    }
+
+    addQueue(app) {
+        let modelApp = {
+            id: app.name,
+            type: "rect",
+            label: app.label,
+            size: [app.size.w, app.size.h],
+            x: app.position.x, // + app.size.w / 2,
+            y: app.position.y, // + app.size.h / 2,
+            anchorPoints: [
+                [0.5, 0],
+                [1, 0.5],
+                [0.5, 1],
+                [0, 0.5],
+            ],
+            style: {
+                fill: "darkgray",
+                radius: 10,
+            },
+            // labelCfg: {
+            //     position: "top",
+            //     offset: 50,
+            //     style: {
+            //         fill: "white",
+            //         fontSize: 16,
+            //     }
+            // },
+            tag: {
+                name: app.name,
+                type: app.type,
+            }
+        }
+
+        // this.g6Graph.addItem("node", modelBroker);
+        this.g6Data.nodes.push(modelApp);
+    }
+
+    addLine(node1, node2, anchor1, anchor2) {
+        let modelLine = {
+            id: node1 + "_EDGE_" + node2,
+            type: "edge",
+            source: node1,
+            target: node2,
+            sourceAnchor: anchor1,
+            targetAnchor: anchor2,
+            label: "300条/S",
+            // labelCfg: {
+            //     position: "start"
+            // },
+            style: {
+                // stroke: "transparent",
+                // lineWidth: 20,
+                endArrow: true
+            },
+            autoRotate: true,
+            // tag: {
+            //     name: partition.name + "_EDGE",
+            //     type: "NODE_PARTITION_EDGE",
+            // }
+        }
+
+        this.g6Data.edges.push(modelLine);
+    }
+
+    g6ChangeData() {
+        this.g6Graph.changeData(this.g6Data);
+        this.g6Graph.fitCenter();
+        this.g6Graph.fitView();
+
+        // this.g6Data.nodes.forEach((itemNode) => {
+        //     if (itemNode.tag.type === "NODE_PARTITION") {
+        //         //if (!itemNode.tag.isRotated) {
+        //             itemNode.tag.isRotated = true;
+        //             let nodeInstance = this.g6Graph.findById(itemNode.tag.name);
+        //             let g = nodeInstance.getContainer();
+        //             let textInstance = g.get("children")[1];
+        //             textInstance.rotate(-Math.PI / 2);
+        //             console.log(itemNode);
+        //             let hR = itemNode.size[1];
+        //             let wT = itemNode.label.length * 7;
+        //             // let x = textInstance.attr("x");
+        //             textInstance.attr("x", - (hR - wT) / 2);
+        //             console.log(hR, wT);
+        //        //}
+        //     }
+        // });
     }
 
     doGetRecords() {
@@ -443,12 +1007,12 @@ export default class OperationKafka extends React.PureComponent {
                 // do ...
             }
         })
-        this.updateContainer("brokers");
+        // this.updateContainer("brokers");
 
         this.g6DataPartitions.forEach((p) => {
             if (!this.gMap.partitions.has(p.name)) {
                 this.gMap.partitions.set(p.name, p);
-                this.addPartition(p);
+                this.addPartition(p, "DIRECTION_VERTICAL");
             } else {
                 // do ...
             }
@@ -470,7 +1034,7 @@ export default class OperationKafka extends React.PureComponent {
         this.g6DataPartitions2.forEach((p) => {
             if (!this.gMap.partitions.has(p.name)) {
                 this.gMap.partitions.set(p.name, p);
-                this.addPartition(p);
+                this.addPartition(p, "DIRECTION_VERTICAL");
             } else {
                 // do ...
             }
@@ -638,11 +1202,20 @@ export default class OperationKafka extends React.PureComponent {
             modes: {
                 default: ['drag-canvas'],
             },
+            defaultEdge: {
+                style: {
+                    stroke: "#fff",
+                    lineWidth: 2
+                },
+                labelCfg: {
+                    autoRotate: true,
+                }
+            },
         });
 
         this.g6Graph.on('combo:click', (evt) => {
-            const item = evt.item;
-            const target = evt.target;
+            // const item = evt.item;
+            // const target = evt.target;
         });
 
         this.g6Data.combos = [];
@@ -653,19 +1226,6 @@ export default class OperationKafka extends React.PureComponent {
         this.g6Graph.render();
         this.g6Graph.fitCenter();
         this.g6Graph.fitView();
-
-        // let indexOfBrokers = 0;
-        // this.g6DataBrokers.forEach((itemBroker) => {
-        //     this.addBroker(itemBroker, indexOfBrokers);
-        //     indexOfBrokers++;
-        // })
-        //
-        // let indexOfZookeepers = 0;
-        // this.g6DataZookeepers.forEach((itemZookeeper) => {
-        //     this.addZookeeper(itemZookeeper, indexOfZookeepers);
-        //     indexOfZookeepers++;
-        // })
-        // this.g6Graph.changeData(this.g6Data);
     }
 
     addContainers() {
@@ -679,23 +1239,25 @@ export default class OperationKafka extends React.PureComponent {
         let modelContainer = {
             id: container.name,
             type: "rect",
-            label: container.name,
+            label: container.label,
             size: [container.size.w, container.size.h],
-            x: container.position.x + container.size.w/2,
-            y: container.position.y + container.size.h/2,
+            x: container.position.x + container.size.w / 2,
+            y: container.position.y + container.size.h / 2,
             style: {
                 fill: "darkgray",
                 radius: 10,
             },
             labelCfg: {
-                offset: 100,
+                position: "top",
+                offset: 50,
                 style: {
                     fill: "white",
                     fontSize: 16,
                 }
             },
             tag: {
-                name: container.name
+                name: container.name,
+                type: "NODE_CONTAINER",
             }
         }
 
@@ -718,8 +1280,8 @@ export default class OperationKafka extends React.PureComponent {
                 hNew += 2 * this.g6Config.s;
                 let w = node.size[0];
                 let h = node.size[1];
-                node.x += (wNew - w)/2;
-                node.y += (hNew - h)/2;
+                node.x += (wNew - w) / 2;
+                node.y += (hNew - h) / 2;
                 node.size[0] = wNew;
                 node.size[1] = hNew;
             }
@@ -728,73 +1290,47 @@ export default class OperationKafka extends React.PureComponent {
 
     //todo <<<<< now >>>>> 绘制 broker
     addBroker(broker) {
-        let container = this.gMap.containers.get("brokers");
+        let container = this.gMap.nodes.get("queue_alarms_collector");
         let index = container.children.length;
-        let xb = container.position.x + this.g6Config.s, yb = container.position.y + this.g6Config.s;
+        console.log(index);
+        container.children.push(broker.name);
+        broker.size.w = 120;
+        broker.size.h = container.size.h - this.g6Config.s * 2;
+        this.gMap.nodes.set(broker.name, broker);
+        let xb = container.position.x - container.size.w /2 + broker.size.w/2 + this.g6Config.s + (broker.size.w + this.g6Config.s) * index,
+            yb = container.position.y;
         let modelBroker = {
             id: broker.name,
             type: "rect",
-            label: broker.name,
+            label: broker.label,
             size: [broker.size.w, broker.size.h],
-            x: xb + broker.size.w/2 + (broker.size.w + this.g6Config.s) * index,
-            y: yb + broker.size.h/2,
+            x: xb,
+            y: yb,
             style: {
                 fill: "darkgreen",
                 radius: 10,
             },
             labelCfg: {
-                offset: 100,
+                position: "top",
+                offset: -30,
                 style: {
                     fill: "white",
                     fontSize: 16,
                 }
             },
             tag: {
-                name: broker.name
+                name: broker.name,
+                type: "NODE_BROKER",
             }
         }
 
-        broker.position.x = modelBroker.x - broker.size.w/2;
-        broker.position.y = modelBroker.y - broker.size.h/2;
-        // this.g6Graph.addItem("node", modelBroker);
+        broker.position.x = modelBroker.x - broker.size.w / 2;
+        broker.position.y = modelBroker.y - broker.size.h / 2;
         this.g6Data.nodes.push(modelBroker);
-        this.gMap.containers.get("brokers").children.push(broker.name);
     }
 
     updateBroker(broker) {
 
-    }
-
-    //todo <<<<< now >>>>> 绘制 zookeeper
-    addZookeeper(broker, index) {
-        let container = this.g6Graph.findById("zookeepers");
-        let containerModel = container.getModel();
-        console.log(containerModel);
-        let xb = containerModel.x - containerModel.size[0]/2 + this.g6Config.s, yb = containerModel.y - containerModel.size[1]/2 + this.g6Config.s;
-        let w = 100, h = 200;
-        let modelZookeeper = {
-            id: broker.name,
-            comboId: "comboZookeepers",
-            type: "rect",
-            label: broker.name,
-            size: [w, h],
-            x: xb + w / 2 + (w + this.g6Config.s) * index,
-            y: yb + h / 2,
-            style: {
-                fill: "darkgreen",
-                radius: 10,
-            },
-            labelCfg: {
-                offset: 100,
-                style: {
-                    fill: "white",
-                    fontSize: 16,
-                }
-            }
-        }
-
-        // this.g6Graph.addItem("node", modelBroker);
-        this.g6Data.nodes.push(modelZookeeper);
     }
 
     addProducer(producer, index) {
@@ -806,53 +1342,137 @@ export default class OperationKafka extends React.PureComponent {
     }
 
     //todo <<<<< now >>>>> add partition
-    addPartition(partition) {
-        let broker = this.gMap.brokers.get(partition.broker);
+    addPartition(partition, direction) {
+        if (direction === undefined) {
+            direction = "DIRECTION_HORIZONTAL";
+        } else {
+            if (direction !== "DIRECTION_HORIZONTAL" && direction !== "DIRECTION_VERTICAL") {
+                direction = "DIRECTION_VERTICAL";
+            }
+        }
+        let broker = this.gMap.nodes.get(partition.broker);
+        partition.size.w = (broker.size.h - this.g6Config.s * 2 - 30) * (partition.size.w / 200);
+        partition.size.h = 25;
         let index = broker.children.length;
-        let xb = broker.position.x + this.g6Config.s, yb = broker.position.y + this.g6Config.s;
-        let modelPartition = {
-            id: partition.name,
+        let w, h, xb, yb, x1, y1, x2, y2, x3, y3;
+
+        if (direction === "DIRECTION_HORIZONTAL") {
+            w = partition.size.w;
+            h = partition.size.h;
+            xb = broker.position.x + this.g6Config.s;
+            yb = broker.position.y + this.g6Config.s;
+            x1 = xb;
+            y1 = yb + (h + this.g6Config.s) * index + h / 2;
+        } else if (direction === "DIRECTION_VERTICAL") {
+            w = partition.size.h;
+            h = partition.size.w;
+            xb = broker.position.x + w * index + this.g6Config.s * (index + 1);
+            yb = broker.position.y + broker.size.h - h - this.g6Config.s;
+            x1 = xb + w / 2;
+            y1 = yb + 10 / 2;
+            x2 = x1;
+            y2 = yb + h / 2;
+            x3 = x1;
+            y3 = yb + (h - 10) + 10 / 2;
+        }
+        let modelPartitionTop = {
+            id: partition.name + "_TOP",
             type: "rect",
-            label: partition.name,
-            size: [partition.size.w, partition.size.h],
-            x: xb + partition.size.w / 2,
-            y: yb + (partition.size.h + this.g6Config.s) * index + partition.size.h / 2,
+            size: [w, 10],
+            x: x1,
+            y: y1,
+            anchorPoints: [
+                [0.5, 0.5],
+                [1, 1],
+            ],
             style: {
-                fill: "lightblue",
-                radius: 2,
-            },
-            labelCfg: {
-                offset: 100,
-                style: {
-                    fill: "black",
-                    fontSize: 12,
-                }
+                fill: "transparent",
+                stroke: 'transparent',
             },
             tag: {
-                name: broker.name
+                name: partition.name + "_TOP",
+                type: "NODE_PARTITION_TOP",
+            }
+        }
+        let modelPartitionBody = {
+            id: partition.name,
+            type: "rect",
+            size: [w, h],
+            x: x2,
+            y: y2,
+            style: {
+                fill: "lightblue",
+                radius: [5, 5, 0, 0],
+            },
+            tag: {
+                name: partition.name,
+                type: "NODE_PARTITION",
+                isRotated: false,
+            }
+        }
+        let modelPartitionBottom = {
+            id: partition.name + "_BOTTOM",
+            type: "rect",
+            size: [w, 10],
+            x: x3,
+            y: y3,
+            anchorPoints: [
+                [0.5, 0.5],
+                [1, 1],
+            ],
+            style: {
+                fill: "transparent",
+                stroke: 'transparent',
+            },
+            tag: {
+                name: partition.name + "_BOTTOM",
+                type: "NODE_PARTITION_BOTTOM",
+            }
+        }
+        let modelPartitionEdge = {
+            id: partition.name + "_EDGE",
+            type: "edge",
+            source: partition.name + "_BOTTOM",
+            target: partition.name + "_TOP",
+            sourceAnchor: 0,
+            targetAnchor: 0,
+            label: partition.name,
+            labelCfg: {
+                position: "start"
+            },
+            style: {
+                stroke: "transparent",
+            },
+            autoRotate: true,
+            tag: {
+                name: partition.name + "_EDGE",
+                type: "NODE_PARTITION_EDGE",
             }
         }
 
-        partition.position.x = modelPartition.x - partition.size.w/2;
-        partition.position.y = modelPartition.y - partition.size.h/2;
+        partition.position.x = x1 - w / 2;
+        partition.position.y = y1 - h / 2;
         // this.g6Graph.addItem("node", modelBroker);
-        this.g6Data.nodes.push(modelPartition);
+        this.g6Data.nodes.push(modelPartitionTop);
+        this.g6Data.nodes.push(modelPartitionBottom);
+        this.g6Data.nodes.push(modelPartitionBody);
+        this.g6Data.edges.push(modelPartitionEdge);
         this.gMap.brokers.get(partition.broker).children.push(partition.name);
     }
 
     updatePartition(partitionId) {
         let nodePartition = this.g6Graph.findById(partitionId);
-        console.log(nodePartition.getContainer().get("children")[0]);
-        // this.g6Graph.setItemState(partitionId, 'selected', true);
+
         nodePartition.getContainer().get("children")[0].animate(
             {
-                opacity: 0.1,
+                fill: "red",
+                stroke: "red"
             },
             {
-                repeat: true, // 循环
+                repeat: true,
                 duration: 1000,
-                easing: 'easeCubic',
-                delay: 0, // 无延迟
+                easing: 'easeLinear',
+                delay: 0,
             },
         );
     }
@@ -863,13 +1483,9 @@ export default class OperationKafka extends React.PureComponent {
         let nodeBroker = {
             name: "broker_" + (indexBroker + 1)
         }
-        this.g6DataBrokers.push(nodeBroker);
+
         this.addBroker(nodeBroker, indexBroker);
-        this.g6Graph.changeData(this.g6Data);
-        let nodes = this.g6Graph.getNodes();
-        nodes.forEach((itemNode) => {
-            itemNode.toFront();
-        })
+        this.g6ChangeData();
     }
 
     //todo <<<<< now >>>>> on button G6 Save clicked

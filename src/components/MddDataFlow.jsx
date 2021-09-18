@@ -10,6 +10,7 @@ import {Addon, DataUri, Graph, Shape} from "@antv/x6";
 import TadMddFlow from "../entity/TadMddFlow";
 import TadMddTree from "../entity/TadMddTree";
 import TadTableRelation from "../entity/TadTableRelation";
+import TadMddFlowNode from "../entity/TadMddFlowNode";
 
 const {Stencil} = Addon;
 const {Rect, Circle} = Shape;
@@ -56,6 +57,17 @@ export default class MddDataFlow extends React.PureComponent {
         this.doGetAll = this.doGetAll.bind(this);
 
         this.commTrees2antdTree = this.commTrees2antdTree.bind(this);
+
+        this.restGetTadMddFlowNodes = this.restGetTadMddFlowNodes.bind(this);
+        this.restAddTadMddFlowNode = this.restAddTadMddFlowNode.bind(this);
+        this.restUpdateTadMddFlowNode = this.restUpdateTadMddFlowNode.bind(this);
+        this.restDeleteTadMddFlowNodes = this.restDeleteTadMddFlowNodes.bind(this);
+        this.doGetTadMddFlowNodes = this.doGetTadMddFlowNodes.bind(this);
+        this.doAddTadMddFlowNode = this.doAddTadMddFlowNode.bind(this);
+        this.doUpdateTadMddFlowNode = this.doUpdateTadMddFlowNode.bind(this);
+        this.doDeleteTadMddFlowNodes = this.doDeleteTadMddFlowNodes.bind(this);
+        this.uiUpdateTadMddFlowNodes = this.uiUpdateTadMddFlowNodes.bind(this);
+        this.drawTaddMddFlow = this.drawTaddMddFlow.bind(this);
 
         this.restGetTadMddTrees = this.restGetTadMddTrees.bind(this);
         this.restAddTadMddTree = this.restAddTadMddTree.bind(this);
@@ -152,6 +164,115 @@ export default class MddDataFlow extends React.PureComponent {
         })).then(() => {
             this.doInit();
         });
+    }
+
+    restGetTadMddFlowNodes(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/mdd/get_mdd_flow_nodes",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restAddTadMddFlowNode(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/mdd/add_mdd_flow_node",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restUpdateTadMddFlowNode(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/mdd/update_mdd_flow_node",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    restDeleteTadMddFlowNodes(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/mdd/delete_mdd_flow_nodes",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetTadMddFlowNodes(params) {
+        this.restGetTadMddFlowNodes(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateTadMddFlowNodes(result.data.data);
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doAddTadMddFlowNode(params) {
+        this.restAddTadMddFlowNode(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    // this.uiUpdateTadMddTree(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    doUpdateTadMddFlowNode(params) {
+        this.restUpdateTadMddFlowNode(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    async doDeleteTadMddFlowNodes(params) {
+        return await this.restDeleteTadMddFlowNodes(params);
+    }
+
+    uiUpdateTadMddFlowNodes(nodes) {
+        this.x6Graph.clearCells();
+        this.x6Data.events = [];
+        nodes.forEach((itemNode) => {
+            let nodeName = itemNode.node_name;
+            let portId;
+
+            switch (nodeName) {
+                case "EVENT_BEGIN":
+                    portId = itemNode.port_bottom_id
+                    break
+                case "EVENT_END":
+                    portId = itemNode.port_top_id
+                    break
+                default:
+                    break
+            }
+            this.x6Data.events.push({
+                id: itemNode.node_id,
+                nodeType: itemNode.node_type,
+                nodeName: nodeName,
+                portId: portId,
+                x: itemNode.position_x,
+                y: itemNode.position_y,
+                label: itemNode.node_label,
+            });
+        });
+
+        this.drawTaddMddFlow();
+    }
+
+    drawTaddMddFlow() {
+        this.x6Data.events.forEach((itemEvent) => {
+            this.x6DrawEvent(itemEvent);
+        })
     }
 
     restGetTadMddTrees() {
@@ -699,7 +820,7 @@ export default class MddDataFlow extends React.PureComponent {
             )
         });
 
-        this.x6Graph.on('edge:connected', ({ isNew, edge, currentCell }) => {
+        this.x6Graph.on('edge:connected', ({isNew, edge, currentCell}) => {
             console.log("x6 on edge:connected");
             if (isNew) {
                 const nodeSource = edge.getSourceCell();
@@ -720,7 +841,7 @@ export default class MddDataFlow extends React.PureComponent {
         })
 
         this.x6Graph.on("node:change:position", (args) => {
-            for(let i = 0; i < this.x6Data.events.length; i++) {
+            for (let i = 0; i < this.x6Data.events.length; i++) {
                 if (this.x6Data.events[i].id === args.cell.id) {
                     this.x6Data.events[i].x = args.current.x;
                     this.x6Data.events[i].y = args.current.y;
@@ -814,7 +935,11 @@ export default class MddDataFlow extends React.PureComponent {
                 let nodeAttrs = node.getAttrs();
                 switch (nodeData.nodeType) {
                     case "NODE_MODEL":
-                        this.x6Data.models.push({id: this.gDynamic.nodeShadow.id, nodeType: nodeData.nodeType, nodeName: nodeData.nodeName});
+                        this.x6Data.models.push({
+                            id: this.gDynamic.nodeShadow.id,
+                            nodeType: nodeData.nodeType,
+                            nodeName: nodeData.nodeName
+                        });
                         this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
                         this.gDynamic.nodeShadow.setProp({
                             ports: {
@@ -983,6 +1108,7 @@ export default class MddDataFlow extends React.PureComponent {
                         });
 
                         let portId;
+                        let nodeLabel;
                         if (nodeData.nodeName === "EVENT_BEGIN") {
                             this.gDynamic.nodeShadow.addPorts([
                                     {group: "groupBottom"},
@@ -991,6 +1117,7 @@ export default class MddDataFlow extends React.PureComponent {
                             console.log(this.gDynamic.nodeShadow.getPortsByGroup("groupTop"))
                             let ports = this.gDynamic.nodeShadow.getPortsByGroup("groupBottom");
                             portId = ports[0].id;
+                            nodeLabel = "开始";
                         } else if (nodeData.nodeName === "EVENT_END") {
                             this.gDynamic.nodeShadow.addPorts([
                                     {group: "groupTop"},
@@ -999,6 +1126,7 @@ export default class MddDataFlow extends React.PureComponent {
                             console.log(this.gDynamic.nodeShadow.getPortsByGroup("groupTop"))
                             let ports = this.gDynamic.nodeShadow.getPortsByGroup("groupTop");
                             portId = ports[0].id;
+                            nodeLabel = "结束";
                         }
 
 
@@ -1008,12 +1136,17 @@ export default class MddDataFlow extends React.PureComponent {
                             nodeName: nodeData.nodeName,
                             portId: portId,
                             x: this.gDynamic.nodeShadow.position().x,
-                            y: this.gDynamic.nodeShadow.position().y
+                            y: this.gDynamic.nodeShadow.position().y,
+                            label: nodeLabel
                         });
                         console.log(this.x6Data.events);
                         break
                     case "NODE_CONTROLLER":
-                        this.x6Data.controllers.push({id: this.gDynamic.nodeShadow.id, nodeType: nodeData.nodeType, nodeName: nodeData.nodeName});
+                        this.x6Data.controllers.push({
+                            id: this.gDynamic.nodeShadow.id,
+                            nodeType: nodeData.nodeType,
+                            nodeName: nodeData.nodeName
+                        });
                         this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
                         this.gDynamic.nodeShadow.setProp({
                             ports: {
@@ -1102,7 +1235,11 @@ export default class MddDataFlow extends React.PureComponent {
 
                         break
                     case "NODE_SCRIPT":
-                        this.x6Data.scripts.push({id: this.gDynamic.nodeShadow.id, nodeType: nodeData.nodeType, nodeName: nodeData.nodeName});
+                        this.x6Data.scripts.push({
+                            id: this.gDynamic.nodeShadow.id,
+                            nodeType: nodeData.nodeType,
+                            nodeName: nodeData.nodeName
+                        });
                         this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
                         this.gDynamic.nodeShadow.setProp({
                             ports: {
@@ -1190,7 +1327,11 @@ export default class MddDataFlow extends React.PureComponent {
 
                         break
                     case "NODE_TRANSFORMER":
-                        this.x6Data.transformers.push({id: this.gDynamic.nodeShadow.id, nodeType: nodeData.nodeType, nodeName: nodeData.nodeName});
+                        this.x6Data.transformers.push({
+                            id: this.gDynamic.nodeShadow.id,
+                            nodeType: nodeData.nodeType,
+                            nodeName: nodeData.nodeName
+                        });
                         this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
                         this.gDynamic.nodeShadow.setProp({
                             ports: {
@@ -1278,7 +1419,11 @@ export default class MddDataFlow extends React.PureComponent {
 
                         break
                     case "NODE_CUSTOMMADE":
-                        this.x6Data.custommades.push({id: this.gDynamic.nodeShadow.id, nodeType: nodeData.nodeType, nodeName: nodeData.nodeName});
+                        this.x6Data.custommades.push({
+                            id: this.gDynamic.nodeShadow.id,
+                            nodeType: nodeData.nodeType,
+                            nodeName: nodeData.nodeName
+                        });
                         this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
                         this.gDynamic.nodeShadow.setProp({
                             ports: {
@@ -1797,58 +1942,92 @@ export default class MddDataFlow extends React.PureComponent {
 
     }
 
-    //todo <<<<< now >>>>> on button X6 Save clicked
+    //todo <<<<< now >>>>> on button 保存（流程图） clicked
     onButtonX6Save(e) {
-        let myJson = this.x6Graph.toJSON();
-        myJson.cells.forEach((cell) => {
-            if (cell.shape === "rect") {
-                console.log(cell.attrs, cell.data, cell.id, cell.ports, cell.position, cell.size, cell.zIndex);
+        console.log(this.gCurrent, this.x6Data);
+        let flowParams = new TadMddFlowNode();
+        flowParams.flow_id = this.gCurrent.mddTreeNode.id;
+        this.doDeleteTadMddFlowNodes(flowParams).then((result) => {
+            console.log(result);
+            if (result.status === 200) {
+
+                if (result.data.success) {
+                    this.x6Data.events.forEach((itemEvent) => {
+                        let flowNode = new TadMddFlowNode();
+                        flowNode.flow_id = this.gCurrent.mddTreeNode.id;
+                        flowNode.node_id = itemEvent.id;
+                        flowNode.node_type = "EVENT";
+                        flowNode.node_name = itemEvent.nodeName;
+                        if (itemEvent.nodeName === "EVENT_BEGIN") {
+                            flowNode.port_bottom_id = itemEvent.portId;
+                        } else if (itemEvent.nodeName === "EVENT_END") {
+                            flowNode.port_top_id = itemEvent.portId;
+                        }
+                        flowNode.position_x = itemEvent.x;
+                        flowNode.position_y = itemEvent.y;
+                        flowNode.node_label = itemEvent.label;
+
+                        this.doAddTadMddFlowNode(flowNode);
+                    });
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
             }
         })
 
-        // let strJson = JSON.stringify(this.myJson);
-        // 解决循环引用问题，来自网络方案（JerryWang）<<<<<
-        let cache = [];
-        let strJson = JSON.stringify(myJson, function (key, value) {
-            // console.log(key, value);
-            console.log(key);
-            if (typeof value === 'object' && value !== null) {
-                if (cache.indexOf(value) !== -1) {
-                    // 移除
-                    return;
-                }
-                // 收集所有的值
-                cache.push(value);
-            }
-            return value;
-        });
-        cache = null;
-        // 解决循环引用问题，来自网络方案（JerryWang）>>>>>
 
-        let fragmentLength = 60000;
-        let nLoop = Math.floor(strJson.length / fragmentLength);
-        let nTail = strJson.length % fragmentLength;
-        let arrJson = [];
-        for (let i = 0; i < nLoop; i++) {
-            arrJson.push(strJson.substr(i * fragmentLength, fragmentLength));
-        }
-        arrJson.push(strJson.substr(nLoop * fragmentLength, nTail));
-
-        let myMddFlow = new TadMddFlow();
-        myMddFlow.flow_id = this.gCurrent.mddTreeNode.id;
-        this.restDeleteTadMddFlow(myMddFlow).then(() => {
-            let i = 0;
-            arrJson.forEach((itemJson) => {
-                i++;
-                let myMddFlow = new TadMddFlow();
-                myMddFlow.flow_id = this.gCurrent.mddTreeNode.id;
-                myMddFlow.flow_content = itemJson;
-                myMddFlow.content_index = i;
-
-                console.log(myMddFlow);
-                this.doAddTadMddFlow(myMddFlow);
-            })
-        });
+        // let myJson = this.x6Graph.toJSON();
+        // myJson.cells.forEach((cell) => {
+        //     if (cell.shape === "rect") {
+        //         console.log(cell.attrs, cell.data, cell.id, cell.ports, cell.position, cell.size, cell.zIndex);
+        //     }
+        // })
+        //
+        // // let strJson = JSON.stringify(this.myJson);
+        // // 解决循环引用问题，来自网络方案（JerryWang）<<<<<
+        // let cache = [];
+        // let strJson = JSON.stringify(myJson, function (key, value) {
+        //     // console.log(key, value);
+        //     console.log(key);
+        //     if (typeof value === 'object' && value !== null) {
+        //         if (cache.indexOf(value) !== -1) {
+        //             // 移除
+        //             return;
+        //         }
+        //         // 收集所有的值
+        //         cache.push(value);
+        //     }
+        //     return value;
+        // });
+        // cache = null;
+        // // 解决循环引用问题，来自网络方案（JerryWang）>>>>>
+        //
+        // let fragmentLength = 60000;
+        // let nLoop = Math.floor(strJson.length / fragmentLength);
+        // let nTail = strJson.length % fragmentLength;
+        // let arrJson = [];
+        // for (let i = 0; i < nLoop; i++) {
+        //     arrJson.push(strJson.substr(i * fragmentLength, fragmentLength));
+        // }
+        // arrJson.push(strJson.substr(nLoop * fragmentLength, nTail));
+        //
+        // let myMddFlow = new TadMddFlow();
+        // myMddFlow.flow_id = this.gCurrent.mddTreeNode.id;
+        // this.restDeleteTadMddFlow(myMddFlow).then(() => {
+        //     let i = 0;
+        //     arrJson.forEach((itemJson) => {
+        //         i++;
+        //         let myMddFlow = new TadMddFlow();
+        //         myMddFlow.flow_id = this.gCurrent.mddTreeNode.id;
+        //         myMddFlow.flow_content = itemJson;
+        //         myMddFlow.content_index = i;
+        //
+        //         console.log(myMddFlow);
+        //         this.doAddTadMddFlow(myMddFlow);
+        //     })
+        // });
     }
 
     onSelectX6TableColumnDataTypeChanged(v) {
@@ -1933,9 +2112,6 @@ export default class MddDataFlow extends React.PureComponent {
         this.doAddTadMddTree(erTree);
     }
 
-    //todo <<<<< now >>>>> on tree 流程树 selected
-
-
     x6DrawEvent(event) {
         console.log(event);
         let nodeEvent = this.x6Graph.createNode({
@@ -1947,10 +2123,15 @@ export default class MddDataFlow extends React.PureComponent {
             y: event.y,
             attrs: {
                 body: {
-                    fill: "gray",
+                    fill: '#efefef',
                     stroke: 'black',
                     strokeWidth: 1,
-                }
+                },
+                text: {
+                    text: event.label,
+                    fill: 'black',
+                    fontWeight: "bold",
+                },
             },
         });
         nodeEvent.setData({
@@ -2081,6 +2262,7 @@ export default class MddDataFlow extends React.PureComponent {
         });
     }
 
+    //todo <<<<< now >>>>> on tree 流程树 selected
     onTreeMddTreeSelected(selectedKeys, info) {
         if (info.selected) {
             this.gCurrent.mddTreeNode = {
@@ -2095,13 +2277,13 @@ export default class MddDataFlow extends React.PureComponent {
         }
 
         if (info.selected && info.node.tag.nodeType === "NODE_MDD_FLOW") {
-            this.x6Graph.clearCells();
-            this.x6Data.events.forEach((itemEvent) => {
-                this.x6DrawEvent(itemEvent);
-            })
-            this.x6Data.relations.forEach((itemRelation) => {
-                this.x6DrawRelation(itemRelation);
-            })
+            let flowParams = new TadMddFlowNode();
+            flowParams.flow_id = this.gCurrent.mddTreeNode.id;
+            this.doGetTadMddFlowNodes(flowParams);
+
+            // this.x6Data.relations.forEach((itemRelation) => {
+            //     this.x6DrawRelation(itemRelation);
+            // })
             // let nodeId = selectedKeys[0];
             // let myMddFlow = new TadMddFlow();
             // myMddFlow.flow_id = nodeId;
