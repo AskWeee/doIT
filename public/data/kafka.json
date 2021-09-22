@@ -1,0 +1,14 @@
+[
+  {
+    "topic": "topic_a",
+    "partition": "topic_a_partition_a",
+    "log_end_offset": 100,
+    "current_offset": 10,
+    "lag": 90,
+    "group_id": "consumer_group_a",
+    "consumer_id": "consumer_a",
+    "status": "正常",
+    "sys_name": "故障中心",
+    "monitor_time": "2021-01-01 12:12:12"
+  }
+]

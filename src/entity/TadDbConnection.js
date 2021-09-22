@@ -13,5 +13,6 @@ export default class TadDbConnection{
         this.db_sid = null;
         this.db_type = null;
         this.db_username = null;
+        this.tag = {};
     }
 }

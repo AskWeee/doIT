@@ -5,7 +5,13 @@ import lodash from "lodash";
 import axios from "axios";
 import moment from 'moment';
 import {Button, Select, Tree, Table, Input, Tabs, Checkbox, Form, Tooltip} from 'antd'
-import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, PlusSquareOutlined, QuestionCircleOutlined} from '@ant-design/icons'
+import {
+    CaretDownOutlined,
+    CaretLeftOutlined,
+    CaretRightOutlined,
+    PlusSquareOutlined,
+    QuestionCircleOutlined
+} from '@ant-design/icons'
 import {Graph, Addon, Shape, DataUri} from "@antv/x6";
 import KColumnTitle from "./KColumnTitle";
 import TadTable from "../entity/TadTable";
@@ -18,6 +24,7 @@ import EditableCellTool from "./EditableCellTool";
 import TadTableEr from "../entity/TadTableEr";
 import TadTableErTree from "../entity/TadTableErTree";
 import TadTableErTable from "../entity/TadTableErTable";
+import TadDbConnection from "../entity/TadDbConnection";
 
 const {TabPane} = Tabs;
 const {Stencil} = Addon;
@@ -42,6 +49,9 @@ export default class DatabaseWorkspace extends React.Component {
         productsNodeSelectedType: undefined,
         letterSelected: undefined,
         tableId: undefined,
+        dbTarget: {
+            connectionId: undefined
+        }
     };
     gDynamic = {
         entities: new Map(),
@@ -90,6 +100,8 @@ export default class DatabaseWorkspace extends React.Component {
             dsPartitions: [],
             dsRelations: [],
             dsRecords: [],
+            recordsDynamic: [],
+            columnsDynamic: [],
             tableSql: "",
             domTableSql: [],
             pageSizeColumns: 0,
@@ -243,6 +255,8 @@ export default class DatabaseWorkspace extends React.Component {
         this.getCommTreeNode = this.getCommTreeNode.bind(this);
 
         this.erTrees2antdTree = this.erTrees2antdTree.bind(this);
+
+        this.restGetTableRecords = this.restGetTableRecords.bind(this);
 
         this.doAddTable = this.doAddTable.bind(this);
         this.doUpdateTable = this.doUpdateTable.bind(this);
@@ -456,10 +470,6 @@ export default class DatabaseWorkspace extends React.Component {
         })
     }
 
-    async doSleep(time) {
-        return new Promise((resolve) => setTimeout(resolve, time));
-    }
-
     onButtonX6FormConfirmClicked() {
 
     }
@@ -467,7 +477,6 @@ export default class DatabaseWorkspace extends React.Component {
     onButtonX6FormCancelClicked() {
 
     }
-
 
     x6ElementsStyleReset() {
         const nodes = this.x6Graph.getNodes();
@@ -792,8 +801,8 @@ export default class DatabaseWorkspace extends React.Component {
             )
         });
 
-        //todo <<<<< now >>>>> x6 on edge:connected
-        this.x6Graph.on('edge:connected', ({ isNew, edge, currentCell }) => {
+        // >>>>> x6 on edge:connected
+        this.x6Graph.on('edge:connected', ({isNew, edge, currentCell}) => {
             console.log("x6 on edge:connected");
             if (isNew) {
                 console.log(edge);
@@ -814,7 +823,7 @@ export default class DatabaseWorkspace extends React.Component {
             }
         })
 
-        //todo <<<<< now >>>>> on change 节点位置
+        // >>>>> on change 节点位置
         this.x6Graph.on("node:change:position", (args) => {
             let nodeData = args.cell.getData();
 
@@ -1013,7 +1022,7 @@ export default class DatabaseWorkspace extends React.Component {
     // >>>>> x6 add Entity Table
     x6AddEntityTable(table, id) {
         let x = table.positionX === undefined ? 50 : table.positionX;
-        let y = table.positionY=== undefined ? 50 : table.positionY;
+        let y = table.positionY === undefined ? 50 : table.positionY;
         let hTitle = 30;
         let wc = 120;
         let hc = 30;
@@ -1146,29 +1155,6 @@ export default class DatabaseWorkspace extends React.Component {
         return enTable;
     }
 
-    x6AddEntityTableColumn(table, column) {
-        // let nodeTable = this.x6GetTable(table);
-
-        if (column === undefined) {
-        }
-    }
-
-    x6GetTable(table) {
-        const nodes = this.x6Graph.getNodes();
-        let myNode;
-
-        for (let i = 0; i < nodes.length; i++) {
-            let nodeData = nodes[i].getData();
-
-            if (nodeData.nodeType === "table") {
-                myNode = nodes[i];
-                break
-            }
-        }
-
-        return myNode
-    }
-
     onButtonX6ToPng(e) {
         this.x6Graph.toPNG((dataUri) => {
             DataUri.downloadDataUri(dataUri, "x6ErInstance.png");
@@ -1182,7 +1168,7 @@ export default class DatabaseWorkspace extends React.Component {
         })
     }
 
-    //todo <<<<< now >>>>> on button 保存ER图 clicked
+    // >>>>> on button 保存ER图 clicked
 
     x6DrawRelation(relation) {
         let nodeSource = this.x6Graph.getCellById(relation.nodeSource)
@@ -1241,7 +1227,7 @@ export default class DatabaseWorkspace extends React.Component {
         this.doAddTableErTree(erTree);
     }
 
-    //todo <<<<< now >>>>> on button 将表加入ER图 clicked
+    // >>>>> on button 将表加入ER图 clicked
     onButtonAddTable2ErDiagramClicked(e) {
         let erTable = new TadTableErTable();
 
@@ -1258,7 +1244,10 @@ export default class DatabaseWorkspace extends React.Component {
                 if (!this.gMap.erTablesByDiagram.has(this.gCurrent.erTreeNode.id)) {
                     // 如果表从未被引用
                     console.log("表从未被引用");
-                    this.gMap.erTablesByDiagram.set(this.gCurrent.erTreeNode.id, {isLoaded: true, tables: [erTable.table_id]});
+                    this.gMap.erTablesByDiagram.set(this.gCurrent.erTreeNode.id, {
+                        isLoaded: true,
+                        tables: [erTable.table_id]
+                    });
 
                     // erTable.er_id = this.gCurrent.erTreeNode.id;
                     // erTable.table_id = this.gCurrent.tableId;
@@ -1325,6 +1314,13 @@ export default class DatabaseWorkspace extends React.Component {
         this.doAddTableErTree(erTree);
     }
 
+    restGetTableRecords(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_records",
+            params,
+            {headers: {'Content-Type': 'application/json'}}
+        );
+    }
+
     restGetTableRelations() {
         let params = {};
 
@@ -1332,6 +1328,7 @@ export default class DatabaseWorkspace extends React.Component {
             params,
             {headers: {'Content-Type': 'application/json'}})
     }
+
     restGetTableRelation(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_table_relation",
             params,
@@ -1376,7 +1373,7 @@ export default class DatabaseWorkspace extends React.Component {
         });
     }
 
-    //todo <<<<< now >>>>> get 表关系
+    // >>>>> get 表关系
     doGetTableRelation(params) {
         this.restGetTableRelation(params).then((result) => {
             if (result.status === 200) {
@@ -1392,7 +1389,7 @@ export default class DatabaseWorkspace extends React.Component {
         });
     }
 
-    //todo <<<<< now >>>>> do 添加表关系
+    // >>>>> do 添加表关系
     doAddTableRelation(params) {
         this.restAddTableRelation(params).then((result) => {
             if (result.status === 200) {
@@ -1440,7 +1437,7 @@ export default class DatabaseWorkspace extends React.Component {
         });
     }
 
-    //todo <<<<< now >>>>> do 检测表关系是否存在
+    // >>>>> do 检测表关系是否存在
     doTestTableRelation(params) {
         this.restTestTableRelation(params).then((result) => {
             if (result.status === 200) {
@@ -1475,6 +1472,7 @@ export default class DatabaseWorkspace extends React.Component {
             params,
             {headers: {'Content-Type': 'application/json'}})
     }
+
     restDeleteTableErTable(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/delete_table_er_table",
             params,
@@ -1502,6 +1500,7 @@ export default class DatabaseWorkspace extends React.Component {
             }
         });
     }
+
     doUpdateTableErTable(params) {
         this.restUpdateTableErTable(params).then((result) => {
             if (result.status === 200) {
@@ -2807,6 +2806,7 @@ export default class DatabaseWorkspace extends React.Component {
             treeExpandedKeysProducts: expandedKeys
         })
     }
+
     // >>>>> on Tree 产品 selected
     onTreeProductsSelected(selectedKeys, info) {
         this.setState({
@@ -3044,6 +3044,7 @@ export default class DatabaseWorkspace extends React.Component {
             })
         }));
     }
+
     // >>>>> on Tree 表 selected
     onTreeTablesKnownSelected(selectedKeys, info) {
         // if (selectedKeys[0] === undefined) return;
@@ -3075,7 +3076,7 @@ export default class DatabaseWorkspace extends React.Component {
 
     };
 
-    //todo <<<<< now >>>>> on Tree ER图树 selected
+    // >>>>> on Tree ER图树 selected
     onTreeErDiagramSelected(selectedKeys, info) {
         if (info.selected) {
             this.gCurrent.erTreeNode = {
@@ -3118,8 +3119,8 @@ export default class DatabaseWorkspace extends React.Component {
                         myErTreeNodes.push(myErTreeNode);
 
                         let attrs = erTables.attrs.get(itemErTable);
-                        if (!attrs.position_x) attrs.position_x = Math.random()*1000;
-                        if (!attrs.position_y) attrs.position_y = Math.random()*1000;
+                        if (!attrs.position_x) attrs.position_x = Math.random() * 1000;
+                        if (!attrs.position_y) attrs.position_y = Math.random() * 1000;
                         myTable.positionX = attrs.position_x;
                         myTable.positionY = attrs.position_y;
 
@@ -3134,8 +3135,8 @@ export default class DatabaseWorkspace extends React.Component {
                 erTables.tables.forEach((itemErTable) => {
                     let myTable = this.gMap.tables.get(itemErTable);
                     let attrs = erTables.attrs.get(itemErTable);
-                    if (attrs.position_x === null) attrs.position_x = Math.random()*1000;
-                    if (attrs.position_y === null) attrs.position_y = Math.random()*1000;
+                    if (attrs.position_x === null) attrs.position_x = Math.random() * 1000;
+                    if (attrs.position_y === null) attrs.position_y = Math.random() * 1000;
                     myTable.positionX = attrs.position_x;
                     myTable.positionY = attrs.position_y;
                     this.x6AddEntityTable(myTable);
@@ -3156,7 +3157,7 @@ export default class DatabaseWorkspace extends React.Component {
             //                     this.x6Graph.fromJSON(myJson);
             //                     this.x6Graph.scrollToContent();
             //
-            //                     //todo <<<<< now >>>>> 监测表结构是否变化，如果变化，增更新ER图
+            //                     // >>>>> 监测表结构是否变化，如果变化，增更新ER图
             //                     let tables = [];
             //                     const nodes = this.x6Graph.getNodes();
             //                     nodes.forEach((itemNode) => {
@@ -3346,8 +3347,52 @@ export default class DatabaseWorkspace extends React.Component {
 
     }
 
+    //todo <<<<< now >>>>> on button 获取(目标数据库库表)数据 clicked
     onButtonGetTableDataClicked(e) {
-        this.context.showMessage("「获取数据」功能正在开发，请稍后。");
+        let connection = this.gMap.connections.get(this.gCurrent.dbTarget.connectionId);
+        console.log(this.gCurrent);
+        let myTable = this.gMap.tables.get(this.gCurrent.tableId);
+        connection.tag = {
+            tableName: myTable.table_name
+        };
+
+        this.restGetTableRecords(connection).then((result) => {
+            if (result.status === 200) {
+                console.log(result.data);
+                if (result.data.success) {
+                    console.log(result.data);
+                    let recordsDynamic = lodash.cloneDeep(result.data.data[0]);
+                    let columns = lodash.cloneDeep(result.data.data[1]);
+
+                    let columnsDynamic = [];
+                    columns.forEach((itemColumn) => {
+                        columnsDynamic.push({
+                            title: itemColumn.column_name,
+                            dataIndex: itemColumn.column_name,
+                            key: itemColumn.column_name,
+                            // className: "clsColumnColumnName",
+                            // render: (text, record) => {
+                            //     if (itemColumn.data_type === "varchar") {
+                            //         if (text.length > 10)
+                            //             return text.substr(0, 10) + "..."
+                            //         else
+                            //             return text
+                            //     } else {
+                            //         return text
+                            //     }
+                            // }
+                        });
+                    });
+                    console.log(recordsDynamic, columnsDynamic);
+                    this.setState({
+                        recordsDynamic: recordsDynamic,
+                        columnsDynamic: columnsDynamic
+                    })
+                } else {
+                    this.context.showMessage(result.data.code);
+                }
+            }
+        });
     }
 
     onInputColumnNameChanged(e) {
@@ -3442,8 +3487,10 @@ export default class DatabaseWorkspace extends React.Component {
             if (treeNodes[i].key === id) {
                 treeNodes[i].title = <div className="tableNameEditing">
                     <Input defaultValue={treeNodes[i].title} onChange={this.onInputTableNameChanged} size={"small"}/>
-                    <Button onClick={this.onButtonTableNameEditingConfirmClicked} size={"small"} type={"primary"}>确认</Button>
-                    <Button onClick={this.onButtonTableNameEditingCancelClicked} size={"small"} type={"primary"}>放弃</Button></div>;
+                    <Button onClick={this.onButtonTableNameEditingConfirmClicked} size={"small"}
+                            type={"primary"}>确认</Button>
+                    <Button onClick={this.onButtonTableNameEditingCancelClicked} size={"small"}
+                            type={"primary"}>放弃</Button></div>;
                 break
             }
         }
@@ -3745,7 +3792,7 @@ export default class DatabaseWorkspace extends React.Component {
 
     }
 
-    //todo <<<<< now >>>>> on button 添加表关系 clicked
+    // >>>>> on button 添加表关系 clicked
     onButtonAddRelationClicked() {
         // let tableId = this.gCurrent.tableId;
         // let relationId = undefined;
@@ -4280,10 +4327,9 @@ export default class DatabaseWorkspace extends React.Component {
         }
     }
 
+    //todo <<<<< now >>>>> on select 目标数据库链接 changed
     onSelectConnectionsChanged(value, option) {
-
-        this.gCurrent.connectionId = value;
-        let connection = this.gMap.connections.get(value);
+        this.gCurrent.dbTarget.connectionId = value;
     }
 
     //todo >>>>> render
@@ -4356,7 +4402,9 @@ export default class DatabaseWorkspace extends React.Component {
                     return (
                         (this.state.tableColumnEditingKey === record.key) ? (
                             <div className="TableColumnDataTypeEditor">
-                                <Select options={optionsDataType} defaultValue={record.data_type === null ? -99999 : record.data_type} onChange={this.onSelectColumnDataTypeChanged}/>
+                                <Select options={optionsDataType}
+                                        defaultValue={record.data_type === null ? -99999 : record.data_type}
+                                        onChange={this.onSelectColumnDataTypeChanged}/>
                             </div>
                         ) : (
                             <div className="TableColumnDataType">
@@ -4377,7 +4425,8 @@ export default class DatabaseWorkspace extends React.Component {
                     return (
                         (this.state.tableColumnEditingKey === record.key) ? (
                             <div className="clsProjectKpiUiTitleEditor">
-                                <Input defaultValue={record.data_length} onChange={this.onInputColumnDataLengthChanged}/>
+                                <Input defaultValue={record.data_length}
+                                       onChange={this.onInputColumnDataLengthChanged}/>
                             </div>
                         ) : (
                             <div className="clsProjectKpiUiTitle">
@@ -4398,7 +4447,9 @@ export default class DatabaseWorkspace extends React.Component {
                     return (
                         (this.state.tableColumnEditingKey === record.key) ? (
                             <div className="clsProjectKpiUiTitleEditor">
-                                <Checkbox defaultChecked={(record.primary_flag === null) ? false : (record.primary_flag === "yes")} onChange={this.onCheckboxColumnPrimaryFlagChanged}>是</Checkbox>
+                                <Checkbox
+                                    defaultChecked={(record.primary_flag === null) ? false : (record.primary_flag === "yes")}
+                                    onChange={this.onCheckboxColumnPrimaryFlagChanged}>是</Checkbox>
                             </div>
                         ) : (
                             <div className="clsProjectKpiUiTitle">
@@ -4419,7 +4470,9 @@ export default class DatabaseWorkspace extends React.Component {
                     return (
                         (this.state.tableColumnEditingKey === record.key) ? (
                             <div className="clsProjectKpiUiTitleEditor">
-                                <Checkbox defaultChecked={(record.nullable_flag === null) ? false : (record.nullable_flag === "yes")} onChange={this.onCheckboxColumnNullableFlagChanged}>是</Checkbox>
+                                <Checkbox
+                                    defaultChecked={(record.nullable_flag === null) ? false : (record.nullable_flag === "yes")}
+                                    onChange={this.onCheckboxColumnNullableFlagChanged}>是</Checkbox>
                             </div>
                         ) : (
                             <div className="clsProjectKpiUiTitle">
@@ -4440,7 +4493,8 @@ export default class DatabaseWorkspace extends React.Component {
                     return (
                         (this.state.tableColumnEditingKey === record.key) ? (
                             <div className="clsProjectKpiUiTitleEditor">
-                                <Input defaultValue={record.data_default} onChange={this.onInputColumnDataDefaultChanged}/>
+                                <Input defaultValue={record.data_default}
+                                       onChange={this.onInputColumnDataDefaultChanged}/>
                             </div>
                         ) : (
                             <div className="clsProjectKpiUiTitle">
@@ -4482,7 +4536,8 @@ export default class DatabaseWorkspace extends React.Component {
                     return (
                         (this.state.tableColumnEditingKey === record.key) ? (
                             <div className="clsProjectKpiUiTitleEditor">
-                                <Input defaultValue={record.repeat_flag} onChange={this.onInputColumnRepeatFlagChanged}/>
+                                <Input defaultValue={record.repeat_flag}
+                                       onChange={this.onInputColumnRepeatFlagChanged}/>
                             </div>
                         ) : (
                             <div className="clsProjectKpiUiTitle">
@@ -4723,11 +4778,15 @@ export default class DatabaseWorkspace extends React.Component {
         ];
 
         return (
-            <div className={this.state.styleLayout === "NNN" ? "DatabaseWorkspace" : this.state.styleLayout === "SNN" ? "DatabaseWorkspace BoxSmall" : this.state.styleLayout === "SSN" ? "DatabaseWorkspace BoxSmallSmall" : "DatabaseMaintain"}>
+            <div
+                className={this.state.styleLayout === "NNN" ? "DatabaseWorkspace" : this.state.styleLayout === "SNN" ? "DatabaseWorkspace BoxSmall" : this.state.styleLayout === "SSN" ? "DatabaseWorkspace BoxSmallSmall" : "DatabaseMaintain"}>
                 <div className={"BoxProductsInfo"}>
                     <div className={"BoxTitleBar"}>
-                        <div className={this.state.styleLayout === "NNN" ? "BoxTitle" : "BoxTitle BoxHidden"}>产品信息：</div>
-                        <Button onClick={this.onButtonProductsChangeComponentSizeClicked} icon={this.state.styleLayout === "NNN" ? <CaretLeftOutlined/> : <CaretRightOutlined/>} size={"small"} type={"ghost"}/>
+                        <div className={this.state.styleLayout === "NNN" ? "BoxTitle" : "BoxTitle BoxHidden"}>产品信息：
+                        </div>
+                        <Button onClick={this.onButtonProductsChangeComponentSizeClicked}
+                                icon={this.state.styleLayout === "NNN" ? <CaretLeftOutlined/> : <CaretRightOutlined/>}
+                                size={"small"} type={"ghost"}/>
                     </div>
                     <div className={this.state.styleLayout === "NNN" ? "BoxTree" : "BoxTree BoxHidden"}>
                         <Tree ref={this.gRef.treeProducts}
@@ -4736,33 +4795,49 @@ export default class DatabaseWorkspace extends React.Component {
                               onExpand={this.onTreeProductsExpanded}
                               selectedKeys={this.state.treeSelectedKeysProducts}
                               expandedKeys={this.state.treeExpandedKeysProducts}
-                              switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true}/>
+                              switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={{showLeafIcon: false}}
+                              showIcon={true}/>
                     </div>
-                    <div className={this.state.styleLayout === "NNN" ? "BoxDescription" : "BoxDescription BoxHidden"}>information</div>
+                    <div
+                        className={this.state.styleLayout === "NNN" ? "BoxDescription" : "BoxDescription BoxHidden"}>information
+                    </div>
                 </div>
                 <div className={"BoxKnown"}>
                     <div className={"BoxTitleBar"}>
-                        <div className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxTitle" : "BoxTitle BoxHidden"}>库表信息：</div>
-                        <Button onClick={this.onButtonTablesChangeComponentSizeClicked} icon={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? <CaretLeftOutlined/> : <CaretRightOutlined/>} size={"small"} type={"ghost"}/>
+                        <div
+                            className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxTitle" : "BoxTitle BoxHidden"}>库表信息：
+                        </div>
+                        <Button onClick={this.onButtonTablesChangeComponentSizeClicked}
+                                icon={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ?
+                                    <CaretLeftOutlined/> : <CaretRightOutlined/>} size={"small"} type={"ghost"}/>
                     </div>
-                    <div className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxSelect" : "BoxSelect BoxHidden"}>
+                    <div
+                        className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxSelect" : "BoxSelect BoxHidden"}>
                         <Select ref={this.gRef.selectDbUser}
                                 onChange={this.onSelectDbUsersChanged}
                                 defaultValue={this.state.dbUserSelected}
                                 value={this.state.productLineDbUserId}
                                 options={this.state.dbUsersSelectOptions}/>
                     </div>
-                    <div className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxTabs" : "BoxTabs BoxHidden"}>
+                    <div
+                        className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxTabs" : "BoxTabs BoxHidden"}>
                         <div className="Tabs">
                             <div className="TabPanes">
-                                <div className={this.state.tabNavSelected === "tabNavOne" ? "TabPane" : "TabPane BoxHidden"}>
+                                <div
+                                    className={this.state.tabNavSelected === "tabNavOne" ? "TabPane" : "TabPane BoxHidden"}>
                                     <div className="BoxToolbar">
                                         <div className={"BoxSearch"}>
-                                            <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
+                                            <Input.Search placeholder="Search" size="small" enterButton
+                                                          onChange={this.onInputSearchSchemasChanged}
+                                                          onSearch={this.onInputSearchSchemasSearched}/>
                                         </div>
-                                        <Button onClick={this.onButtonAddTableClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新增</Button>
-                                        <Button onClick={this.onButtonCloneTableClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>复制</Button>
-                                        <Button onClick={this.onButtonRenameTableClicked} disabled={this.state.isTableNameEditing} size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>修改</Button>
+                                        <Button onClick={this.onButtonAddTableClicked} icon={<PlusSquareOutlined/>}
+                                                size={"small"} type={"primary"}>新增</Button>
+                                        <Button onClick={this.onButtonCloneTableClicked} icon={<PlusSquareOutlined/>}
+                                                size={"small"} type={"primary"}>复制</Button>
+                                        <Button onClick={this.onButtonRenameTableClicked}
+                                                disabled={this.state.isTableNameEditing} size={"small"} type={"primary"}
+                                                icon={<PlusSquareOutlined/>}>修改</Button>
                                         {/*<Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditConfirmClicked}>确认</Button>*/}
                                         {/*<Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditCancelClicked}>放弃</Button>*/}
                                         <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>删除</Button>
@@ -4775,7 +4850,8 @@ export default class DatabaseWorkspace extends React.Component {
                                                   onSelect={this.onTreeLettersKnownSelected}
                                                   defaultSelectedKeys={this.state.lettersKnownSelectedKeys}
                                                   selectedKeys={this.state.treeSelectedKeysTableFirstLetters}
-                                                  className={"TreeLetters"} blockNode={true} showLine={{showLeafIcon: false}} showIcon={false}/>
+                                                  className={"TreeLetters"} blockNode={true}
+                                                  showLine={{showLeafIcon: false}} showIcon={false}/>
                                         </div>
                                         <div className={"BoxTree"}>
                                             <div className={"BoxTree2"}>
@@ -4784,26 +4860,34 @@ export default class DatabaseWorkspace extends React.Component {
                                                       onSelect={this.onTreeTablesKnownSelected}
                                                       selectedKeys={this.state.treeSelectedKeysTables}
                                                       selectable={!this.state.isTableNameEditing}
-                                                      className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
+                                                      className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>}
+                                                      blockNode={true} showLine={true} showIcon={true}/>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div className={this.state.tabNavSelected === "tabNavTwo" ? "TabPane" : "TabPane BoxHidden"}>
+                                <div
+                                    className={this.state.tabNavSelected === "tabNavTwo" ? "TabPane" : "TabPane BoxHidden"}>
                                     <div className="BoxToolbar">
                                         <div className={"BoxSearch"}>
-                                            <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
+                                            <Input.Search placeholder="Search" size="small" enterButton
+                                                          onChange={this.onInputSearchSchemasChanged}
+                                                          onSearch={this.onInputSearchSchemasSearched}/>
                                         </div>
-                                        <Button onClick={this.onButtonAddTable2ErDiagramClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>加入ER图</Button>
+                                        <Button onClick={this.onButtonAddTable2ErDiagramClicked}
+                                                icon={<PlusSquareOutlined/>} size={"small"}
+                                                type={"primary"}>加入ER图</Button>
                                     </div>
                                     <div className={"BoxUpDown"}>
                                         <div className="BoxLeftRight">
                                             <div className={"BoxList"}>
                                                 <Tree ref={this.gRef.treeTableFirstLetters4ErDiagram}
-                                                    treeData={this.state.treeDataLettersKnown}
-                                                    onSelect={this.onTreeLettersKnownSelected}
+                                                      treeData={this.state.treeDataLettersKnown}
+                                                      onSelect={this.onTreeLettersKnownSelected}
                                                       selectedKeys={this.state.treeSelectedKeysTableFirstLetters}
-                                                    defaultSelectedKeys={this.state.lettersKnownSelectedKeys} className={"TreeLetters"} blockNode={true} showLine={{showLeafIcon: false}} showIcon={false}/>
+                                                      defaultSelectedKeys={this.state.lettersKnownSelectedKeys}
+                                                      className={"TreeLetters"} blockNode={true}
+                                                      showLine={{showLeafIcon: false}} showIcon={false}/>
                                             </div>
                                             <div className={"BoxTree"}>
                                                 <div className={"BoxTreeInstance"}>
@@ -4812,20 +4896,29 @@ export default class DatabaseWorkspace extends React.Component {
                                                           onSelect={this.onTreeTablesKnownSelected}
                                                           selectedKeys={this.state.treeSelectedKeysTables}
                                                           selectable={!this.state.isTableNameEditing}
-                                                          className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
+                                                          className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>}
+                                                          blockNode={true} showLine={true} showIcon={true}/>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="BoxToolbarErDiagram">
                                             <div className={"BoxSearch"}>
-                                                <Input.Search placeholder="Search" size="small" enterButton onChange={this.onInputSearchSchemasChanged} onSearch={this.onInputSearchSchemasSearched}/>
+                                                <Input.Search placeholder="Search" size="small" enterButton
+                                                              onChange={this.onInputSearchSchemasChanged}
+                                                              onSearch={this.onInputSearchSchemasSearched}/>
                                             </div>
-                                            <Button onClick={this.onButtonAddTableErDirClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新建目录</Button>
-                                            <Button onClick={this.onButtonAddTableErClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新建ER图</Button>
-                                            <Button disabled={this.state.isTableNameEditing} size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>修改</Button>
+                                            <Button onClick={this.onButtonAddTableErDirClicked}
+                                                    icon={<PlusSquareOutlined/>} size={"small"}
+                                                    type={"primary"}>新建目录</Button>
+                                            <Button onClick={this.onButtonAddTableErClicked}
+                                                    icon={<PlusSquareOutlined/>} size={"small"}
+                                                    type={"primary"}>新建ER图</Button>
+                                            <Button disabled={this.state.isTableNameEditing} size={"small"}
+                                                    type={"primary"} icon={<PlusSquareOutlined/>}>修改</Button>
                                             {/*<Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditConfirmClicked}>确认</Button>*/}
                                             {/*<Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>} onClick={this.onButtonDbUserEditCancelClicked}>放弃</Button>*/}
-                                            <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>删除</Button>
+                                            <Button size={"small"} type={"primary"}
+                                                    icon={<PlusSquareOutlined/>}>删除</Button>
                                         </div>
                                         <div className={"BoxTreeErDiagram"}>
                                             <div className={"BoxTree"}>
@@ -4834,7 +4927,8 @@ export default class DatabaseWorkspace extends React.Component {
                                                           treeData={this.state.treeDataTableErs}
                                                           onSelect={this.onTreeErDiagramSelected}
                                                           selectable={!this.state.isTableNameEditing}
-                                                          className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={true} showIcon={true}/>
+                                                          className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>}
+                                                          blockNode={true} showLine={true} showIcon={true}/>
                                                 </div>
                                             </div>
                                         </div>
@@ -4842,8 +4936,12 @@ export default class DatabaseWorkspace extends React.Component {
                                 </div>
                             </div>
                             <div className="TabNavs">
-                                <Button id="tabNavOne" className={this.state.tabNavSelected === "tabNavOne" ? "TabNavSelected" : "TabNavNormal"} onClick={this.onButtonListTreeClicked}>树图</Button>
-                                <Button id="tabNavTwo" className={this.state.tabNavSelected === "tabNavTwo" ? "TabNavSelected" : "TabNavNormal"} onClick={this.onButtonErDiagramClicked}>ER图</Button>
+                                <Button id="tabNavOne"
+                                        className={this.state.tabNavSelected === "tabNavOne" ? "TabNavSelected" : "TabNavNormal"}
+                                        onClick={this.onButtonListTreeClicked}>树图</Button>
+                                <Button id="tabNavTwo"
+                                        className={this.state.tabNavSelected === "tabNavTwo" ? "TabNavSelected" : "TabNavNormal"}
+                                        onClick={this.onButtonErDiagramClicked}>ER图</Button>
                             </div>
                         </div>
                     </div>
@@ -4851,7 +4949,8 @@ export default class DatabaseWorkspace extends React.Component {
                 <div className={this.state.isErDiagram ? "BoxErDiagram" : "BoxHidden"}>
                     <div className="BoxTitleBar">
                         <div className="BoxTitle">产品信息：</div>
-                        <Button icon={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? <CaretLeftOutlined/> : <CaretRightOutlined/>} size={"small"} type={"ghost"}/>
+                        <Button icon={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ?
+                            <CaretLeftOutlined/> : <CaretRightOutlined/>} size={"small"} type={"ghost"}/>
                     </div>
                     <div className="BoxContent">
                         <div ref={this.gRef.x6StencilContainerBox} className="BoxEntities"/>
@@ -4877,16 +4976,27 @@ export default class DatabaseWorkspace extends React.Component {
                             <Select/>
                         </div>
                         <div className={"BoxOtherProperties"}>
-                            <Tabs defaultActiveKey="tablePaneColumns" type="card" tabBarGutter={5} animated={false} onChange={this.onTabsTablePropertiesChanged}>
+                            <Tabs defaultActiveKey="tablePaneColumns" type="card" tabBarGutter={5} animated={false}
+                                  onChange={this.onTabsTablePropertiesChanged}>
                                 <TabPane tab="表字段" key="tablePaneColumns">
                                     <div className={"BoxTableColumnProperties"}>
                                         <div className={"BoxToolbar"}>
                                             <div className={"BoxLabel"}>&nbsp;</div>
-                                            <Button onClick={this.onButtonAddColumnClicked} disabled={this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新增</Button>
-                                            <Button onClick={this.onButtonAlterColumnClicked} disabled={this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>修改</Button>
-                                            <Button onClick={this.onButtonAlterColumnConfirmClicked} disabled={!this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>确认</Button>
-                                            <Button onClick={this.onButtonAlterColumnCancelClicked} disabled={!this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>放弃</Button>
-                                            <Button onClick={this.onButtonDeleteColumnClicked} disabled={this.state.isColumnEditing} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>删除</Button>
+                                            <Button onClick={this.onButtonAddColumnClicked}
+                                                    disabled={this.state.isColumnEditing} icon={<PlusSquareOutlined/>}
+                                                    size={"small"} type={"primary"}>新增</Button>
+                                            <Button onClick={this.onButtonAlterColumnClicked}
+                                                    disabled={this.state.isColumnEditing} icon={<PlusSquareOutlined/>}
+                                                    size={"small"} type={"primary"}>修改</Button>
+                                            <Button onClick={this.onButtonAlterColumnConfirmClicked}
+                                                    disabled={!this.state.isColumnEditing} icon={<PlusSquareOutlined/>}
+                                                    size={"small"} type={"primary"}>确认</Button>
+                                            <Button onClick={this.onButtonAlterColumnCancelClicked}
+                                                    disabled={!this.state.isColumnEditing} icon={<PlusSquareOutlined/>}
+                                                    size={"small"} type={"primary"}>放弃</Button>
+                                            <Button onClick={this.onButtonDeleteColumnClicked}
+                                                    disabled={this.state.isColumnEditing} icon={<PlusSquareOutlined/>}
+                                                    size={"small"} type={"primary"}>删除</Button>
                                         </div>
                                         <div ref={this.gRef.boxTableColumns} className={"BoxDetail"}>
                                             <Table
@@ -4915,11 +5025,26 @@ export default class DatabaseWorkspace extends React.Component {
                                     <div className={"BoxTableIndexProperties"}>
                                         <div className={"BoxToolbar"}>
                                             <div className={"BoxLabel"}>&nbsp;</div>
-                                            <Button onClick={this.onButtonAddIndexClicked} style={{display: this.state.isShownButtonAddIndex}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>新增</Button>
-                                            <Button onClick={this.onButtonAlterIndexClicked} disabled={this.state.isShownButtonAlterIndexConfirm === "block"} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>修改</Button>
-                                            <Button onClick={this.onButtonDeleteIndexClicked} style={{display: this.state.isShownButtonDeleteIndex}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>删除</Button>
-                                            <Button onClick={this.onButtonAlterIndexConfirmClicked} style={{display: this.state.isShownButtonAlterIndexConfirm}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>确认</Button>
-                                            <Button onClick={this.onButtonAlterIndexCancelClicked} style={{display: this.state.isShownButtonAlterIndexCancel}} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>放弃</Button>
+                                            <Button onClick={this.onButtonAddIndexClicked}
+                                                    style={{display: this.state.isShownButtonAddIndex}}
+                                                    icon={<PlusSquareOutlined/>} size={"small"}
+                                                    type={"primary"}>新增</Button>
+                                            <Button onClick={this.onButtonAlterIndexClicked}
+                                                    disabled={this.state.isShownButtonAlterIndexConfirm === "block"}
+                                                    icon={<PlusSquareOutlined/>} size={"small"}
+                                                    type={"primary"}>修改</Button>
+                                            <Button onClick={this.onButtonDeleteIndexClicked}
+                                                    style={{display: this.state.isShownButtonDeleteIndex}}
+                                                    icon={<PlusSquareOutlined/>} size={"small"}
+                                                    type={"primary"}>删除</Button>
+                                            <Button onClick={this.onButtonAlterIndexConfirmClicked}
+                                                    style={{display: this.state.isShownButtonAlterIndexConfirm}}
+                                                    icon={<PlusSquareOutlined/>} size={"small"}
+                                                    type={"primary"}>确认</Button>
+                                            <Button onClick={this.onButtonAlterIndexCancelClicked}
+                                                    style={{display: this.state.isShownButtonAlterIndexCancel}}
+                                                    icon={<PlusSquareOutlined/>} size={"small"}
+                                                    type={"primary"}>放弃</Button>
                                         </div>
                                         <div className={"BoxDetail"}>
                                             <Table
@@ -5044,24 +5169,29 @@ export default class DatabaseWorkspace extends React.Component {
                                                 }}/>
                                         </div>
                                         <div className={"BoxSelect"}>
-                                            <Select onChange={this.onSelectConnectionsChanged} defaultValue={this.state.connectionsSelected} options={this.state.connectionsSelectOptions} size="small"/>
-                                            <Button onClick={this.onButtonGetTableDataClicked} icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>获取数据</Button>
+                                            <Select onChange={this.onSelectConnectionsChanged}
+                                                    defaultValue={this.state.connectionsSelected}
+                                                    options={this.state.connectionsSelectOptions} size="small"/>
+                                            <Button onClick={this.onButtonGetTableDataClicked}
+                                                    icon={<PlusSquareOutlined/>} size={"small"}
+                                                    type={"primary"}>获取数据</Button>
                                         </div>
                                         <div className={"BoxDetail"}>
                                             <Table
-                                                dataSource={this.state.dsRecords}
-                                                columns={this.state.columnsRecord}
-                                                scroll={{y: 400}}
+                                                dataSource={this.state.recordsDynamic}
+                                                columns={this.state.columnsDynamic}
+                                                // scroll={{y: 200}}
                                                 bordered={true}
                                                 size={"small"}
-                                                pagination={{
-                                                    pageSize: this.state.pageSizeRecords,
-                                                    position: ["none", "none"]
-                                                }}
-                                                rowSelection={{
-                                                    type: "radio",
-                                                    ...this.onRowRecordSelected
-                                                }}/>
+                                                // pagination={{
+                                                //     pageSize: this.state.pageSizeRecords,
+                                                //     position: ["none", "none"]
+                                                // }}
+                                                // rowSelection={{
+                                                //     type: "radio",
+                                                //     ...this.onRowRecordSelected
+                                                // }}
+                                            />
                                         </div>
                                     </div>
                                 </TabPane>
