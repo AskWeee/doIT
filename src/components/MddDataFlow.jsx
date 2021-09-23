@@ -11,6 +11,7 @@ import TadMddFlow from "../entity/TadMddFlow";
 import TadMddTree from "../entity/TadMddTree";
 import TadTableRelation from "../entity/TadTableRelation";
 import TadMddFlowNode from "../entity/TadMddFlowNode";
+import TadMddFlowEdge from "../entity/TadMddFlowEdge";
 
 const {Stencil} = Addon;
 const {Rect, Circle} = Shape;
@@ -36,7 +37,7 @@ export default class MddDataFlow extends React.PureComponent {
         controllers: [],
         scripts: [],
         transformers: [],
-        custommades: [],
+        transformerGroups: [],
         relations: []
     };
 
@@ -66,8 +67,20 @@ export default class MddDataFlow extends React.PureComponent {
         this.doAddTadMddFlowNode = this.doAddTadMddFlowNode.bind(this);
         this.doUpdateTadMddFlowNode = this.doUpdateTadMddFlowNode.bind(this);
         this.doDeleteTadMddFlowNodes = this.doDeleteTadMddFlowNodes.bind(this);
+
+        this.restGetTadMddFlowEdges = this.restGetTadMddFlowEdges.bind(this);
+        this.restAddTadMddFlowEdge = this.restAddTadMddFlowEdge.bind(this);
+        this.restUpdateTadMddFlowEdge = this.restUpdateTadMddFlowEdge.bind(this);
+        this.restDeleteTadMddFlowEdges = this.restDeleteTadMddFlowEdges.bind(this);
+        this.doGetTadMddFlowEdges = this.doGetTadMddFlowEdges.bind(this);
+        this.doAddTadMddFlowEdge = this.doAddTadMddFlowEdge.bind(this);
+        this.doUpdateTadMddFlowEdge = this.doUpdateTadMddFlowEdge.bind(this);
+        this.doDeleteTadMddFlowEdges = this.doDeleteTadMddFlowEdges.bind(this);
+
         this.uiUpdateTadMddFlowNodes = this.uiUpdateTadMddFlowNodes.bind(this);
-        this.drawTaddMddFlow = this.drawTaddMddFlow.bind(this);
+        this.drawTaddMddFlowNodes = this.drawTaddMddFlowNodes.bind(this);
+        this.uiUpdateTadMddFlowEdges = this.uiUpdateTadMddFlowEdges.bind(this);
+        this.drawTaddMddFlowEdges = this.drawTaddMddFlowEdges.bind(this);
 
         this.restGetTadMddTrees = this.restGetTadMddTrees.bind(this);
         this.restAddTadMddTree = this.restAddTadMddTree.bind(this);
@@ -209,6 +222,7 @@ export default class MddDataFlow extends React.PureComponent {
         this.restAddTadMddFlowNode(params).then((result) => {
             if (result.status === 200) {
                 if (result.data.success) {
+                    console.log(result);
                     // this.uiUpdateTadMddTree(result.data.data, "add");
                     this.context.showMessage("成功，内部ID为：" + result.data.data.id);
                 } else {
@@ -238,11 +252,85 @@ export default class MddDataFlow extends React.PureComponent {
         return await this.restDeleteTadMddFlowNodes(params);
     }
 
+    restGetTadMddFlowEdges(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/mdd/get_mdd_flow_edges",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+    restAddTadMddFlowEdge(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/mdd/add_mdd_flow_edge",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+    restUpdateTadMddFlowEdge(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/mdd/update_mdd_flow_edge",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+    restDeleteTadMddFlowEdges(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/mdd/delete_mdd_flow_edges",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+    doGetTadMddFlowEdges(params) {
+        this.restGetTadMddFlowEdges(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.uiUpdateTadMddFlowEdges(result.data.data);
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+    doAddTadMddFlowEdge(params) {
+        this.restAddTadMddFlowEdge(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    console.log(result);
+                    // this.uiUpdateTadMddTree(result.data.data, "add");
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+    doUpdateTadMddFlowEdge(params) {
+        this.restUpdateTadMddFlowEdge(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+    async doDeleteTadMddFlowEdges(params) {
+        return await this.restDeleteTadMddFlowEdges(params);
+    }
+
     uiUpdateTadMddFlowNodes(nodes) {
         this.x6Graph.clearCells();
         this.x6Data.events = [];
+        this.x6Data.models = [];
+        this.x6Data.controllers = [];
+        this.x6Data.scripts = [];
+        this.x6Data.transformers = [];
+        this.x6Data.transformerGroups = [];
+        this.x6Data.relations = [];
+
         nodes.forEach((itemNode) => {
             let nodeName = itemNode.node_name;
+            let nodeType = itemNode.node_type;
             let portId;
 
             switch (nodeName) {
@@ -255,23 +343,140 @@ export default class MddDataFlow extends React.PureComponent {
                 default:
                     break
             }
-            this.x6Data.events.push({
-                id: itemNode.node_id,
-                nodeType: itemNode.node_type,
-                nodeName: nodeName,
-                portId: portId,
-                x: itemNode.position_x,
-                y: itemNode.position_y,
-                label: itemNode.node_label,
+
+            switch(nodeType) {
+                case "NODE_EVENT":
+                    this.x6Data.events.push({
+                        id: itemNode.node_id,
+                        nodeType: itemNode.node_type,
+                        nodeName: nodeName,
+                        portId: portId,
+                        x: itemNode.position_x,
+                        y: itemNode.position_y,
+                        label: itemNode.node_label,
+                    });
+                    break
+                case "NODE_MODEL":
+                    this.x6Data.models.push({
+                        id: itemNode.node_id,
+                        nodeType: itemNode.node_type,
+                        nodeName: nodeName,
+                        portInId: itemNode.port_top_id,
+                        portOutId: itemNode.port_bottom_id,
+                        x: itemNode.position_x,
+                        y: itemNode.position_y,
+                        label: itemNode.node_label,
+                    });
+                    break
+                case "NODE_CONTROLLER":
+                    this.x6Data.controllers.push({
+                        id: itemNode.node_id,
+                        nodeType: itemNode.node_type,
+                        nodeName: nodeName,
+                        portInId: itemNode.port_top_id,
+                        portOutTrueId: itemNode.port_right_id,
+                        portOutFalseId: itemNode.port_left_id,
+                        x: itemNode.position_x,
+                        y: itemNode.position_y,
+                        label: itemNode.node_label,
+                    });
+                    break
+                case "NODE_SCRIPT":
+                    this.x6Data.scripts.push({
+                        id: itemNode.node_id,
+                        nodeType: itemNode.node_type,
+                        nodeName: nodeName,
+                        portInId: itemNode.port_top_id,
+                        portOutId: itemNode.port_bottom_id,
+                        x: itemNode.position_x,
+                        y: itemNode.position_y,
+                        label: itemNode.node_label,
+                    });
+                    break
+                case "NODE_TRANSFORMER":
+                    this.x6Data.transformers.push({
+                        id: itemNode.node_id,
+                        nodeType: itemNode.node_type,
+                        nodeName: nodeName,
+                        portInId: itemNode.port_top_id,
+                        portOutId: itemNode.port_bottom_id,
+                        x: itemNode.position_x,
+                        y: itemNode.position_y,
+                        label: itemNode.node_label,
+                    });
+                    break
+                case "NODE_TRANSFORMER_GROUP":
+                    this.x6Data.transformerGroups.push({
+                        id: itemNode.node_id,
+                        nodeType: itemNode.node_type,
+                        nodeName: nodeName,
+                        portInId: itemNode.port_top_id,
+                        portOutId: itemNode.port_bottom_id,
+                        x: itemNode.position_x,
+                        y: itemNode.position_y,
+                        label: itemNode.node_label,
+                    });
+                    break
+                default:
+                    break
+            }
+        });
+
+        this.drawTaddMddFlowNodes();
+
+        let flowParams = new TadMddFlowNode();
+        flowParams.flow_id = this.gCurrent.mddTreeNode.id;
+        this.doGetTadMddFlowEdges(flowParams);
+    }
+
+
+    uiUpdateTadMddFlowEdges(edges) {
+        this.x6Data.relations = [];
+
+        edges.forEach((itemEdge) => {
+            this.x6Data.relations.push({
+                id: itemEdge.edge_id,
+                sourceNodeId: itemEdge.source_node_id,
+                sourcePortId: itemEdge.source_port_id,
+                targetNodeId: itemEdge.target_node_id,
+                targetPortId: itemEdge.target_port_id,
+                edgeType: itemEdge.edge_type,
+                edgeName: itemEdge.edge_name,
+                edgeLabel: itemEdge.edge_label,
             });
         });
 
-        this.drawTaddMddFlow();
+        this.drawTaddMddFlowEdges();
     }
 
-    drawTaddMddFlow() {
+    drawTaddMddFlowNodes() {
         this.x6Data.events.forEach((itemEvent) => {
             this.x6DrawEvent(itemEvent);
+        })
+        this.x6Data.models.forEach((itemModel) => {
+            this.x6DrawModel(itemModel);
+        })
+        this.x6Data.controllers.forEach((itemController) => {
+            this.x6DrawController(itemController);
+        })
+        this.x6Data.scripts.forEach((itemScript) => {
+            this.x6DrawScript(itemScript);
+        })
+        this.x6Data.transformers.forEach((itemTransformer) => {
+            this.x6DrawTransformer(itemTransformer);
+        })
+        this.x6Data.transformerGroups.forEach((itemTransformerGroup) => {
+            this.x6DrawTransformerGroup(itemTransformerGroup);
+        })
+
+        this.x6Data.relations.forEach((itemRelation) => {
+            this.x6DrawRelation(itemRelation);
+        })
+    }
+
+    drawTaddMddFlowEdges() {
+        this.x6Data.relations.forEach((itemRelation) => {
+            this.x6DrawRelation(itemRelation);
         })
     }
 
@@ -820,31 +1025,57 @@ export default class MddDataFlow extends React.PureComponent {
             )
         });
 
+        //todo <<<<< now >>>>> 拖放连线
         this.x6Graph.on('edge:connected', ({isNew, edge, currentCell}) => {
-            console.log("x6 on edge:connected");
+            console.log("x6 on edge:connected", edge.source, edge.target);
             if (isNew) {
-                const nodeSource = edge.getSourceCell();
-                console.log(nodeSource);
-                // const nodeCurrent = edge.getCurrentCell();
-                console.log(nodeSource.getData(), currentCell.getData());
-                let sNodeData = nodeSource.getData();
-                let aNodeData = currentCell.getData();
-                console.log(sNodeData, aNodeData, nodeSource.id);
                 this.x6Data.relations.push(
                     {
-                        nodeSource: nodeSource.id,
-                        nodeTarget: currentCell.id,
-                        relationType: "1-N"
+                        id: edge.id,
+                        sourceNodeId: edge.source.cell,
+                        sourcePortId: edge.source.port,
+                        targetNodeId: edge.target.cell,
+                        targetPortId: edge.target.port,
+                        edgeLabel: "1-N",
+                        edgeType: "EDGE_RELATION",
+                        edgeName: "EDGE_RELATION_ONE2MORE"
                     }
                 )
             }
         })
 
         this.x6Graph.on("node:change:position", (args) => {
-            for (let i = 0; i < this.x6Data.events.length; i++) {
-                if (this.x6Data.events[i].id === args.cell.id) {
-                    this.x6Data.events[i].x = args.current.x;
-                    this.x6Data.events[i].y = args.current.y;
+
+            let nodeData = args.cell.getData();
+            console.log(nodeData);
+            let nodes = [];
+            switch (nodeData.nodeType) {
+                case "NODE_MODEL":
+                    nodes = this.x6Data.models;
+                    break
+                case "NODE_EVENT":
+                    nodes = this.x6Data.events;
+                    break
+                case "NODE_CONTROLLER":
+                    nodes = this.x6Data.controllers;
+                    break
+                case "NODE_SCRIPT":
+                    nodes = this.x6Data.scripts;
+                    break
+                case "NODE_TRANSFORMER":
+                    nodes = this.x6Data.transformers;
+                    break
+                case "NODE_TRANSFORMER_GROUP":
+                    nodes = this.x6Data.transformerGroups;
+                    break
+                default:
+                    break
+            }
+
+            for (let i = 0; i < nodes.length; i++) {
+                if (nodes[i].id === args.cell.id) {
+                    nodes[i].x = args.current.x;
+                    nodes[i].y = args.current.y;
                     break
                 }
             }
@@ -888,7 +1119,7 @@ export default class MddDataFlow extends React.PureComponent {
                     title: '运算',
                 },
                 {
-                    name: 'groupCustomMades',
+                    name: 'groupTransformerGroups',
                     title: '自制',
                 },
             ],
@@ -935,11 +1166,6 @@ export default class MddDataFlow extends React.PureComponent {
                 let nodeAttrs = node.getAttrs();
                 switch (nodeData.nodeType) {
                     case "NODE_MODEL":
-                        this.x6Data.models.push({
-                            id: this.gDynamic.nodeShadow.id,
-                            nodeType: nodeData.nodeType,
-                            nodeName: nodeData.nodeName
-                        });
                         this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
                         this.gDynamic.nodeShadow.setProp({
                             ports: {
@@ -1024,6 +1250,21 @@ export default class MddDataFlow extends React.PureComponent {
                                 {group: "groupBottom"},
                             ]
                         );
+
+                        let portsIn = this.gDynamic.nodeShadow.getPortsByGroup("groupTop");
+                        let portsOut = this.gDynamic.nodeShadow.getPortsByGroup("groupBottom");
+                        let nodeModelLabel = "告警模型";
+
+                        this.x6Data.models.push({
+                            id: this.gDynamic.nodeShadow.id,
+                            nodeType: nodeData.nodeType,
+                            nodeName: nodeData.nodeName,
+                            portInId: portsIn[0].id,
+                            portOutId: portsOut[0].id,
+                            x: this.gDynamic.nodeShadow.position().x,
+                            y: this.gDynamic.nodeShadow.position().y,
+                            label: nodeModelLabel
+                        });
 
                         break
                     case "NODE_EVENT":
@@ -1114,7 +1355,6 @@ export default class MddDataFlow extends React.PureComponent {
                                     {group: "groupBottom"},
                                 ]
                             );
-                            console.log(this.gDynamic.nodeShadow.getPortsByGroup("groupTop"))
                             let ports = this.gDynamic.nodeShadow.getPortsByGroup("groupBottom");
                             portId = ports[0].id;
                             nodeLabel = "开始";
@@ -1123,7 +1363,6 @@ export default class MddDataFlow extends React.PureComponent {
                                     {group: "groupTop"},
                                 ]
                             );
-                            console.log(this.gDynamic.nodeShadow.getPortsByGroup("groupTop"))
                             let ports = this.gDynamic.nodeShadow.getPortsByGroup("groupTop");
                             portId = ports[0].id;
                             nodeLabel = "结束";
@@ -1139,14 +1378,8 @@ export default class MddDataFlow extends React.PureComponent {
                             y: this.gDynamic.nodeShadow.position().y,
                             label: nodeLabel
                         });
-                        console.log(this.x6Data.events);
                         break
                     case "NODE_CONTROLLER":
-                        this.x6Data.controllers.push({
-                            id: this.gDynamic.nodeShadow.id,
-                            nodeType: nodeData.nodeType,
-                            nodeName: nodeData.nodeName
-                        });
                         this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
                         this.gDynamic.nodeShadow.setProp({
                             ports: {
@@ -1233,105 +1466,136 @@ export default class MddDataFlow extends React.PureComponent {
                             ]
                         );
 
+                        let portsInController = this.gDynamic.nodeShadow.getPortsByGroup("groupTop");
+                        let portsOutTrueController = this.gDynamic.nodeShadow.getPortsByGroup("groupRight");
+                        let portsOutFalseController = this.gDynamic.nodeShadow.getPortsByGroup("groupLeft");
+
+                        this.x6Data.controllers.push({
+                            id: this.gDynamic.nodeShadow.id,
+                            nodeType: nodeData.nodeType,
+                            nodeName: nodeData.nodeName,
+                            portInId: portsInController[0].id,
+                            portOutTrueId: portsOutTrueController[0].id,
+                            portOutFalseId: portsOutFalseController[0].id,
+                            x: this.gDynamic.nodeShadow.position().x,
+                            y: this.gDynamic.nodeShadow.position().y,
+                            label: "条件判断"
+                        });
+
                         break
                     case "NODE_SCRIPT":
+                        // this.x6Data.scripts.push({
+                        //     id: this.gDynamic.nodeShadow.id,
+                        //     nodeType: nodeData.nodeType,
+                        //     nodeName: nodeData.nodeName
+                        // });
+                        this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
+                        this.gDynamic.nodeShadow.setProp({
+                            ports: {
+                                groups: {
+                                    groupTop: {
+                                        position: {
+                                            name: "top",
+                                        },
+                                        attrs: {
+                                            circle: {
+                                                fill: '#ffffff',
+                                                stroke: '#31d0c6',
+                                                strokeWidth: 1,
+                                                r: 6,
+                                                magnet: true,
+                                            },
+                                            text: {
+                                                fill: '#6a6c8a',
+                                                fontSize: 12,
+                                            },
+                                        },
+                                    },
+                                    groupRight: {
+                                        position: {
+                                            name: "right",
+                                        },
+                                        attrs: {
+                                            circle: {
+                                                fill: '#ffffff',
+                                                stroke: '#31d0c6',
+                                                strokeWidth: 1,
+                                                r: 6,
+                                                magnet: true,
+                                            },
+                                            text: {
+                                                fill: '#6a6c8a',
+                                                fontSize: 12,
+                                            },
+                                        },
+                                    },
+                                    groupBottom: {
+                                        position: {
+                                            name: "bottom",
+                                        },
+                                        attrs: {
+                                            circle: {
+                                                fill: '#ffffff',
+                                                stroke: '#31d0c6',
+                                                strokeWidth: 1,
+                                                r: 6,
+                                                magnet: true,
+                                            },
+                                            text: {
+                                                fill: '#6a6c8a',
+                                                fontSize: 12,
+                                            },
+                                        },
+                                    },
+                                    groupLeft: {
+                                        position: {
+                                            name: "left",
+                                        },
+                                        attrs: {
+                                            circle: {
+                                                fill: '#ffffff',
+                                                stroke: '#31d0c6',
+                                                strokeWidth: 1,
+                                                r: 6,
+                                                magnet: true,
+                                            },
+                                            text: {
+                                                fill: '#6a6c8a',
+                                                fontSize: 12,
+                                            },
+                                        },
+                                    }
+                                },
+                            }
+                        });
+                        this.gDynamic.nodeShadow.addPorts([
+                                {group: "groupTop"},
+                                {group: "groupBottom"},
+                            ]
+                        );
+
+                        let portsInScript = this.gDynamic.nodeShadow.getPortsByGroup("groupTop");
+                        let portsOutScript = this.gDynamic.nodeShadow.getPortsByGroup("groupBottom");
+                        let nodeLabelScript = "脚本";
+
                         this.x6Data.scripts.push({
                             id: this.gDynamic.nodeShadow.id,
                             nodeType: nodeData.nodeType,
-                            nodeName: nodeData.nodeName
+                            nodeName: nodeData.nodeName,
+                            portInId: portsInScript[0].id,
+                            portOutId: portsOutScript[0].id,
+                            x: this.gDynamic.nodeShadow.position().x,
+                            y: this.gDynamic.nodeShadow.position().y,
+                            label: nodeLabelScript
                         });
-                        this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
-                        this.gDynamic.nodeShadow.setProp({
-                            ports: {
-                                groups: {
-                                    groupTop: {
-                                        position: {
-                                            name: "top",
-                                        },
-                                        attrs: {
-                                            circle: {
-                                                fill: '#ffffff',
-                                                stroke: '#31d0c6',
-                                                strokeWidth: 1,
-                                                r: 6,
-                                                magnet: true,
-                                            },
-                                            text: {
-                                                fill: '#6a6c8a',
-                                                fontSize: 12,
-                                            },
-                                        },
-                                    },
-                                    groupRight: {
-                                        position: {
-                                            name: "right",
-                                        },
-                                        attrs: {
-                                            circle: {
-                                                fill: '#ffffff',
-                                                stroke: '#31d0c6',
-                                                strokeWidth: 1,
-                                                r: 6,
-                                                magnet: true,
-                                            },
-                                            text: {
-                                                fill: '#6a6c8a',
-                                                fontSize: 12,
-                                            },
-                                        },
-                                    },
-                                    groupBottom: {
-                                        position: {
-                                            name: "bottom",
-                                        },
-                                        attrs: {
-                                            circle: {
-                                                fill: '#ffffff',
-                                                stroke: '#31d0c6',
-                                                strokeWidth: 1,
-                                                r: 6,
-                                                magnet: true,
-                                            },
-                                            text: {
-                                                fill: '#6a6c8a',
-                                                fontSize: 12,
-                                            },
-                                        },
-                                    },
-                                    groupLeft: {
-                                        position: {
-                                            name: "left",
-                                        },
-                                        attrs: {
-                                            circle: {
-                                                fill: '#ffffff',
-                                                stroke: '#31d0c6',
-                                                strokeWidth: 1,
-                                                r: 6,
-                                                magnet: true,
-                                            },
-                                            text: {
-                                                fill: '#6a6c8a',
-                                                fontSize: 12,
-                                            },
-                                        },
-                                    }
-                                },
-                            }
-                        });
-                        this.gDynamic.nodeShadow.addPorts([
-                                {group: "groupTop"},
-                                {group: "groupBottom"},
-                            ]
-                        );
 
                         break
                     case "NODE_TRANSFORMER":
-                        this.x6Data.transformers.push({
-                            id: this.gDynamic.nodeShadow.id,
-                            nodeType: nodeData.nodeType,
-                            nodeName: nodeData.nodeName
-                        });
+                        // this.x6Data.transformers.push({
+                        //     id: this.gDynamic.nodeShadow.id,
+                        //     nodeType: nodeData.nodeType,
+                        //     nodeName: nodeData.nodeName
+                        // });
                         this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
                         this.gDynamic.nodeShadow.setProp({
                             ports: {
@@ -1417,13 +1681,28 @@ export default class MddDataFlow extends React.PureComponent {
                             ]
                         );
 
-                        break
-                    case "NODE_CUSTOMMADE":
-                        this.x6Data.custommades.push({
+                        let portsInTransformer = this.gDynamic.nodeShadow.getPortsByGroup("groupTop");
+                        let portsOutTransformer = this.gDynamic.nodeShadow.getPortsByGroup("groupBottom");
+                        let nodeLabelTransformer = "转换器";
+
+                        this.x6Data.transformers.push({
                             id: this.gDynamic.nodeShadow.id,
                             nodeType: nodeData.nodeType,
-                            nodeName: nodeData.nodeName
+                            nodeName: nodeData.nodeName,
+                            portInId: portsInTransformer[0].id,
+                            portOutId: portsOutTransformer[0].id,
+                            x: this.gDynamic.nodeShadow.position().x,
+                            y: this.gDynamic.nodeShadow.position().y,
+                            label: nodeLabelTransformer
                         });
+
+                        break
+                    case "NODE_TRANSFORMER_GROUP":
+                        // this.x6Data.transformerGroups.push({
+                        //     id: this.gDynamic.nodeShadow.id,
+                        //     nodeType: nodeData.nodeType,
+                        //     nodeName: nodeData.nodeName
+                        // });
                         this.gDynamic.nodeShadow.setAttrs(nodeAttrs);
                         this.gDynamic.nodeShadow.setProp({
                             ports: {
@@ -1508,6 +1787,21 @@ export default class MddDataFlow extends React.PureComponent {
                                 {group: "groupBottom"},
                             ]
                         );
+
+                        let portsInTransformerGroup = this.gDynamic.nodeShadow.getPortsByGroup("groupTop");
+                        let portsOutTransformerGroup = this.gDynamic.nodeShadow.getPortsByGroup("groupBottom");
+                        let nodeLabelTransformerGroup = "转换器组";
+
+                        this.x6Data.transformerGroups.push({
+                            id: this.gDynamic.nodeShadow.id,
+                            nodeType: nodeData.nodeType,
+                            nodeName: nodeData.nodeName,
+                            portInId: portsInTransformerGroup[0].id,
+                            portOutId: portsOutTransformerGroup[0].id,
+                            x: this.gDynamic.nodeShadow.position().x,
+                            y: this.gDynamic.nodeShadow.position().y,
+                            label: nodeLabelTransformerGroup
+                        });
 
                         break
                     default:
@@ -1551,7 +1845,7 @@ export default class MddDataFlow extends React.PureComponent {
         this.x6LoadControllers();
         this.x6LoadScripts();
         this.x6LoadTransformers();
-        this.x6LoadCustomMades();
+        this.x6LoadTransformerGroups();
     }
 
     x6LoadModels() {
@@ -1655,8 +1949,8 @@ export default class MddDataFlow extends React.PureComponent {
                     fill: '#AFAFAF',
                     stroke: '#4B4A67',
                     strokeWidth: 1,
-                    rx: 10,
-                    ry: 10
+                    rx: 20,
+                    ry: 20
                 },
                 text: {
                     text: '脚本',
@@ -1694,7 +1988,7 @@ export default class MddDataFlow extends React.PureComponent {
         this.x6Stencil.load([nodeTransformer], 'groupTransformers')
     }
 
-    x6LoadCustomMades() {
+    x6LoadTransformerGroups() {
         const nodeTransformer = new Rect({
             width: 100,
             height: 40,
@@ -1702,7 +1996,7 @@ export default class MddDataFlow extends React.PureComponent {
                 body: {
                     fill: '#AFAFAF',
                     stroke: '#4B4A67',
-                    strokeWidth: 2,
+                    strokeWidth: 5,
                     rx: 10,
                     ry: 10
                 },
@@ -1713,9 +2007,9 @@ export default class MddDataFlow extends React.PureComponent {
                 },
             },
         })
-        nodeTransformer.setData({nodeName: "TRANSFORMER_UNKNOWN", nodeTitle: "转化器", nodeType: "NODE_CUSTOMMADE"});
+        nodeTransformer.setData({nodeName: "TRANSFORMER_GROUP_UNKNOWN", nodeTitle: "转化器", nodeType: "NODE_TRANSFORMER_GROUP"});
 
-        this.x6Stencil.load([nodeTransformer], 'groupCustomMades')
+        this.x6Stencil.load([nodeTransformer], 'groupTransformerGroups')
     }
 
     x6Move() {
@@ -1948,15 +2242,13 @@ export default class MddDataFlow extends React.PureComponent {
         let flowParams = new TadMddFlowNode();
         flowParams.flow_id = this.gCurrent.mddTreeNode.id;
         this.doDeleteTadMddFlowNodes(flowParams).then((result) => {
-            console.log(result);
             if (result.status === 200) {
-
                 if (result.data.success) {
                     this.x6Data.events.forEach((itemEvent) => {
                         let flowNode = new TadMddFlowNode();
                         flowNode.flow_id = this.gCurrent.mddTreeNode.id;
                         flowNode.node_id = itemEvent.id;
-                        flowNode.node_type = "EVENT";
+                        flowNode.node_type = itemEvent.nodeType;
                         flowNode.node_name = itemEvent.nodeName;
                         if (itemEvent.nodeName === "EVENT_BEGIN") {
                             flowNode.port_bottom_id = itemEvent.portId;
@@ -1969,6 +2261,77 @@ export default class MddDataFlow extends React.PureComponent {
 
                         this.doAddTadMddFlowNode(flowNode);
                     });
+
+                    this.x6Data.models.forEach((itemModel) => {
+                        let flowNode = new TadMddFlowNode();
+                        flowNode.flow_id = this.gCurrent.mddTreeNode.id;
+                        flowNode.node_id = itemModel.id;
+                        flowNode.node_type = itemModel.nodeType;
+                        flowNode.port_top_id = itemModel.portInId;
+                        flowNode.port_bottom_id = itemModel.portOutId;
+                        flowNode.position_x = itemModel.x;
+                        flowNode.position_y = itemModel.y;
+                        flowNode.node_label = itemModel.label;
+
+                        this.doAddTadMddFlowNode(flowNode);
+                    });
+
+                    this.x6Data.controllers.forEach((itemController) => {
+                        let flowNode = new TadMddFlowNode();
+                        flowNode.flow_id = this.gCurrent.mddTreeNode.id;
+                        flowNode.node_id = itemController.id;
+                        flowNode.node_type = itemController.nodeType;
+                        flowNode.port_top_id = itemController.portInId;
+                        flowNode.port_right_id = itemController.portOutTrueId;
+                        flowNode.port_left_id = itemController.portOutFalseId;
+                        flowNode.position_x = itemController.x;
+                        flowNode.position_y = itemController.y;
+                        flowNode.node_label = itemController.label;
+
+                        this.doAddTadMddFlowNode(flowNode);
+                    });
+
+                    this.x6Data.scripts.forEach((itemScript) => {
+                        let flowNode = new TadMddFlowNode();
+                        flowNode.flow_id = this.gCurrent.mddTreeNode.id;
+                        flowNode.node_id = itemScript.id;
+                        flowNode.node_type = itemScript.nodeType;
+                        flowNode.port_top_id = itemScript.portInId;
+                        flowNode.port_bottom_id = itemScript.portOutId;
+                        flowNode.position_x = itemScript.x;
+                        flowNode.position_y = itemScript.y;
+                        flowNode.node_label = itemScript.label;
+
+                        this.doAddTadMddFlowNode(flowNode);
+                    });
+
+                    this.x6Data.transformers.forEach((itemTransformer) => {
+                        let flowNode = new TadMddFlowNode();
+                        flowNode.flow_id = this.gCurrent.mddTreeNode.id;
+                        flowNode.node_id = itemTransformer.id;
+                        flowNode.node_type = itemTransformer.nodeType;
+                        flowNode.port_top_id = itemTransformer.portInId;
+                        flowNode.port_bottom_id = itemTransformer.portOutId;
+                        flowNode.position_x = itemTransformer.x;
+                        flowNode.position_y = itemTransformer.y;
+                        flowNode.node_label = itemTransformer.label;
+
+                        this.doAddTadMddFlowNode(flowNode);
+                    });
+
+                    this.x6Data.transformerGroups.forEach((itemTransformerGroup) => {
+                        let flowNode = new TadMddFlowNode();
+                        flowNode.flow_id = this.gCurrent.mddTreeNode.id;
+                        flowNode.node_id = itemTransformerGroup.id;
+                        flowNode.node_type = itemTransformerGroup.nodeType;
+                        flowNode.port_top_id = itemTransformerGroup.portInId;
+                        flowNode.port_bottom_id = itemTransformerGroup.portOutId;
+                        flowNode.position_x = itemTransformerGroup.x;
+                        flowNode.position_y = itemTransformerGroup.y;
+                        flowNode.node_label = itemTransformerGroup.label;
+
+                        this.doAddTadMddFlowNode(flowNode);
+                    });
                 } else {
                     this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
                 }
@@ -1977,6 +2340,30 @@ export default class MddDataFlow extends React.PureComponent {
             }
         })
 
+        this.doDeleteTadMddFlowEdges(flowParams).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    this.x6Data.relations.forEach((itemRelation) => {
+                        let flowEdge = new TadMddFlowEdge();
+                        flowEdge.flow_id = this.gCurrent.mddTreeNode.id;
+                        flowEdge.edge_id = itemRelation.id;
+                        flowEdge.source_node_id = itemRelation.sourceNodeId;
+                        flowEdge.source_port_id = itemRelation.sourcePortId;
+                        flowEdge.target_node_id = itemRelation.targetNodeId;
+                        flowEdge.target_port_id = itemRelation.targetPortId;
+                        flowEdge.edge_label = itemRelation.edgeLabel;
+                        flowEdge.edge_type = itemRelation.edgeType;
+                        flowEdge.edge_name = itemRelation.edgeName;
+
+                        this.doAddTadMddFlowEdge(flowEdge);
+                    });
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        })
 
         // let myJson = this.x6Graph.toJSON();
         // myJson.cells.forEach((cell) => {
@@ -2112,15 +2499,134 @@ export default class MddDataFlow extends React.PureComponent {
         this.doAddTadMddTree(erTree);
     }
 
-    x6DrawEvent(event) {
-        console.log(event);
+    x6DrawModel(node) {
+        let nodeModel = this.x6Graph.createNode({
+            id: node.id,
+            width: 100,
+            height: 40,
+            shape: "rect",
+            x: node.x,
+            y: node.y,
+            attrs: {
+                body: {
+                    fill: '#AFAFAF',
+                    stroke: '#4B4A67',
+                    strokeWidth: 1,
+                },
+                text: {
+                    text: node.label,
+                    fill: 'black',
+                    fontWeight: "bold",
+                },
+            },
+        });
+        nodeModel.setData({
+            x: 0,
+            y: 0,
+            nodeType: node.nodeType,
+            nodeName: node.nodeName,
+            portInId: node.portInId,
+            portOutId: node.portOutId
+        });
+        this.x6Graph.addNode(nodeModel);
+        nodeModel.setProp({
+            ports: {
+                groups: {
+                    groupTop: {
+                        position: {
+                            name: "top",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    },
+                    groupRight: {
+                        position: {
+                            name: "right",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    },
+                    groupBottom: {
+                        position: {
+                            name: "bottom",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    },
+                    groupLeft: {
+                        position: {
+                            name: "left",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    }
+                },
+            }
+        });
+        nodeModel.addPorts([
+            {
+                id: node.portInId,
+                group: "groupTop"
+            },
+            {
+                id: node.portOutId,
+                group: "groupBottom"
+            },
+        ]);
+    }
+
+    x6DrawEvent(node) {
         let nodeEvent = this.x6Graph.createNode({
-            id: event.id,
+            id: node.id,
             width: 50,
             height: 50,
             shape: "circle",
-            x: event.x,
-            y: event.y,
+            x: node.x,
+            y: node.y,
             attrs: {
                 body: {
                     fill: '#efefef',
@@ -2128,7 +2634,7 @@ export default class MddDataFlow extends React.PureComponent {
                     strokeWidth: 1,
                 },
                 text: {
-                    text: event.label,
+                    text: node.label,
                     fill: 'black',
                     fontWeight: "bold",
                 },
@@ -2138,8 +2644,8 @@ export default class MddDataFlow extends React.PureComponent {
             x: 0,
             y: 0,
             nodeType: "NODE_EVENT",
-            nodeName: event.nodeName,
-            portId: event.portId
+            nodeName: node.nodeName,
+            portId: node.portId
         });
         this.x6Graph.addNode(nodeEvent);
         nodeEvent.setProp({
@@ -2220,11 +2726,11 @@ export default class MddDataFlow extends React.PureComponent {
                 },
             }
         });
-        switch (event.nodeName) {
+        switch (node.nodeName) {
             case "EVENT_BEGIN":
                 nodeEvent.addPorts([
                     {
-                        id: event.portId,
+                        id: node.portId,
                         group: "groupBottom"
                     },
                 ]);
@@ -2232,7 +2738,7 @@ export default class MddDataFlow extends React.PureComponent {
             case "EVENT_END":
                 nodeEvent.addPorts([
                     {
-                        id: event.portId,
+                        id: node.portId,
                         group: "groupTop"
                     },
                 ]);
@@ -2242,23 +2748,521 @@ export default class MddDataFlow extends React.PureComponent {
         }
     }
 
-    x6DrawRelation(relation) {
-        let nodeSource = this.x6Graph.getCellById(relation.nodeSource)
-        let nodeDataSource = nodeSource.getData();
-        let nodeTarget = this.x6Graph.getCellById(relation.nodeTarget)
-        let nodeDataTarget = nodeTarget.getData();
+    x6DrawController(node) {
+        let nodeModel = this.x6Graph.createNode({
+            id: node.id,
+            width: 100,
+            height: 60,
+            shape: "polygon",
+            points: [
+                [0, 10],
+                [10, 0],
+                [20, 10],
+                [10, 20],
+            ],
+            x: node.x,
+            y: node.y,
+            attrs: {
+                body: {
+                    fill: '#AFAFAF',
+                    stroke: '#4B4A67',
+                    strokeWidth: 1,
+                },
+                text: {
+                    text: node.label,
+                    fill: 'black',
+                    fontWeight: "bold",
+                },
+            },
+        });
+        nodeModel.setData({
+            x: 0,
+            y: 0,
+            nodeType: "NODE_CONTROLLER",
+            nodeName: node.nodeName,
+            portInId: node.portId,
+            portOutTrueId: node.portOutTrueId,
+            portOutFalseId: node.portOutFalseId
+        });
+        this.x6Graph.addNode(nodeModel);
+        nodeModel.setProp({
+            ports: {
+                groups: {
+                    groupTop: {
+                        position: {
+                            name: "top",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    },
+                    groupRight: {
+                        position: {
+                            name: "right",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    },
+                    groupBottom: {
+                        position: {
+                            name: "bottom",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    },
+                    groupLeft: {
+                        position: {
+                            name: "left",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    }
+                },
+            }
+        });
+        nodeModel.addPorts([
+            {
+                id: node.portId,
+                group: "groupTop"
+            },
+            {
+                id: node.portOutTrueId,
+                group: "groupRight"
+            },
+            {
+                id: node.portOutFalseId,
+                group: "groupLeft"
+            },
+        ]);
+    }
+
+    x6DrawScript(node) {
+        let nodeModel = this.x6Graph.createNode({
+            id: node.id,
+            width: 100,
+            height: 40,
+            shape: "rect",
+            x: node.x,
+            y: node.y,
+            attrs: {
+                body: {
+                    fill: '#AFAFAF',
+                    stroke: '#4B4A67',
+                    strokeWidth: 1,
+                    rx: 20,
+                    ry: 20
+                },
+                text: {
+                    text: node.label,
+                    fill: 'black',
+                    fontWeight: "bold",
+                },
+            },
+        });
+        nodeModel.setData({
+            x: 0,
+            y: 0,
+            nodeType: "NODE_SCRIPT",
+            nodeName: node.nodeName,
+            portInId: node.portInId,
+            portOutId: node.portOutId
+        });
+        this.x6Graph.addNode(nodeModel);
+        nodeModel.setProp({
+            ports: {
+                groups: {
+                    groupTop: {
+                        position: {
+                            name: "top",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    },
+                    groupRight: {
+                        position: {
+                            name: "right",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    },
+                    groupBottom: {
+                        position: {
+                            name: "bottom",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    },
+                    groupLeft: {
+                        position: {
+                            name: "left",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    }
+                },
+            }
+        });
+        nodeModel.addPorts([
+            {
+                id: node.portInId,
+                group: "groupTop"
+            },
+            {
+                id: node.portOutId,
+                group: "groupBottom"
+            },
+        ]);
+    }
+
+    x6DrawTransformer(node) {
+        console.log(node);
+        let nodeModel = this.x6Graph.createNode({
+            id: node.id,
+            width: 100,
+            height: 40,
+            shape: "rect",
+            x: node.x,
+            y: node.y,
+            attrs: {
+                body: {
+                    fill: '#AFAFAF',
+                    stroke: '#4B4A67',
+                    strokeWidth: 1,
+                    rx: 10,
+                    ry: 10
+                },
+                text: {
+                    text: node.label,
+                    fill: 'black',
+                    fontWeight: "bold",
+                },
+            },
+        });
+        nodeModel.setData({
+            x: 0,
+            y: 0,
+            nodeType: "NODE_TRANSFORMER",
+            nodeName: node.nodeName,
+            portInId: node.portInId,
+            portOutId: node.portOutId
+        });
+        this.x6Graph.addNode(nodeModel);
+        nodeModel.setProp({
+            ports: {
+                groups: {
+                    groupTop: {
+                        position: {
+                            name: "top",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    },
+                    groupRight: {
+                        position: {
+                            name: "right",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    },
+                    groupBottom: {
+                        position: {
+                            name: "bottom",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    },
+                    groupLeft: {
+                        position: {
+                            name: "left",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    }
+                },
+            }
+        });
+        nodeModel.addPorts([
+            {
+                id: node.portInId,
+                group: "groupTop"
+            },
+            {
+                id: node.portOutId,
+                group: "groupBottom"
+            },
+        ]);
+    }
+
+    x6DrawTransformerGroup(node) {
+        let nodeModel = this.x6Graph.createNode({
+            id: node.id,
+            width: 100,
+            height: 40,
+            shape: "rect",
+            x: node.x,
+            y: node.y,
+            attrs: {
+                body: {
+                    fill: '#AFAFAF',
+                    stroke: '#4B4A67',
+                    strokeWidth: 5,
+                    rx: 10,
+                    ry: 10
+                },
+                text: {
+                    text: node.label,
+                    fill: 'black',
+                    fontWeight: "bold",
+                },
+            },
+        });
+        nodeModel.setData({
+            x: 0,
+            y: 0,
+            nodeType: "NODE_TRANSFORMER_GROUP",
+            nodeName: node.nodeName,
+            portInId: node.portInId,
+            portOutId: node.portOutId
+        });
+        this.x6Graph.addNode(nodeModel);
+        nodeModel.setProp({
+            ports: {
+                groups: {
+                    groupTop: {
+                        position: {
+                            name: "top",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    },
+                    groupRight: {
+                        position: {
+                            name: "right",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    },
+                    groupBottom: {
+                        position: {
+                            name: "bottom",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    },
+                    groupLeft: {
+                        position: {
+                            name: "left",
+                        },
+                        attrs: {
+                            circle: {
+                                fill: '#ffffff',
+                                stroke: '#31d0c6',
+                                strokeWidth: 1,
+                                r: 6,
+                                magnet: true,
+                            },
+                            text: {
+                                fill: '#6a6c8a',
+                                fontSize: 12,
+                            },
+                        },
+                    }
+                },
+            }
+        });
+        nodeModel.addPorts([
+            {
+                id: node.portInId,
+                group: "groupTop"
+            },
+            {
+                id: node.portOutId,
+                group: "groupBottom"
+            },
+        ]);
+    }
+
+    x6DrawRelation(edge) {
+        let nodeSource = this.x6Graph.getCellById(edge.sourceNodeId);
+        let nodeTarget = this.x6Graph.getCellById(edge.targetNodeId);
+
         this.x6Graph.addEdge({
+            id: edge.id,
             source: {
                 cell: nodeSource,
-                port: nodeDataSource.portId
+                port: edge.sourcePortId
             },
             target: {
                 cell: nodeTarget,
-                port: nodeDataTarget.portId
+                port: edge.targetPortId
             },
-            router: {
-                name: 'er',
-            }
+            // router: {
+            //     name: 'er',
+            // }
         });
     }
 
@@ -2271,8 +3275,6 @@ export default class MddDataFlow extends React.PureComponent {
             }
         }
 
-        console.log(this.gCurrent);
-
         if (info.selected && info.node.tag.nodeType === "NODE_MDD_MODEL") {
         }
 
@@ -2280,43 +3282,6 @@ export default class MddDataFlow extends React.PureComponent {
             let flowParams = new TadMddFlowNode();
             flowParams.flow_id = this.gCurrent.mddTreeNode.id;
             this.doGetTadMddFlowNodes(flowParams);
-
-            // this.x6Data.relations.forEach((itemRelation) => {
-            //     this.x6DrawRelation(itemRelation);
-            // })
-            // let nodeId = selectedKeys[0];
-            // let myMddFlow = new TadMddFlow();
-            // myMddFlow.flow_id = nodeId;
-            // this.restGetTadMddFlow(myMddFlow).then((result) => {
-            //     if (result.status === 200) {
-            //         if (result.data.success) {
-            //             if ((result.data.data !== null) && (result.data.data !== undefined)) {
-            //                 console.log(result.data.data);
-            //                 let content = "";
-            //                 result.data.data.forEach((itemFlow) => {
-            //                     content += itemFlow.flow_content;
-            //                 })
-            //                 if (content !== "") {
-            //                     // let buffer = new Uint8Array(content.data);
-            //                     // let strJson = new TextDecoder('utf-8').decode(buffer);
-            //                     let myJson = JSON.parse(content);
-            //                     this.x6Graph.fromJSON(myJson);
-            //                     this.x6Graph.scrollToContent();
-            //
-            //                     this.context.showMessage("成功，内部ID为：" + result.data.data.id);
-            //                 } else {
-            //                     let myJson = JSON.parse("{}");
-            //                     this.x6Graph.fromJSON(myJson);
-            //                     this.x6Graph.scrollToContent();
-            //                 }
-            //             }
-            //         } else {
-            //             this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
-            //         }
-            //     } else {
-            //         this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
-            //     }
-            // });
         }
     };
 
