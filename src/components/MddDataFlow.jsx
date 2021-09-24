@@ -106,6 +106,7 @@ export default class MddDataFlow extends React.PureComponent {
         this.onButtonX6ImportModels = this.onButtonX6ImportModels.bind(this);
         this.onButtonX6ImportTransformers = this.onButtonX6ImportTransformers.bind(this);
         this.onButtonX6Save = this.onButtonX6Save.bind(this);
+        this.onButtonX6Clear = this.onButtonX6Clear.bind(this);
         this.onButtonX6ToPng = this.onButtonX6ToPng.bind(this);
         this.onFormX6PropertiesFinish = this.onFormX6PropertiesFinish.bind(this);
         this.x6AddEntityTable = this.x6AddEntityTable.bind(this);
@@ -118,6 +119,7 @@ export default class MddDataFlow extends React.PureComponent {
         this.x6Update = this.x6Update.bind(this);
         this.x6DrawEvent = this.x6DrawEvent.bind(this);
         this.x6DrawRelation = this.x6DrawRelation.bind(this);
+        this.onButtonX6GenerateWorkflow = this.onButtonX6GenerateWorkflow.bind(this);
 
         this.onButtonAddMddDirClicked = this.onButtonAddMddDirClicked.bind(this);
         this.onButtonAddMddFlowClicked = this.onButtonAddMddFlowClicked.bind(this);
@@ -222,7 +224,6 @@ export default class MddDataFlow extends React.PureComponent {
         this.restAddTadMddFlowNode(params).then((result) => {
             if (result.status === 200) {
                 if (result.data.success) {
-                    console.log(result);
                     // this.uiUpdateTadMddTree(result.data.data, "add");
                     this.context.showMessage("成功，内部ID为：" + result.data.data.id);
                 } else {
@@ -290,7 +291,6 @@ export default class MddDataFlow extends React.PureComponent {
         this.restAddTadMddFlowEdge(params).then((result) => {
             if (result.status === 200) {
                 if (result.data.success) {
-                    console.log(result);
                     // this.uiUpdateTadMddTree(result.data.data, "add");
                     this.context.showMessage("成功，内部ID为：" + result.data.data.id);
                 } else {
@@ -806,14 +806,14 @@ export default class MddDataFlow extends React.PureComponent {
             // 恢复上一次选中 node 的样式
             // if (this.gCurrent.node !== null && this.gCurrent.node !== undefined) {
             //     this.gCurrent.node.attr('body', {
-            //         // todo 有点问题，不是所有形状都是rect
+            //         // 有点问题，不是所有形状都是rect
             //         // stroke: this.gCurrent.nodeAttrs.rect.stroke,
             //     })
             // }
             this.gCurrent.node = null;
         });
 
-        //todo <<<<< now >>>>> x6Graph on node:click
+        // >>>>> x6Graph on node:click
         this.x6Graph.on('node:click', ({node}) => {
             let nodeData = node.getData();
 
@@ -831,7 +831,6 @@ export default class MddDataFlow extends React.PureComponent {
             //     stroke: '#ffa940',
             // })
 
-            console.log(node.id, nodeData.nodeType);
             if (nodeData.nodeType === "NODE_MODEL") {
                 node.toFront({deep: true});
                 this.setState({
@@ -914,68 +913,6 @@ export default class MddDataFlow extends React.PureComponent {
             this.x6SetFormItems();
         });
 
-        this.x6Graph.on('node:mouseenter', ({node}) => {
-            let nodeData = node.getData();
-
-            this.gDynamic.node = node;
-
-            if (nodeData.nodeType === "table") {
-                node.addTools([
-                    {
-                        name: 'button-remove',
-                        args: {x: "100%", y: 0, offset: {x: -10, y: 10}},
-                    },
-                ]);
-                // node.toFront({deep: true});
-            } else if (nodeData.nodeType === "table_column") {
-                node.addTools([
-                    {
-                        name: 'button-remove',
-                        args: {x: "100%", y: "50%", offset: {x: -20, y: 0}},
-                    },
-                ]);
-            }
-
-        });
-
-        this.x6Graph.on('node:mouseleave', ({cell}) => {
-            cell.removeTools()
-        })
-
-        this.x6Graph.on('edge:click', ({edge}) => {
-
-        });
-
-        this.x6Graph.on('edge:mouseenter', ({cell}) => {
-            cell.addTools([
-                {
-                    name: 'button-remove',
-                    args: {distance: -40},
-                },
-                {
-                    name: 'source-arrowhead',
-                },
-                {
-                    name: 'target-arrowhead',
-                    args: {
-                        attrs: {
-                            fill: 'red',
-                        },
-                    },
-                },
-            ])
-
-            cell.attr('line/strokeWidth', '3');
-
-            cell.toFront({deep: true});
-
-        });
-
-        this.x6Graph.on('edge:mouseleave', ({cell}) => {
-            cell.removeTools()
-            cell.attr('line/strokeWidth', '1');
-        })
-
         // >>>>> x6 on node:dblclick
         this.x6Graph.on("node:dblclick", ({cell, e}) => {
             let nodeData = cell.getData();
@@ -1019,36 +956,51 @@ export default class MddDataFlow extends React.PureComponent {
             })
         });
 
-        this.x6Graph.on('edge:dblclick', ({edge}) => {
-            alert(
-                `边ID:${edge.id}, 起始节点: ${edge.source.cell},目标节点: ${edge.target.cell}`
-            )
+        this.x6Graph.on('node:mouseenter', ({node}) => {
+            let nodeData = node.getData();
+
+            this.gDynamic.node = node;
+
+            let args;
+            switch (nodeData.nodeType) {
+                case "NODE_MODEL":
+                    args = {x: "100%", y: "50%", offset: {x: -20, y: 0}};
+                    break
+                case "NODE_EVENT":
+                    args = {x: "100%", y: "50%", offset: {x: -20, y: 0}};
+                    break
+                case "NODE_CONTROLLER":
+                    args = {x: "100%", y: "50%", offset: {x: -20, y: 0}};
+                    break
+                case "NODE_SCRIPT":
+                    args = {x: "100%", y: "50%", offset: {x: -20, y: 0}};
+                    break
+                case "NODE_TRANSFORMER":
+                    args = {x: "100%", y: "50%", offset: {x: -20, y: 0}};
+                    break
+                case "NODE_TRANSFORMER_GROUP":
+                    args = {x: "100%", y: "50%", offset: {x: -20, y: 0}};
+                    break
+                default:
+                    break
+            }
+
+            node.addTools([
+                {
+                    name: 'button-remove',
+                    args: args,
+                },
+            ]);
         });
 
-        //todo <<<<< now >>>>> 拖放连线
-        this.x6Graph.on('edge:connected', ({isNew, edge, currentCell}) => {
-            console.log("x6 on edge:connected", edge.source, edge.target);
-            if (isNew) {
-                this.x6Data.relations.push(
-                    {
-                        id: edge.id,
-                        sourceNodeId: edge.source.cell,
-                        sourcePortId: edge.source.port,
-                        targetNodeId: edge.target.cell,
-                        targetPortId: edge.target.port,
-                        edgeLabel: "1-N",
-                        edgeType: "EDGE_RELATION",
-                        edgeName: "EDGE_RELATION_ONE2MORE"
-                    }
-                )
-            }
+        this.x6Graph.on('node:mouseleave', ({cell}) => {
+            cell.removeTools()
         })
 
         this.x6Graph.on("node:change:position", (args) => {
-
             let nodeData = args.cell.getData();
-            console.log(nodeData);
             let nodes = [];
+
             switch (nodeData.nodeType) {
                 case "NODE_MODEL":
                     nodes = this.x6Data.models;
@@ -1076,6 +1028,121 @@ export default class MddDataFlow extends React.PureComponent {
                 if (nodes[i].id === args.cell.id) {
                     nodes[i].x = args.current.x;
                     nodes[i].y = args.current.y;
+                    break
+                }
+            }
+        });
+
+        this.x6Graph.on("node:removed", ({cell, index, options}) => {
+            let nodeData = cell.getData();
+            let nodes = [];
+
+            switch (nodeData.nodeType) {
+                case "NODE_MODEL":
+                    nodes = this.x6Data.models;
+                    break
+                case "NODE_EVENT":
+                    nodes = this.x6Data.events;
+
+                    break
+                case "NODE_CONTROLLER":
+                    nodes = this.x6Data.controllers;
+
+                    break
+                case "NODE_SCRIPT":
+                    nodes = this.x6Data.scripts;
+
+                    break
+                case "NODE_TRANSFORMER":
+                    nodes = this.x6Data.transformers;
+
+                    break
+                case "NODE_TRANSFORMER_GROUP":
+                    nodes = this.x6Data.transformerGroups;
+
+                    break
+                default:
+                    break
+            }
+
+            for(let i = 0; i < nodes.length; i++) {
+                if (nodes[i].id === nodeData.id) {
+                    nodes.splice(i, 1);
+                    break
+                }
+            }
+
+            let relationsNew = [];
+            this.x6Data.relations.forEach((itemEdge) => {
+                if ((itemEdge.sourceNodeId !== nodeData.id) && (itemEdge.targetNodeId !== nodeData.id)) {
+                    relationsNew.push(itemEdge);
+                }
+            });
+            this.x6Data.relations = relationsNew;
+        });
+
+        //todo <<<<< now >>>>> 拖放连线
+        this.x6Graph.on('edge:connected', ({isNew, edge, currentCell}) => {
+            if (isNew) {
+                this.x6Data.relations.push(
+                    {
+                        id: edge.id,
+                        sourceNodeId: edge.source.cell,
+                        sourcePortId: edge.source.port,
+                        targetNodeId: edge.target.cell,
+                        targetPortId: edge.target.port,
+                        edgeLabel: "1-N",
+                        edgeType: "EDGE_RELATION",
+                        edgeName: "EDGE_RELATION_ONE2MORE"
+                    }
+                );
+            }
+        })
+
+        this.x6Graph.on('edge:click', ({edge}) => {
+
+        });
+
+        this.x6Graph.on('edge:dblclick', ({edge}) => {
+            alert(
+                `边ID:${edge.id}, 起始节点: ${edge.source.cell},目标节点: ${edge.target.cell}`
+            )
+        });
+
+        this.x6Graph.on('edge:mouseenter', ({cell}) => {
+            cell.addTools([
+                {
+                    name: 'button-remove',
+                    args: {distance: -40},
+                },
+                {
+                    name: 'source-arrowhead',
+                },
+                {
+                    name: 'target-arrowhead',
+                    args: {
+                        attrs: {
+                            fill: 'red',
+                        },
+                    },
+                },
+            ])
+
+            cell.attr('line/strokeWidth', '3');
+
+            cell.toFront({deep: true});
+
+        });
+
+        this.x6Graph.on('edge:mouseleave', ({cell}) => {
+            cell.removeTools()
+            cell.attr('line/strokeWidth', '1');
+        })
+
+        this.x6Graph.on("edge:removed", ({edge}) => {
+            for(let i = 0; i < this.x6Data.relations.length; i++) {
+                if (this.x6Data.relations[i].id === edge.id) {
+                    this.x6Data.relations.splice(i, 1);
                     break
                 }
             }
@@ -1124,7 +1191,6 @@ export default class MddDataFlow extends React.PureComponent {
                 },
             ],
             getDragNode: (node) => {
-                console.log(node.shape);
                 let nodeShadow = this.x6Graph.createNode({
                     width: node.size().width,
                     height: node.size().height,
@@ -1160,7 +1226,6 @@ export default class MddDataFlow extends React.PureComponent {
             //todo <<<<< now >>>>> 拖放节点
             getDropNode: (node) => {
                 clearInterval(this.gDynamic.timerMove);
-                console.log(this.gDynamic.nodeShadow);
 
                 let nodeData = node.getData();
                 let nodeAttrs = node.getAttrs();
@@ -1809,6 +1874,7 @@ export default class MddDataFlow extends React.PureComponent {
                 }
 
                 this.gDynamic.nodeShadow.setData({
+                    id: this.gDynamic.nodeShadow.id,
                     nodeName: nodeData.nodeName,
                     nodeType: nodeData.nodeType
                 })
@@ -1823,7 +1889,6 @@ export default class MddDataFlow extends React.PureComponent {
 
                 this.x6SetFormItems();
 
-                console.log(this.x6Data);
                 return node.clone();
             },
             validateNode: (node, options) => {
@@ -2238,7 +2303,6 @@ export default class MddDataFlow extends React.PureComponent {
 
     //todo <<<<< now >>>>> on button 保存（流程图） clicked
     onButtonX6Save(e) {
-        console.log(this.gCurrent, this.x6Data);
         let flowParams = new TadMddFlowNode();
         flowParams.flow_id = this.gCurrent.mddTreeNode.id;
         this.doDeleteTadMddFlowNodes(flowParams).then((result) => {
@@ -2417,6 +2481,179 @@ export default class MddDataFlow extends React.PureComponent {
         // });
     }
 
+    onButtonX6Clear(e) {
+        this.x6Graph.clearCells();
+
+        this.x6Data.models = [];
+        this.x6Data.events = [];
+        this.x6Data.controllers = [];
+        this.x6Data.scripts = [];
+        this.x6Data.transformers = [];
+        this.x6Data.transformerGroups = [];
+        this.x6Data.relations = [];
+    }
+
+    //todo <<<<< now >>>>> on button 生成流程脚本 clicked
+    onButtonX6GenerateWorkflow(e) {
+        let eventBegin;
+        for(let i = 0; i < this.x6Data.events.length; i++) {
+            if (this.x6Data.events[i].nodeName === "EVENT_BEGIN") {
+                eventBegin = this.x6Data.events[i];
+                break
+            }
+        }
+
+        for(let i = 0; i < this.x6Data.events.length; i++) {
+            if (this.x6Data.events[i].nodeName === "EVENT_BEGIN") {
+                eventBegin = this.x6Data.events[i];
+                break
+            }
+        }
+
+        let workflow = {value: "", ifelse : 0, ifelseChanged: 0};
+        this.findNext(this.x6Data, eventBegin, workflow);
+        console.log(workflow.value);
+    }
+
+    getNode(nodes, nodeId) {
+        let myResult = null;
+        let isFound = false;
+
+        for(let i = 0; i < nodes.events.length; i++) {
+            if (nodes.events[i].id === nodeId) {
+                myResult = nodes.events[i];
+                isFound = true;
+                break
+            }
+        }
+
+        if (!isFound) {
+            for(let i = 0; i < nodes.models.length; i++) {
+                if (nodes.models[i].id === nodeId) {
+                    myResult = nodes.models[i];
+                    isFound = true;
+                    break
+                }
+            }
+        }
+
+        if (!isFound) {
+            for(let i = 0; i < nodes.controllers.length; i++) {
+                if (nodes.controllers[i].id === nodeId) {
+                    myResult = nodes.controllers[i];
+                    isFound = true;
+                    break
+                }
+            }
+        }
+
+        if (!isFound) {
+            for(let i = 0; i < nodes.scripts.length; i++) {
+                if (nodes.scripts[i].id === nodeId) {
+                    myResult = nodes.scripts[i];
+                    isFound = true;
+                    break
+                }
+            }
+        }
+
+        if (!isFound) {
+            for(let i = 0; i < nodes.transformers.length; i++) {
+                if (nodes.transformers[i].id === nodeId) {
+                    myResult = nodes.transformers[i];
+                    isFound = true;
+                    break
+                }
+            }
+        }
+
+        if (!isFound) {
+            for(let i = 0; i < nodes.transformerGroups.length; i++) {
+                if (nodes.transformerGroups[i].id === nodeId) {
+                    myResult = nodes.transformerGroups[i];
+                    isFound = true;
+                    break
+                }
+            }
+        }
+
+        return myResult;
+    }
+
+    findNext(nodes, node, workflow) {
+        console.log(node);
+        let strTab = "\t";
+        for(let i = 0; i< workflow.ifelse; i++) {
+            strTab +="\t";
+        }
+        switch (node.nodeType) {
+            case "NODE_EVENT":
+                if (node.nodeName === "EVENT_BEGIN") {
+                    workflow.value += "function begin() {\n";
+                }
+                break
+            case "NODE_MODEL":
+                workflow.value += strTab + "private _o_var1, _o_var2;\n\n";
+                break
+            case "NODE_SCRIPT":
+                workflow.value += strTab + "_o_var1 = 100;\n";
+                workflow.value += strTab + "_o_var2 = 100;\n\n";
+                break
+            case "NODE_TRANSFORMER":
+                workflow.value += strTab + "getResource();\n\n";
+                break
+            case "NODE_TRANSFORMER_GROUP":
+                workflow.value += strTab + "getResourceProvince();\n";
+                workflow.value += strTab + "getResourceCity();\n";
+                workflow.value += strTab + "getResourceRegion();\n\n";
+                break
+            case "NODE_CONTROLLER":
+                workflow.value += strTab + "if (_o_var1 > _o_var2) {\n";
+                workflow.ifelse++;
+                break
+            default:
+                break
+        }
+
+        let isFound = false;
+
+        for(let i = 0; i < nodes.relations.length; i++) {
+            if (nodes.relations[i].sourceNodeId === node.id) {
+                isFound = true;
+
+                let nodeNextId = nodes.relations[i].targetNodeId;
+                let nodeNext = this.getNode(nodes, nodeNextId);
+                if (nodeNext.nodeName === "EVENT_END") {
+                    if (workflow.ifelse > 0) {
+                        let strTab2 = "\t";
+                        for(let i = 0; i< workflow.ifelse -1; i++) {
+                            strTab2 +="\t";
+                        }
+                        workflow.value += strTab2 + "} else {\n";
+                        workflow.ifelse--;
+
+                        workflow.ifelseChanged++;
+                    } else {
+                        let strEnd = "}\n";
+                        for(let i = 0; i< workflow.ifelseChanged; i++) {
+                            strEnd +="}\n";
+                        }
+                        workflow.value += strEnd + "\n";
+                    }
+                    console.log("is over = end")
+                    // workflow.value += "is over = end"
+                } else {
+                    this.findNext(nodes, nodeNext, workflow);
+                }
+            }
+        }
+
+        if (!isFound) {
+            console.log("is over = error");
+            // workflow.value += "is over = error"
+        }
+    }
+    
     onSelectX6TableColumnDataTypeChanged(v) {
         // this.gDynamic.x6TableColumnDataType = v;
         let nodeType = v;
@@ -2521,6 +2758,7 @@ export default class MddDataFlow extends React.PureComponent {
             },
         });
         nodeModel.setData({
+            id: node.id,
             x: 0,
             y: 0,
             nodeType: node.nodeType,
@@ -2641,6 +2879,7 @@ export default class MddDataFlow extends React.PureComponent {
             },
         });
         nodeEvent.setData({
+            id: node.id,
             x: 0,
             y: 0,
             nodeType: "NODE_EVENT",
@@ -2776,6 +3015,7 @@ export default class MddDataFlow extends React.PureComponent {
             },
         });
         nodeModel.setData({
+            id: node.id,
             x: 0,
             y: 0,
             nodeType: "NODE_CONTROLLER",
@@ -2903,6 +3143,7 @@ export default class MddDataFlow extends React.PureComponent {
             },
         });
         nodeModel.setData({
+            id: node.id,
             x: 0,
             y: 0,
             nodeType: "NODE_SCRIPT",
@@ -3002,7 +3243,6 @@ export default class MddDataFlow extends React.PureComponent {
     }
 
     x6DrawTransformer(node) {
-        console.log(node);
         let nodeModel = this.x6Graph.createNode({
             id: node.id,
             width: 100,
@@ -3026,6 +3266,7 @@ export default class MddDataFlow extends React.PureComponent {
             },
         });
         nodeModel.setData({
+            id: node.id,
             x: 0,
             y: 0,
             nodeType: "NODE_TRANSFORMER",
@@ -3148,6 +3389,7 @@ export default class MddDataFlow extends React.PureComponent {
             },
         });
         nodeModel.setData({
+            id: node.id,
             x: 0,
             y: 0,
             nodeType: "NODE_TRANSFORMER_GROUP",
@@ -3595,7 +3837,9 @@ export default class MddDataFlow extends React.PureComponent {
                                                 icon={<CloudUploadOutlined/>}>导入转化器</Button>
                                     </Upload>
                                     <Button size={"small"} type={"primary"} onClick={this.onButtonX6Save}>保存</Button>
+                                    <Button size={"small"} type={"primary"} onClick={this.onButtonX6Clear}>全部删除</Button>
                                     <Button size={"small"} type={"primary"} onClick={this.onButtonX6ToPng}>导出</Button>
+                                    <Button size={"small"} type={"primary"} onClick={this.onButtonX6GenerateWorkflow}>生成流程脚本</Button>
                                 </div>
                             </div>
                             <div ref={this.gRef.x6GraphContainerBox} className="box-canvas">

@@ -5,13 +5,14 @@ import K3 from "../utils/k3";
 import axios from "axios";
 import lodash from "lodash";
 import moment from 'moment';
-import {Button, Form, Input, Select, Tooltip, Tree} from 'antd'
+import {Button, Form, Input, Select, Table, Tooltip, Tree} from 'antd'
 import {
-    CaretDownOutlined,
+    CaretDownOutlined, PlusSquareOutlined,
     QuestionCircleOutlined,
 } from '@ant-design/icons'
 import G6 from '@antv/g6';
 import TadMddTree from "../entity/TadMddTree";
+import TadDbConnection from "../entity/TadDbConnection";
 
 export default class OperationKafka extends React.PureComponent {
     static contextType = GCtx;
@@ -32,6 +33,7 @@ export default class OperationKafka extends React.PureComponent {
         g6GraphContainerBox: React.createRef(),
         g6GraphContainer: React.createRef(),
         formG6Properties: React.createRef(),
+        boxTableAlarms: React.createRef(),
     };
     gDynamic = {};
 
@@ -124,7 +126,7 @@ export default class OperationKafka extends React.PureComponent {
     g6DataServices = [
         {
             name: "service_alarms_transfer",
-            label: "告警接入服务",
+            label: "告警接入服务\nJfmHandler",
             type: "NODE_SERVICE",
             children: [],
             position: {
@@ -138,7 +140,7 @@ export default class OperationKafka extends React.PureComponent {
         },
         {
             name: "service_alarms_filter",
-            label: "告警过滤服务",
+            label: "告警过滤服务\nMatcher",
             type: "NODE_SERVICE",
             children: [],
             position: {
@@ -180,7 +182,7 @@ export default class OperationKafka extends React.PureComponent {
         },
         {
             name: "service_alarms_cache",
-            label: "告警缓存服务",
+            label: "告警缓存服务\nDataworker",
             type: "NODE_SERVICE",
             children: [],
             position: {
@@ -194,7 +196,7 @@ export default class OperationKafka extends React.PureComponent {
         },
         {
             name: "service_alarms_view",
-            label: "告警视图服务",
+            label: "告警视图服务\nViewServer",
             type: "NODE_SERVICE",
             children: [],
             position: {
@@ -524,6 +526,10 @@ export default class OperationKafka extends React.PureComponent {
 
         this.state = {
             treeDataMddTree: [],
+            dataSourceAlarms: [],
+            columnsAlarms: [],
+            tablePropertiesScrollY: 0,
+            pageSizeRecords: 0,
             isMddTreeEditing: false,
         }
 
@@ -550,6 +556,9 @@ export default class OperationKafka extends React.PureComponent {
         this.restAddTadMddFlow = this.restAddTadMddFlow.bind(this);
         this.restUpdateTadMddFlow = this.restUpdateTadMddFlow.bind(this);
         this.restDeleteTadMddFlow = this.restDeleteTadMddFlow.bind(this);
+
+        this.restGetAlarmsStatus = this.restGetAlarmsStatus.bind(this);
+        this.doGetAlarmsStatus = this.doGetAlarmsStatus.bind(this);
 
         this.doGetTadMddFlow = this.doGetTadMddFlow.bind(this);
         this.doAddTadMddFlow = this.doAddTadMddFlow.bind(this);
@@ -583,6 +592,7 @@ export default class OperationKafka extends React.PureComponent {
 
         this.onButtonAddMddDirClicked = this.onButtonAddMddDirClicked.bind(this);
         this.onButtonAddMddFlowClicked = this.onButtonAddMddFlowClicked.bind(this);
+        this.onButtonGetAlarmsStatusClicked = this.onButtonGetAlarmsStatusClicked.bind(this);
 
         this.onSelectG6TableColumnDataTypeChanged = this.onSelectG6TableColumnDataTypeChanged.bind(this);
         this.onTreeMddTreeSelected = this.onTreeMddTreeSelected.bind(this);
@@ -609,6 +619,10 @@ export default class OperationKafka extends React.PureComponent {
 
         this.drawWorkflow();
         this.g6ChangeData();
+
+        this.setState({
+            tablePropertiesScrollY: this.gRef.boxTableAlarms.current.scrollHeight - 40,
+        })
     }
 
     //todo >>>>> do Get All
@@ -1190,6 +1204,137 @@ export default class OperationKafka extends React.PureComponent {
         });
     }
 
+    restGetAlarmsStatus(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/alarms/get_alarms_status_1407",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetAlarmsStatus(params) {
+        this.restGetAlarmsStatus(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    // title: itemColumn.column_name,
+                    //     dataIndex: itemColumn.column_name,
+                    //     key: itemColumn.column_name,
+
+                    let columnsAlarms = [
+                        {
+                            key: "fp",
+                            dataIndex: "fp",
+                            title: "告警指纹"
+                        },
+                        {
+                            key: "event_time_matcher",
+                            dataIndex: "event_time_matcher",
+                            title: "Matcher时间",
+                            width: 150
+                        },
+                        {
+                            key: "topic_name_matcher",
+                            dataIndex: "topic_name_matcher",
+                            title: "TRANS.Q",
+                            width: 150
+                        },
+                        // {
+                        //     key: "service_name_matcher",
+                        //     dataIndex: "service_name_matcher",
+                        //     title: "Matcher"
+                        // },
+                        {
+                            key: "event_time_dataworker",
+                            dataIndex: "event_time_dataworker",
+                            title: "Dataworker时间",
+                            width: 150
+                        },
+                        {
+                            key: "topic_name_dataworker",
+                            dataIndex: "topic_name_dataworker",
+                            title: "MAT_AGENT.Q",
+                            width: 150
+                        },
+                        // {
+                        //     key: "service_name_dataworker",
+                        //     dataIndex: "service_name_dataworker",
+                        //     title: "Dataworker"
+                        // },
+                        {
+                            key: "event_time_viewserver",
+                            dataIndex: "event_time_viewserver",
+                            title: "View Server时间",
+                            width: 150
+                        },
+                        {
+                            key: "topic_name_viewserver",
+                            dataIndex: "topic_name_viewserver",
+                            title: "CW_1.Q",
+                            width: 150
+                        },
+                        // {
+                        //     key: "service_name_viewserver",
+                        //     dataIndex: "service_name_viewserver",
+                        //     title: "View Server"
+                        // },
+                    ];
+                    let records = result.data.data.data;
+                    let dataSourceAlarms = [];
+                    let n = 0;
+
+                    records[0].forEach((itemRecord) => {
+                        itemRecord.flow.forEach((itemFlow) => {
+                            n++;
+                            let alarm = {
+                                fp: itemRecord.fp,
+                                event_time_matcher: "",
+                                topic_name_matcher: "丢",
+                                event_time_dataworker: "",
+                                topic_name_dataworker: "丢",
+                                event_time_viewserver: "",
+                                topic_name_viewserver: "丢",
+                            }
+                            if (itemFlow.service_name.toUpperCase() === "MATCHER") {
+                                alarm.event_time_matcher = itemFlow.event_time;
+                                alarm.topic_name_matcher = "YES";
+                            } else if (itemFlow.service_name.toUpperCase() === "DATAWORKER") {
+                                alarm.event_time_dataworker = itemFlow.event_time;
+                                alarm.topic_name_dataworker = "YES";
+                            } else if (itemFlow.service_name.toUpperCase() === "VIEW") {
+                                alarm.event_time_viewserver = itemFlow.event_time;
+                                alarm.topic_name_viewserver = "YES";
+                            }
+
+                            if (alarm.topic_name_viewserver !== "YES") {
+                                if (alarm.topic_name_dataworker === "YES") {
+                                    alarm.topic_name_matcher = "yes";
+                                    alarm.event_time_matcher = alarm.event_time_dataworker;
+                                }
+                                dataSourceAlarms.push(alarm);
+                            }
+
+                            if ((alarm.topic_name_matcher === "丢")
+                                && (alarm.topic_name_dataworker === "丢")
+                                && (alarm.topic_name_viewserver === "丢")) {
+                                console.log(itemRecord);
+                            }
+                        })
+                    })
+                    this.setState({
+                        columnsAlarms: columnsAlarms,
+                        dataSourceAlarms: dataSourceAlarms,
+                        pageSizeRecords: n
+                    })
+
+                    console.log(result.data.data);
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
     //todo <<<<< now >>>>> G6 初始化
     g6Init() {
         let wg = this.gRef.g6GraphContainer.current.scrollWidth;
@@ -1297,7 +1442,7 @@ export default class OperationKafka extends React.PureComponent {
         broker.size.w = 120;
         broker.size.h = container.size.h - this.g6Config.s * 2;
         this.gMap.nodes.set(broker.name, broker);
-        let xb = container.position.x - container.size.w /2 + broker.size.w/2 + this.g6Config.s + (broker.size.w + this.g6Config.s) * index,
+        let xb = container.position.x - container.size.w / 2 + broker.size.w / 2 + this.g6Config.s + (broker.size.w + this.g6Config.s) * index,
             yb = container.position.y;
         let modelBroker = {
             id: broker.name,
@@ -1578,6 +1723,18 @@ export default class OperationKafka extends React.PureComponent {
         this.doAddTadMddTree(erTree);
     }
 
+    onButtonGetAlarmsStatusClicked(e) {
+        let dbConn = new TadDbConnection();
+        dbConn.db_type = "mysql";
+        dbConn.db_host = "10.12.2.104";
+        dbConn.db_port = "3306";
+        dbConn.db_sid = "nmosdb";
+        dbConn.db_username = "root";
+        dbConn.db_password = "root123";
+
+        this.doGetAlarmsStatus(dbConn);
+    }
+
     onTreeMddTreeSelected(selectedKeys, info) {
         if (info.selected) {
             this.gCurrent.mddTreeNode = {
@@ -1794,18 +1951,35 @@ export default class OperationKafka extends React.PureComponent {
                                 </div>
                             </div>
                         </div>
-                        <div className={"BoxAlarms"}>
-                            <div className="BoxToolbarErDiagram">
-                                <div className="box-properties-title-bar">
-                                    <div className="box-properties-title">活动告警列表</div>
-                                </div>
-                                <div className={"BoxSearch"}>
+                        <div className={"box-alarms"}>
+                            <div className="box-alarms-titlebar">
+                                <div className="box-alarms-title">活动告警列表</div>
+                            </div>
+                            <div className={"box-alarms-toolbar"}>
+                                <div className={"box-search"}>
                                     <Input.Search placeholder="Search" size="small" enterButton
                                                   onChange={this.onInputSearchSchemasChanged}
                                                   onSearch={this.onInputSearchSchemasSearched}/>
                                 </div>
+                                <Button onClick={this.onButtonGetAlarmsStatusClicked} icon={<PlusSquareOutlined/>}
+                                        size={"small"} type={"primary"}>刷新</Button>
                             </div>
-                            <div className={"box-properties-content"}>
+                            <div ref={this.gRef.boxTableAlarms} className={"box-alarms-content"}>
+                                <Table
+                                    dataSource={this.state.dataSourceAlarms}
+                                    columns={this.state.columnsAlarms}
+                                    scroll={{y: this.state.tablePropertiesScrollY}}
+                                    bordered={true}
+                                    size={"small"}
+                                    pagination={{
+                                        pageSize: this.state.pageSizeRecords,
+                                        position: ["none", "none"]
+                                    }}
+                                    // rowSelection={{
+                                    //     type: "radio",
+                                    //     ...this.onRowRecordSelected
+                                    // }}
+                                />
                             </div>
                         </div>
                     </div>

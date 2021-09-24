@@ -256,48 +256,52 @@ $debugBorderColor2: green;
                 }
             }
 
-            .BoxAlarms {
+            .box-alarms {
                 display: grid;
                 border: 1px solid lighten($colorBoxBackground, 30%);
-                grid-template-rows: auto 1fr;
+                grid-template-rows: auto auto 1fr;
                 background: lighten($colorBoxBackground, 15%);
-                grid-gap: 5px;
 
-                .BoxToolbarErDiagram {
-                    border: $debugBorderWidth solid red;
-                    background: rgba(255, 255, 255, 1);
-                    margin: 0 0 3px 0;
+                .box-alarms-titlebar {
+                    border: 1px solid darkgray;
+                    background: lightgray;
+                    margin: 3px;
                     display: grid;
-                    grid-template-rows: auto auto;
+                    justify-content: center;
+                    align-content: center;
 
-                    .box-properties-title-bar {
-                        border: 1px solid darkgray;
-                        background: lightgray;
-                        margin: 3px;
+                    .box-alarms-title {
                         display: grid;
+                        color: black;
                         justify-content: center;
-                        align-content: center;
-
-
-                        .box-properties-title {
-                            display: grid;
-                            color: black;
-                            justify-content: center;
-                        }
-
-                        .box-properties-buttons {
-                            display: grid;
-                            grid-template-columns: auto auto;
-                            grid-gap: 3px;
-                        }
                     }
                 }
 
-                .box-properties-content {
+                .box-alarms-toolbar {
                     display: grid;
-                    margin: 3px;
+                    grid-template-columns: 1fr auto auto;
+                    margin: 0 3px 3px 3px;
+
+                    .box-search {
+
+                    }
+
+                    Button {
+                        margin: 0 0 0 3px;
+
+                        &:first-child {
+
+                        }
+                    }
+
+                }
+
+                .box-alarms-content {
+                    display: grid;
+                    margin: 0 3px 10px 3px;
                     border: 1px solid darkgray;
                 }
+
             }
         }
     }
