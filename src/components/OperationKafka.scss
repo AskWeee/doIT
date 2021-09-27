@@ -45,7 +45,7 @@ $debugBorderColor2: green;
 
         .BoxContent {
             display: grid;
-            grid-template-rows: 1fr 200px;
+            grid-template-rows: 1fr 5px 300px;
 
             .BoxKafkas {
                 border: $debugBorderWidth solid red;
@@ -254,6 +254,10 @@ $debugBorderColor2: green;
                         }
                     }
                 }
+            }
+
+            .K3Splitter {
+                background: #0f4f8f;
             }
 
             .box-alarms {

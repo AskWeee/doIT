@@ -34,8 +34,12 @@ export default class OperationKafka extends React.PureComponent {
         g6GraphContainer: React.createRef(),
         formG6Properties: React.createRef(),
         boxTableAlarms: React.createRef(),
+        splitter: React.createRef(),
+        splitterUp: React.createRef(),
     };
-    gDynamic = {};
+    gDynamic = {
+        isMouseDown: false
+    };
 
     g6Graph = null;
     g6Data = {};
@@ -44,8 +48,18 @@ export default class OperationKafka extends React.PureComponent {
         sH: 80,
         sV: 100,
         workflow: [
-            {name: "app_alarms_center", type: "NODE_APPLICATION", parentNode: "ROOT", direction: "BEGIN"},
-            {name: "queue_alarms_collector", type: "NODE_QUEUE", parentNode: "app_alarms_center", direction: "RIGHT"},
+            {
+                name: "app_alarms_center",
+                type: "NODE_APPLICATION",
+                parentNode: "ROOT",
+                direction: "BEGIN"
+            },
+            {
+                name: "queue_alarms_collector",
+                type: "NODE_QUEUE",
+                parentNode: "app_alarms_center",
+                direction: "RIGHT"
+            },
             {
                 name: "service_alarms_transfer",
                 type: "NODE_SERVICE",
@@ -58,12 +72,37 @@ export default class OperationKafka extends React.PureComponent {
                 parentNode: "service_alarms_transfer",
                 direction: "RIGHT"
             },
-            {name: "service_alarms_filter", type: "NODE_SERVICE", parentNode: "queue_alarms_transfer", direction: "UP"},
-            {name: "service_alarms_eoms", type: "NODE_SERVICE", parentNode: "service_alarms_filter", direction: "UP"},
+            {
+                name: "service_alarms_filter",
+                type: "NODE_SERVICE",
+                parentNode: "queue_alarms_transfer",
+                direction: "UP"
+            },
+            {
+                name: "service_alarms_eoms",
+                type: "NODE_SERVICE",
+                parentNode: "service_alarms_filter",
+                direction: "UP"
+            },
             // {name: "service_alarms_filter2", type: "NODE_SERVICE", parentNode: "queue_alarms_transfer", direction: "DOWN"},
-            {name: "app_eoms", type: "NODE_APPLICATION", parentNode: "service_alarms_eoms", direction: "UP"},
-            {name: "queue_alarms_matcher", type: "NODE_QUEUE", parentNode: "service_alarms_filter", direction: "LEFT"},
-            {name: "service_alarms_cache", type: "NODE_SERVICE", parentNode: "queue_alarms_matcher", direction: "LEFT"},
+            {
+                name: "app_eoms",
+                type: "NODE_APPLICATION",
+                parentNode: "service_alarms_eoms",
+                direction: "UP"
+            },
+            {
+                name: "queue_alarms_matcher",
+                type: "NODE_QUEUE",
+                parentNode: "service_alarms_filter",
+                direction: "LEFT"
+            },
+            {
+                name: "service_alarms_cache",
+                type: "NODE_SERVICE",
+                parentNode: "queue_alarms_matcher",
+                direction: "LEFT"
+            },
             {
                 name: "queue_alarms_client_worker",
                 type: "NODE_QUEUE",
@@ -76,7 +115,12 @@ export default class OperationKafka extends React.PureComponent {
                 parentNode: "queue_alarms_client_worker",
                 direction: "UP"
             },
-            {name: "app_alarms_monitor", type: "NODE_APPLICATION", parentNode: "service_alarms_view", direction: "UP"},
+            {
+                name: "app_alarms_monitor",
+                type: "NODE_APPLICATION",
+                parentNode: "service_alarms_view",
+                direction: "UP"
+            },
         ]
     }
     g6DataApplications = [
@@ -531,6 +575,8 @@ export default class OperationKafka extends React.PureComponent {
             tablePropertiesScrollY: 0,
             pageSizeRecords: 0,
             isMddTreeEditing: false,
+            selectedKeysObjects: [],
+            height: 300,
         }
 
         //todo >>>>> bind(this)
@@ -559,6 +605,8 @@ export default class OperationKafka extends React.PureComponent {
 
         this.restGetAlarmsStatus = this.restGetAlarmsStatus.bind(this);
         this.doGetAlarmsStatus = this.doGetAlarmsStatus.bind(this);
+        this.restGetAlarmsQueue = this.restGetAlarmsQueue.bind(this);
+        this.doGetAlarmsQueue = this.doGetAlarmsQueue.bind(this);
 
         this.doGetTadMddFlow = this.doGetTadMddFlow.bind(this);
         this.doAddTadMddFlow = this.doAddTadMddFlow.bind(this);
@@ -583,6 +631,7 @@ export default class OperationKafka extends React.PureComponent {
         this.addProducer = this.addProducer.bind(this);
         this.addConsumer = this.addConsumer.bind(this);
         this.addPartition = this.addPartition.bind(this);
+        this.addPartition2 = this.addPartition2.bind(this);
         this.updatePartition = this.updatePartition.bind(this);
 
         this.onG6ButtonAddBroker = this.onG6ButtonAddBroker.bind(this);
@@ -596,6 +645,10 @@ export default class OperationKafka extends React.PureComponent {
 
         this.onSelectG6TableColumnDataTypeChanged = this.onSelectG6TableColumnDataTypeChanged.bind(this);
         this.onTreeMddTreeSelected = this.onTreeMddTreeSelected.bind(this);
+
+        this.onMouseDownSplitter = this.onMouseDownSplitter.bind(this);
+        this.onMouseMoveSplitter = this.onMouseMoveSplitter.bind(this);
+        this.onMouseUpSplitter = this.onMouseUpSplitter.bind(this);
     }
 
     componentDidMount() {
@@ -604,7 +657,35 @@ export default class OperationKafka extends React.PureComponent {
     }
 
     doPrepare() {
+        let treeDataMddTree = [];
 
+        this.g6Config.nodes = new Map();
+        this.g6DataApplications.forEach((itemApplication) => {
+            this.g6Config.nodes.set(itemApplication.name, itemApplication);
+        });
+        this.g6DataServices.forEach((itemService) => {
+            this.g6Config.nodes.set(itemService.name, itemService);
+        });
+        this.g6DataQueues.forEach((itemQueue) => {
+            this.g6Config.nodes.set(itemQueue.name, itemQueue);
+        });
+
+        this.g6Config.workflow.forEach((itemNode) => {
+            let uiNode = {
+                key: itemNode.name,
+                title: this.g6Config.nodes.get(itemNode.name).label.replace(/\n/g, " - "),
+                children: [],
+                tag: {
+                    nodeType: itemNode.type,
+                    nodeParent: itemNode.parentNode
+                }
+            }
+            treeDataMddTree.push(uiNode);
+        });
+
+        this.setState({
+            treeDataMddTree: treeDataMddTree
+        })
     }
 
     async doInit() {
@@ -627,47 +708,40 @@ export default class OperationKafka extends React.PureComponent {
 
     //todo >>>>> do Get All
     doGetAll() {
+        let dbConn = new TadDbConnection();
+        dbConn.db_type = "mysql";
+        dbConn.db_host = "10.12.2.104";
+        dbConn.db_port = "3306";
+        dbConn.db_sid = "nmosdb";
+        dbConn.db_username = "root";
+        dbConn.db_password = "root123";
+
         axios.all([
-            this.restGetTadMddTrees(),
+            this.restGetAlarmsStatus(dbConn)
         ]).then(axios.spread((
-            mddTrees,
+            resultAlarms,
         ) => {
-            let dsMddTrees = mddTrees.data.data;
-            //let mapErTables = new Map();
+            let dsAlarms = resultAlarms.data.data.data[0];
 
-            let treeDataMddTree = [];
-            for (let i = 0; i < dsMddTrees.length; i++) {
-                if (dsMddTrees[i].node_parent_id === -1) {
-                    let nodeRoot = {
-                        key: dsMddTrees[i].uuid,
-                        title: dsMddTrees[i].node_zhname,
-                        children: [],
-                        tag: {
-                            nodeType: "NODE_DIR"
-                        }
-                    }
-                    let nodeTrees = this.commTrees2antdTree(dsMddTrees, dsMddTrees[i].uuid, nodeRoot);
-                    treeDataMddTree.push(nodeTrees);
-                }
-            }
-            this.setState({
-                treeDataMddTree: treeDataMddTree
-            })
+            dsAlarms.forEach((itemAlarm) => {
+                itemAlarm.flow.forEach((itemFlow) => {
 
+                });
+            });
         })).then(() => {
             this.doInit().then(async (r) => {
                 this.context.showMessage("KAFKA监控模块初始化完成");
 
-                await K3.sleep(1000);
-                this.doGetRecords();
-                this.g6ChangeData();
+                // await K3.sleep(1000);
+                // this.doGetRecords();
+                // this.g6ChangeData();
                 //
                 // await K3.sleep(1000);
                 // this.doGetRecords2();
                 // this.g6ChangeData();
                 //
-                await K3.sleep(1000);
-                this.updatePartition("topic_a-part_0");
+                // await K3.sleep(1000);
+                // this.updatePartition("topic_a-part_0");
             });
         });
     }
@@ -1314,7 +1388,6 @@ export default class OperationKafka extends React.PureComponent {
                             if ((alarm.topic_name_matcher === "丢")
                                 && (alarm.topic_name_dataworker === "丢")
                                 && (alarm.topic_name_viewserver === "丢")) {
-                                console.log(itemRecord);
                             }
                         })
                     })
@@ -1324,7 +1397,97 @@ export default class OperationKafka extends React.PureComponent {
                         pageSizeRecords: n
                     })
 
-                    console.log(result.data.data);
+                    this.context.showMessage("成功，内部ID为：" + result.data.data.id);
+                } else {
+                    this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
+                }
+            } else {
+                this.context.showMessage("调用服务接口出现问题，详情：" + result.statusText);
+            }
+        });
+    }
+
+    restGetAlarmsQueue(params) {
+        return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/alarms/get_alarms_queue_monitor",
+            params,
+            {headers: {'Content-Type': 'application/json'}})
+    }
+
+    doGetAlarmsQueue(params) {
+        this.restGetAlarmsQueue(params).then((result) => {
+            if (result.status === 200) {
+                if (result.data.success) {
+                    let records = result.data.data.data[0];
+                    let treeDataObjects = lodash.cloneDeep(this.state.treeDataMddTree);
+                    let mapQueues = new Map();
+                    records.forEach((record) => {
+                          let topic = record.topic.toUpperCase();
+                          let topicNodeName = "";
+                          if (topic === "TRANS.Q") {
+                              topicNodeName = "queue_alarms_transfer";
+                          } else if (topic === "MAT_AGENT.Q") {
+                              topicNodeName = "queue_alarms_matcher";
+                          } else if (topic === "CLIENTWORKER_1.Q") {
+                              topicNodeName = "queue_alarms_client_worker";
+                          }
+
+                          let partition = record.partition;
+
+                          if (!mapQueues.has(topic)) {
+                            let mapPartitions = new Map();
+                            mapPartitions.set(partition, {
+                                log_end_offset: record.log_end_offset,
+                                current_offset: record.current_offset,
+                                topicNodeName: topicNodeName
+                            });
+                            mapQueues.set(topic, mapPartitions);
+                          } else {
+                            let mapPartitions = mapQueues.get(topic);
+                            mapPartitions.set(partition, {
+                                log_end_offset: record.log_end_offset,
+                                current_offset: record.current_offset,
+                                topicNodeName: topicNodeName
+                            });
+                          }
+
+                          let myPartition = {
+                              name: topicNodeName + "_" + partition,
+                              label: partition,
+                              broker: "broker_1",
+                              topic: topic,
+                              topicNodeName: topicNodeName,
+                              type: "leader",
+                              position: {
+                                  x: 0,
+                                  y: 0
+                              },
+                              size: {
+                                  w: 180,
+                                  h: 30
+                              }
+
+                          };
+
+                          let uiPartiton = {
+                              key: myPartition.name,
+                              title: myPartition.name,
+                              children: [],
+                              tag: {
+                                  nodeType: "NODE_PARTITION",
+                              }
+                          }
+
+                        treeDataObjects.forEach((object) => {
+                            if (object.key === myPartition.topicNodeName) {
+                                object.children.push(uiPartiton);
+                            }
+                        })
+                          this.addPartition2(myPartition, "DIRECTION_VERTICAL");
+                          this.g6Config.nodes.set(myPartition.name, myPartition);
+                        });
+                    this.setState({treeDataMddTree: treeDataObjects});
+                    this.g6ChangeData();
+
                     this.context.showMessage("成功，内部ID为：" + result.data.data.id);
                 } else {
                     this.context.showMessage("调用服务接口出现问题，详情：" + result.data.message);
@@ -1437,7 +1600,7 @@ export default class OperationKafka extends React.PureComponent {
     addBroker(broker) {
         let container = this.gMap.nodes.get("queue_alarms_collector");
         let index = container.children.length;
-        console.log(index);
+
         container.children.push(broker.name);
         broker.size.w = 120;
         broker.size.h = container.size.h - this.g6Config.s * 2;
@@ -1605,6 +1768,126 @@ export default class OperationKafka extends React.PureComponent {
         this.gMap.brokers.get(partition.broker).children.push(partition.name);
     }
 
+    addPartition2(partition, direction) {
+        if (direction === undefined) {
+            direction = "DIRECTION_HORIZONTAL";
+        } else {
+            if (direction !== "DIRECTION_HORIZONTAL" && direction !== "DIRECTION_VERTICAL") {
+                direction = "DIRECTION_VERTICAL";
+            }
+        }
+        let container = this.gMap.nodes.get(partition.topicNodeName);
+
+        partition.size.w = (container.size.h - this.g6Config.s * 2 - 30);
+        partition.size.h = 30;
+        let index = container.children.length;
+        let w, h, xb, yb, x1, y1, x2, y2, x3, y3;
+
+        if (direction === "DIRECTION_HORIZONTAL") {
+            w = partition.size.w;
+            h = partition.size.h;
+            xb = container.position.x + this.g6Config.s;
+            yb = container.position.y + this.g6Config.s;
+            x1 = xb;
+            y1 = yb + (h + this.g6Config.s) * index + h / 2;
+        } else if (direction === "DIRECTION_VERTICAL") {
+            w = partition.size.h;
+            h = partition.size.w;
+            xb = container.position.x - container.size.w/2 + w * index + this.g6Config.s * (index + 1);
+            yb = container.position.y - container.size.h/2 + container.size.h - h - this.g6Config.s;
+            x1 = xb + w / 2;
+            y1 = yb + 10 / 2;
+            x2 = x1;
+            y2 = yb + h / 2;
+            x3 = x1;
+            y3 = yb + (h - 10) + 10 / 2;
+        }
+        let modelPartitionTop = {
+            id: partition.name + "_TOP",
+            type: "rect",
+            size: [w, 10],
+            x: x1,
+            y: y1,
+            anchorPoints: [
+                [0.5, 0.5],
+                [1, 1],
+            ],
+            style: {
+                fill: "transparent",
+                stroke: 'transparent',
+            },
+            tag: {
+                name: partition.name + "_TOP",
+                type: "NODE_PARTITION_TOP",
+            }
+        }
+        let modelPartitionBody = {
+            id: partition.name,
+            type: "rect",
+            size: [w, h],
+            x: x2,
+            y: y2,
+            style: {
+                fill: "lightblue",
+                radius: [5, 5, 0, 0],
+            },
+            tag: {
+                name: partition.name,
+                type: "NODE_PARTITION",
+                isRotated: false,
+            }
+        }
+        let modelPartitionBottom = {
+            id: partition.name + "_BOTTOM",
+            type: "rect",
+            size: [w, 10],
+            x: x3,
+            y: y3,
+            anchorPoints: [
+                [0.5, 0.5],
+                [1, 1],
+            ],
+            style: {
+                fill: "transparent",
+                stroke: 'transparent',
+            },
+            tag: {
+                name: partition.name + "_BOTTOM",
+                type: "NODE_PARTITION_BOTTOM",
+            }
+        }
+        let modelPartitionEdge = {
+            id: partition.name + "_EDGE",
+            type: "edge",
+            source: partition.name + "_BOTTOM",
+            target: partition.name + "_TOP",
+            sourceAnchor: 0,
+            targetAnchor: 0,
+            label: partition.label,
+            labelCfg: {
+                position: "start"
+            },
+            style: {
+                stroke: "transparent",
+            },
+            autoRotate: true,
+            tag: {
+                name: partition.name + "_EDGE",
+                type: "NODE_PARTITION_EDGE",
+            }
+        }
+
+        partition.position.x = x1 - w / 2;
+        partition.position.y = y1 - h / 2;
+        // this.g6Graph.addItem("node", modelBroker);
+        this.g6Data.nodes.push(modelPartitionTop);
+        this.g6Data.nodes.push(modelPartitionBottom);
+        this.g6Data.nodes.push(modelPartitionBody);
+        this.g6Data.edges.push(modelPartitionEdge);
+        container.children.push(partition.name);
+        // this.gMap.brokers.get(partition.broker).children.push(partition.name);
+    }
+
     updatePartition(partitionId) {
         let nodePartition = this.g6Graph.findById(partitionId);
 
@@ -1624,13 +1907,14 @@ export default class OperationKafka extends React.PureComponent {
 
     //todo <<<<< now >>>>> 新增 broker
     onG6ButtonAddBroker(e) {
-        let indexBroker = this.g6DataBrokers.length;
-        let nodeBroker = {
-            name: "broker_" + (indexBroker + 1)
-        }
-
-        this.addBroker(nodeBroker, indexBroker);
-        this.g6ChangeData();
+        this.g6Graph.fitView();
+        // let indexBroker = this.g6DataBrokers.length;
+        // let nodeBroker = {
+        //     name: "broker_" + (indexBroker + 1)
+        // }
+        //
+        // this.addBroker(nodeBroker, indexBroker);
+        // this.g6ChangeData();
     }
 
     //todo <<<<< now >>>>> on button G6 Save clicked
@@ -1723,6 +2007,7 @@ export default class OperationKafka extends React.PureComponent {
         this.doAddTadMddTree(erTree);
     }
 
+    //todo <<<<< now >>>>> on button 刷新告警状态数据 clicked
     onButtonGetAlarmsStatusClicked(e) {
         let dbConn = new TadDbConnection();
         dbConn.db_type = "mysql";
@@ -1733,15 +2018,38 @@ export default class OperationKafka extends React.PureComponent {
         dbConn.db_password = "root123";
 
         this.doGetAlarmsStatus(dbConn);
+        this.doGetAlarmsQueue(dbConn);
     }
 
     onTreeMddTreeSelected(selectedKeys, info) {
         if (info.selected) {
-            this.gCurrent.mddTreeNode = {
+            this.gCurrent.selectedKeysObjects = selectedKeys;
+        }
+
+        let selectedKeysObjects = info.selected ? selectedKeys : this.gCurrent.selectedKeysObjects;
+        this.setState({
+            selectedKeysObjects: selectedKeysObjects
+        });
+
+        if (this.gCurrent.nodeCurrent !== undefined) {
+            let node = this.g6Config.nodes.get(this.gCurrent.nodeCurrent.id);
+            let g6Node = this.g6Graph.findById(node.name);
+            g6Node.clearStates(['selected']);
+        }
+
+        if (info.selected) {
+            this.gCurrent.nodeCurrent = {
                 id: selectedKeys[0],
                 nodeType: info.node.tag.nodeType,
             }
         }
+
+        let node = this.g6Config.nodes.get(this.gCurrent.nodeCurrent.id);
+
+        let g6Node = this.g6Graph.findById(node.name);
+        g6Node.setState('selected', true);
+        this.g6Graph.zoomTo(1);
+        this.g6Graph.focusItem(g6Node);
     };
 
     uiUpdateTadMddTree(erTree, what) {
@@ -1849,6 +2157,26 @@ export default class OperationKafka extends React.PureComponent {
         }
     }
 
+    onMouseDownSplitter(e) {
+        this.gDynamic.isMouseDown = true;
+        this.gDynamic.x = e.clientX;
+        this.gDynamic.y = e.clientY;
+    }
+
+    onMouseMoveSplitter(e) {
+        if (this.gDynamic.isMouseDown) {
+            console.log(e.clientY - this.gDynamic.y);
+            // let height = this.state.height;
+            // this.setState({
+            //     height: height + e.clientY - this.gDynamic.y
+            // });
+        }
+    }
+
+    onMouseUpSplitter(e) {
+        this.gDynamic.isMouseDown = false;
+    }
+
     //todo >>>>> render
     render() {
         const optionsDataType = [
@@ -1866,7 +2194,7 @@ export default class OperationKafka extends React.PureComponent {
                         <div className="BoxTitle"/>
                     </div>
                     <div className="BoxContent">
-                        <div className={"BoxKafkas"}>
+                        <div ref={this.gRef.splitterUp} className={"BoxKafkas"}>
                             <div className={"BoxUpDown"}>
                                 <div className="BoxToolbarErDiagram">
                                     <div className="box-properties-title-bar">
@@ -1883,10 +2211,14 @@ export default class OperationKafka extends React.PureComponent {
                                         <div className={"BoxTreeInstance"}>
                                             <Tree ref={this.gRef.treeTadMddTree}
                                                   treeData={this.state.treeDataMddTree}
-                                                // onSelect={this.onTreeMddTreeSelected}
+                                                  onSelect={this.onTreeMddTreeSelected}
                                                   selectable={!this.state.isMddTreeEditing}
-                                                  className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>}
-                                                  blockNode={true} showLine={true} showIcon={true}/>
+                                                  selectedKeys={this.state.selectedKeysObjects}
+                                                  className={"TreeKnown"}
+                                                  switcherIcon={<CaretDownOutlined/>}
+                                                  blockNode={true}
+                                                  showLine={true}
+                                                  showIcon={true}/>
                                         </div>
                                     </div>
                                 </div>
@@ -1896,7 +2228,7 @@ export default class OperationKafka extends React.PureComponent {
                                     <div className={"box-box-canvas-toolbar-title"}>&nbsp;</div>
                                     <div className={"box-box-canvas-toolbar-buttons"}>
                                         <Button size={"small"} type={"primary"}
-                                                onClick={this.onG6ButtonAddBroker}>新增Broker</Button>
+                                                onClick={this.onG6ButtonAddBroker}>适应屏幕大小</Button>
                                         <Button size={"small"} type={"primary"}
                                                 onClick={this.onButtonG6ToPng}>导出</Button>
                                     </div>
@@ -1951,7 +2283,13 @@ export default class OperationKafka extends React.PureComponent {
                                 </div>
                             </div>
                         </div>
-                        <div className={"box-alarms"}>
+                        <div ref={this.gRef.splitter}
+                             className={"K3Splitter"}
+                             onMouseDown={this.onMouseDownSplitter}
+                             onMouseMove={this.onMouseMoveSplitter}
+                             onMouseUp={this.onMouseUpSplitter}
+                        >&nbsp;</div>
+                        <div className={"box-alarms"} style={{height: this.state.height}}>
                             <div className="box-alarms-titlebar">
                                 <div className="box-alarms-title">活动告警列表</div>
                             </div>
@@ -1961,8 +2299,8 @@ export default class OperationKafka extends React.PureComponent {
                                                   onChange={this.onInputSearchSchemasChanged}
                                                   onSearch={this.onInputSearchSchemasSearched}/>
                                 </div>
-                                <Button onClick={this.onButtonGetAlarmsStatusClicked} icon={<PlusSquareOutlined/>}
-                                        size={"small"} type={"primary"}>刷新</Button>
+                                <Button onClick={this.onButtonGetAlarmsStatusClicked}
+                                        icon={<PlusSquareOutlined/>} size={"small"} type={"primary"}>刷新</Button>
                             </div>
                             <div ref={this.gRef.boxTableAlarms} className={"box-alarms-content"}>
                                 <Table

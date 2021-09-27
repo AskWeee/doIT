@@ -3,13 +3,11 @@ import './MddDataFlow.scss'
 import GCtx from "../GCtx";
 import axios from "axios";
 import lodash from "lodash";
-import {Button, Form, Input, Select, Tooltip, Tree, Upload} from 'antd'
-import {CaretDownOutlined, CloudUploadOutlined, PlusSquareOutlined, QuestionCircleOutlined,} from '@ant-design/icons'
+import {Button, Input, Tree, Upload} from 'antd'
+import {CaretDownOutlined, CloudUploadOutlined, PlusSquareOutlined,} from '@ant-design/icons'
 import EditableCellTool from "./EditableCellTool";
 import {Addon, DataUri, Graph, Shape} from "@antv/x6";
-import TadMddFlow from "../entity/TadMddFlow";
 import TadMddTree from "../entity/TadMddTree";
-import TadTableRelation from "../entity/TadTableRelation";
 import TadMddFlowNode from "../entity/TadMddFlowNode";
 import TadMddFlowEdge from "../entity/TadMddFlowEdge";
 
@@ -132,6 +130,9 @@ export default class MddDataFlow extends React.PureComponent {
 
         this.onSelectX6TableColumnDataTypeChanged = this.onSelectX6TableColumnDataTypeChanged.bind(this);
         this.onTreeMddTreeSelected = this.onTreeMddTreeSelected.bind(this);
+
+        this.setNodes = this.setNodes.bind(this);
+        this.getNode = this.getNode.bind(this);
     }
 
     componentDidMount() {
@@ -258,21 +259,25 @@ export default class MddDataFlow extends React.PureComponent {
             params,
             {headers: {'Content-Type': 'application/json'}})
     }
+
     restAddTadMddFlowEdge(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/mdd/add_mdd_flow_edge",
             params,
             {headers: {'Content-Type': 'application/json'}})
     }
+
     restUpdateTadMddFlowEdge(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/mdd/update_mdd_flow_edge",
             params,
             {headers: {'Content-Type': 'application/json'}})
     }
+
     restDeleteTadMddFlowEdges(params) {
         return axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/mdd/delete_mdd_flow_edges",
             params,
             {headers: {'Content-Type': 'application/json'}})
     }
+
     doGetTadMddFlowEdges(params) {
         this.restGetTadMddFlowEdges(params).then((result) => {
             if (result.status === 200) {
@@ -287,6 +292,7 @@ export default class MddDataFlow extends React.PureComponent {
             }
         });
     }
+
     doAddTadMddFlowEdge(params) {
         this.restAddTadMddFlowEdge(params).then((result) => {
             if (result.status === 200) {
@@ -301,6 +307,7 @@ export default class MddDataFlow extends React.PureComponent {
             }
         });
     }
+
     doUpdateTadMddFlowEdge(params) {
         this.restUpdateTadMddFlowEdge(params).then((result) => {
             if (result.status === 200) {
@@ -314,6 +321,7 @@ export default class MddDataFlow extends React.PureComponent {
             }
         });
     }
+
     async doDeleteTadMddFlowEdges(params) {
         return await this.restDeleteTadMddFlowEdges(params);
     }
@@ -344,7 +352,7 @@ export default class MddDataFlow extends React.PureComponent {
                     break
             }
 
-            switch(nodeType) {
+            switch (nodeType) {
                 case "NODE_EVENT":
                     this.x6Data.events.push({
                         id: itemNode.node_id,
@@ -354,6 +362,8 @@ export default class MddDataFlow extends React.PureComponent {
                         x: itemNode.position_x,
                         y: itemNode.position_y,
                         label: itemNode.node_label,
+                        in: 0,
+                        out: 0,
                     });
                     break
                 case "NODE_MODEL":
@@ -366,6 +376,8 @@ export default class MddDataFlow extends React.PureComponent {
                         x: itemNode.position_x,
                         y: itemNode.position_y,
                         label: itemNode.node_label,
+                        in: 0,
+                        out: 0,
                     });
                     break
                 case "NODE_CONTROLLER":
@@ -379,6 +391,8 @@ export default class MddDataFlow extends React.PureComponent {
                         x: itemNode.position_x,
                         y: itemNode.position_y,
                         label: itemNode.node_label,
+                        in: 0,
+                        out: 0,
                     });
                     break
                 case "NODE_SCRIPT":
@@ -391,6 +405,8 @@ export default class MddDataFlow extends React.PureComponent {
                         x: itemNode.position_x,
                         y: itemNode.position_y,
                         label: itemNode.node_label,
+                        in: 0,
+                        out: 0,
                     });
                     break
                 case "NODE_TRANSFORMER":
@@ -403,6 +419,8 @@ export default class MddDataFlow extends React.PureComponent {
                         x: itemNode.position_x,
                         y: itemNode.position_y,
                         label: itemNode.node_label,
+                        in: 0,
+                        out: 0,
                     });
                     break
                 case "NODE_TRANSFORMER_GROUP":
@@ -415,6 +433,8 @@ export default class MddDataFlow extends React.PureComponent {
                         x: itemNode.position_x,
                         y: itemNode.position_y,
                         label: itemNode.node_label,
+                        in: 0,
+                        out: 0,
                     });
                     break
                 default:
@@ -422,6 +442,7 @@ export default class MddDataFlow extends React.PureComponent {
             }
         });
 
+        this.setNodes();
         this.drawTaddMddFlowNodes();
 
         let flowParams = new TadMddFlowNode();
@@ -444,6 +465,11 @@ export default class MddDataFlow extends React.PureComponent {
                 edgeName: itemEdge.edge_name,
                 edgeLabel: itemEdge.edge_label,
             });
+
+            let nodeSource = this.getNodeNew(itemEdge.source_node_id);
+            nodeSource.out++;
+            let nodeTarget = this.getNodeNew(itemEdge.target_node_id);
+            nodeTarget.in++;
         });
 
         this.drawTaddMddFlowEdges();
@@ -698,6 +724,39 @@ export default class MddDataFlow extends React.PureComponent {
         })
     }
 
+    //todo <<<<< now >>>>> getNode
+
+    setNodes() {
+        let mapNodes = new Map();
+
+        this.x6Data.models.forEach((item) => {
+            mapNodes.set(item.id, item);
+        })
+        this.x6Data.events.forEach((item) => {
+            mapNodes.set(item.id, item);
+        })
+        this.x6Data.controllers.forEach((item) => {
+            mapNodes.set(item.id, item);
+            console.log(item);
+        })
+        this.x6Data.scripts.forEach((item) => {
+            mapNodes.set(item.id, item);
+        })
+        this.x6Data.transformers.forEach((item) => {
+            mapNodes.set(item.id, item);
+        })
+        this.x6Data.transformerGroups.forEach((item) => {
+            mapNodes.set(item.id, item);
+        })
+
+        this.gMap.nodes = mapNodes;
+        console.log(this.gMap.nodes);
+    }
+
+    getNodeNew(id) {
+        return this.gMap.nodes.get(id);
+    }
+
     // now >>>> x6 init
     x6Init() {
         EditableCellTool.config({
@@ -768,6 +827,68 @@ export default class MddDataFlow extends React.PureComponent {
                     }
 
                     return count < max
+                },
+                validateConnection: ({sourceView, targetView, sourceMagnet, targetMagnet}) => {
+                    let nodeSource = this.getNodeNew(sourceView.cell.id);
+                    let nodeTarget = this.getNodeNew(targetView.cell.id);
+                    let maxIn = 1;
+                    let maxOut = 1;
+
+                    switch (nodeSource.nodeType) {
+                        case "NODE_MODEL":
+                            maxOut = 1;
+                            break
+                        case "NODE_EVENT":
+                            if (nodeTarget.nodeName === "EVENT_BEGIN") {
+                                maxOut = 1;
+                            } else if (nodeTarget.nodeName === "EVENT_END") {
+                                maxOut = 0;
+                            }
+                            break
+                        case "NODE_CONTROLLER":
+                            maxOut = 2;
+                            break
+                        case "NODE_SCRIPT":
+                            maxOut = 1;
+                            break
+                        case "NODE_TRANSFORMER":
+                            maxOut = 1;
+                            break
+                        case "NODE_TRANSFORMER_GROUP":
+                            maxOut = 1;
+                            break
+                        default:
+                            break
+                    }
+                    switch (nodeTarget.nodeType) {
+                        case "NODE_MODEL":
+                            maxIn = 1;
+                            break
+                        case "NODE_EVENT":
+                            if (nodeTarget.nodeName === "EVENT_BEGIN") {
+                                maxIn = 0;
+                            } else if (nodeTarget.nodeName === "EVENT_END") {
+                                maxIn = 99;
+                            }
+                            break
+                        case "NODE_CONTROLLER":
+                            maxIn = 2
+                            maxOut = 2;
+                            break
+                        case "NODE_SCRIPT":
+                            maxIn = 2
+                            break
+                        case "NODE_TRANSFORMER":
+                            maxIn = 2
+                            break
+                        case "NODE_TRANSFORMER_GROUP":
+                            maxIn = 2
+                            break
+                        default:
+                            break
+                    }
+                    return nodeSource.out < maxOut && nodeTarget.in < maxIn;
+
                 },
                 createEdge: (source, target) => {
                     let edge = this.x6Graph.createEdge({
@@ -1065,7 +1186,7 @@ export default class MddDataFlow extends React.PureComponent {
                     break
             }
 
-            for(let i = 0; i < nodes.length; i++) {
+            for (let i = 0; i < nodes.length; i++) {
                 if (nodes[i].id === nodeData.id) {
                     nodes.splice(i, 1);
                     break
@@ -1096,6 +1217,11 @@ export default class MddDataFlow extends React.PureComponent {
                         edgeName: "EDGE_RELATION_ONE2MORE"
                     }
                 );
+
+                let nodeSource = this.getNodeNew(edge.source.cell);
+                let nodeTarget = this.getNodeNew(edge.target.cell);
+                nodeSource.out++;
+                nodeTarget.in++;
             }
         })
 
@@ -1140,8 +1266,10 @@ export default class MddDataFlow extends React.PureComponent {
         })
 
         this.x6Graph.on("edge:removed", ({edge}) => {
-            for(let i = 0; i < this.x6Data.relations.length; i++) {
+            for (let i = 0; i < this.x6Data.relations.length; i++) {
                 if (this.x6Data.relations[i].id === edge.id) {
+                    let nodeTarget = this.getNodeNew(this.x6Data.relations[i].targetNodeId);
+                    nodeTarget.in--;
                     this.x6Data.relations.splice(i, 1);
                     break
                 }
@@ -1328,7 +1456,9 @@ export default class MddDataFlow extends React.PureComponent {
                             portOutId: portsOut[0].id,
                             x: this.gDynamic.nodeShadow.position().x,
                             y: this.gDynamic.nodeShadow.position().y,
-                            label: nodeModelLabel
+                            label: nodeModelLabel,
+                            in: 0,
+                            out: 0,
                         });
 
                         break
@@ -1441,7 +1571,9 @@ export default class MddDataFlow extends React.PureComponent {
                             portId: portId,
                             x: this.gDynamic.nodeShadow.position().x,
                             y: this.gDynamic.nodeShadow.position().y,
-                            label: nodeLabel
+                            label: nodeLabel,
+                            in: 0,
+                            out: 0,
                         });
                         break
                     case "NODE_CONTROLLER":
@@ -1544,7 +1676,9 @@ export default class MddDataFlow extends React.PureComponent {
                             portOutFalseId: portsOutFalseController[0].id,
                             x: this.gDynamic.nodeShadow.position().x,
                             y: this.gDynamic.nodeShadow.position().y,
-                            label: "条件判断"
+                            label: "条件判断",
+                            in: 0,
+                            out: 0,
                         });
 
                         break
@@ -1651,7 +1785,9 @@ export default class MddDataFlow extends React.PureComponent {
                             portOutId: portsOutScript[0].id,
                             x: this.gDynamic.nodeShadow.position().x,
                             y: this.gDynamic.nodeShadow.position().y,
-                            label: nodeLabelScript
+                            label: nodeLabelScript,
+                            in: 0,
+                            out: 0,
                         });
 
                         break
@@ -1758,7 +1894,9 @@ export default class MddDataFlow extends React.PureComponent {
                             portOutId: portsOutTransformer[0].id,
                             x: this.gDynamic.nodeShadow.position().x,
                             y: this.gDynamic.nodeShadow.position().y,
-                            label: nodeLabelTransformer
+                            label: nodeLabelTransformer,
+                            in: 0,
+                            out: 0,
                         });
 
                         break
@@ -1865,13 +2003,16 @@ export default class MddDataFlow extends React.PureComponent {
                             portOutId: portsOutTransformerGroup[0].id,
                             x: this.gDynamic.nodeShadow.position().x,
                             y: this.gDynamic.nodeShadow.position().y,
-                            label: nodeLabelTransformerGroup
+                            label: nodeLabelTransformerGroup,
+                            in: 0,
+                            out: 0,
                         });
 
                         break
                     default:
                         break
                 }
+                this.setNodes();
 
                 this.gDynamic.nodeShadow.setData({
                     id: this.gDynamic.nodeShadow.id,
@@ -2072,7 +2213,11 @@ export default class MddDataFlow extends React.PureComponent {
                 },
             },
         })
-        nodeTransformer.setData({nodeName: "TRANSFORMER_GROUP_UNKNOWN", nodeTitle: "转化器", nodeType: "NODE_TRANSFORMER_GROUP"});
+        nodeTransformer.setData({
+            nodeName: "TRANSFORMER_GROUP_UNKNOWN",
+            nodeTitle: "转化器",
+            nodeType: "NODE_TRANSFORMER_GROUP"
+        });
 
         this.x6Stencil.load([nodeTransformer], 'groupTransformerGroups')
     }
@@ -2496,6 +2641,92 @@ export default class MddDataFlow extends React.PureComponent {
     //todo <<<<< now >>>>> on button 生成流程脚本 clicked
     onButtonX6GenerateWorkflow(e) {
         let eventBegin;
+        for (let i = 0; i < this.x6Data.events.length; i++) {
+            if (this.x6Data.events[i].nodeName === "EVENT_BEGIN") {
+                eventBegin = this.x6Data.events[i];
+                break
+            }
+        }
+
+        for (let i = 0; i < this.x6Data.events.length; i++) {
+            if (this.x6Data.events[i].nodeName === "EVENT_BEGIN") {
+                eventBegin = this.x6Data.events[i];
+                break
+            }
+        }
+
+        let workflow = {value: "", ifelse: 0, ifelseChanged: 0};
+        this.findNext(this.x6Data, eventBegin, workflow);
+        console.log(workflow.value);
+    }
+
+    onButtonX6GenerateWorkflow2(e) {
+        let babel = require("@babel/core");
+        let types = require("@babel/types");
+        let {parse} = require("@babel/parser");
+        let traverse = require("@babel/traverse").default;
+        let generator = require("@babel/generator").default;
+
+        const code = "";
+        const ast = parse(code);
+        const astTest = parse("if (a>0) {b = 10;}");
+        let astIf = lodash.cloneDeep(astTest.program.body[0]);
+
+        let body = {
+            type: "IfStatement",
+        }
+        let a = types.valueToNode(body);
+        console.log(a);
+
+        ast.program.body.push(
+            astIf
+        );
+        traverse(ast, {
+            enter(path) {
+                if (path.isIdentifier({name: "a"})) {
+                    path.node.name = "x";
+                }
+            }
+        })
+        console.log(ast, astTest);
+        const output = generator(ast)["code"];
+        console.log(output);
+
+        /*
+        let code = "const sum = (a, b) => a + b";
+        //插件对象，可以对特定类型的节点进行处理
+        let visitor = {
+            //代表处理 ArrowFunctionExpression 节点
+            ArrowFunctionExpression(path){
+                let params = path.node.params;
+                //创建一个blockStatement
+                let blockStatement = types.blockStatement([
+                    types.returnStatement(types.binaryExpression(
+                        '+',
+                        types.identifier('a'),
+                        types.identifier('b')
+                    ))
+                ]);
+                //创建一个函数
+                let func = types.functionExpression(null, params, blockStatement, false, false);
+                //替换
+                path.replaceWith(func);
+            }
+        }
+
+        let result = babel.transform(code, {
+            plugins: [
+                {
+                    visitor
+                }
+            ]
+        });
+
+        console.log(result.code);
+        */
+
+        /*
+        let eventBegin;
         for(let i = 0; i < this.x6Data.events.length; i++) {
             if (this.x6Data.events[i].nodeName === "EVENT_BEGIN") {
                 eventBegin = this.x6Data.events[i];
@@ -2513,13 +2744,14 @@ export default class MddDataFlow extends React.PureComponent {
         let workflow = {value: "", ifelse : 0, ifelseChanged: 0};
         this.findNext(this.x6Data, eventBegin, workflow);
         console.log(workflow.value);
+        */
     }
 
     getNode(nodes, nodeId) {
         let myResult = null;
         let isFound = false;
 
-        for(let i = 0; i < nodes.events.length; i++) {
+        for (let i = 0; i < nodes.events.length; i++) {
             if (nodes.events[i].id === nodeId) {
                 myResult = nodes.events[i];
                 isFound = true;
@@ -2528,7 +2760,7 @@ export default class MddDataFlow extends React.PureComponent {
         }
 
         if (!isFound) {
-            for(let i = 0; i < nodes.models.length; i++) {
+            for (let i = 0; i < nodes.models.length; i++) {
                 if (nodes.models[i].id === nodeId) {
                     myResult = nodes.models[i];
                     isFound = true;
@@ -2538,7 +2770,7 @@ export default class MddDataFlow extends React.PureComponent {
         }
 
         if (!isFound) {
-            for(let i = 0; i < nodes.controllers.length; i++) {
+            for (let i = 0; i < nodes.controllers.length; i++) {
                 if (nodes.controllers[i].id === nodeId) {
                     myResult = nodes.controllers[i];
                     isFound = true;
@@ -2548,7 +2780,7 @@ export default class MddDataFlow extends React.PureComponent {
         }
 
         if (!isFound) {
-            for(let i = 0; i < nodes.scripts.length; i++) {
+            for (let i = 0; i < nodes.scripts.length; i++) {
                 if (nodes.scripts[i].id === nodeId) {
                     myResult = nodes.scripts[i];
                     isFound = true;
@@ -2558,7 +2790,7 @@ export default class MddDataFlow extends React.PureComponent {
         }
 
         if (!isFound) {
-            for(let i = 0; i < nodes.transformers.length; i++) {
+            for (let i = 0; i < nodes.transformers.length; i++) {
                 if (nodes.transformers[i].id === nodeId) {
                     myResult = nodes.transformers[i];
                     isFound = true;
@@ -2568,7 +2800,7 @@ export default class MddDataFlow extends React.PureComponent {
         }
 
         if (!isFound) {
-            for(let i = 0; i < nodes.transformerGroups.length; i++) {
+            for (let i = 0; i < nodes.transformerGroups.length; i++) {
                 if (nodes.transformerGroups[i].id === nodeId) {
                     myResult = nodes.transformerGroups[i];
                     isFound = true;
@@ -2581,10 +2813,9 @@ export default class MddDataFlow extends React.PureComponent {
     }
 
     findNext(nodes, node, workflow) {
-        console.log(node);
         let strTab = "\t";
-        for(let i = 0; i< workflow.ifelse; i++) {
-            strTab +="\t";
+        for (let i = 0; i < workflow.ifelse; i++) {
+            strTab += "\t";
         }
         switch (node.nodeType) {
             case "NODE_EVENT":
@@ -2617,17 +2848,17 @@ export default class MddDataFlow extends React.PureComponent {
 
         let isFound = false;
 
-        for(let i = 0; i < nodes.relations.length; i++) {
+        for (let i = 0; i < nodes.relations.length; i++) {
             if (nodes.relations[i].sourceNodeId === node.id) {
                 isFound = true;
 
                 let nodeNextId = nodes.relations[i].targetNodeId;
-                let nodeNext = this.getNode(nodes, nodeNextId);
+                let nodeNext = this.getNodeNew(nodeNextId); //this.getNode(nodes, nodeNextId);
                 if (nodeNext.nodeName === "EVENT_END") {
                     if (workflow.ifelse > 0) {
                         let strTab2 = "\t";
-                        for(let i = 0; i< workflow.ifelse -1; i++) {
-                            strTab2 +="\t";
+                        for (let i = 0; i < workflow.ifelse - 1; i++) {
+                            strTab2 += "\t";
                         }
                         workflow.value += strTab2 + "} else {\n";
                         workflow.ifelse--;
@@ -2635,14 +2866,31 @@ export default class MddDataFlow extends React.PureComponent {
                         workflow.ifelseChanged++;
                     } else {
                         let strEnd = "}\n";
-                        for(let i = 0; i< workflow.ifelseChanged; i++) {
-                            strEnd +="}\n";
+                        for (let i = 0; i < workflow.ifelseChanged; i++) {
+                            strEnd += "}\n";
                         }
                         workflow.value += strEnd + "\n";
                     }
                     console.log("is over = end")
                     // workflow.value += "is over = end"
-                } else {
+                } else if (workflow.ifelse > 0 && nodeNext.in > 1) {
+                    // workflow.ifelse--;
+                    if (nodeNext.isEnter === undefined) {
+                        workflow.value += "} else {\n";
+                        nodeNext.isEnter = true
+                    } else {
+                        workflow.value += "}\n";
+                        workflow.ifelse--;
+                        this.findNext(nodes, nodeNext, workflow);
+                    }
+                    // nodeNext.in--;
+                }
+                    // else if (workflow.ifelse > 0 && nodeNext.in <= 1) {
+                    //     workflow.value += "}\n";
+                    //     nodeNext.in++;
+                    //     this.findNext(nodes, nodeNext, workflow);
+                // }
+                else {
                     this.findNext(nodes, nodeNext, workflow);
                 }
             }
@@ -2653,7 +2901,7 @@ export default class MddDataFlow extends React.PureComponent {
             // workflow.value += "is over = error"
         }
     }
-    
+
     onSelectX6TableColumnDataTypeChanged(v) {
         // this.gDynamic.x6TableColumnDataType = v;
         let nodeType = v;
@@ -3839,7 +4087,8 @@ export default class MddDataFlow extends React.PureComponent {
                                     <Button size={"small"} type={"primary"} onClick={this.onButtonX6Save}>保存</Button>
                                     <Button size={"small"} type={"primary"} onClick={this.onButtonX6Clear}>全部删除</Button>
                                     <Button size={"small"} type={"primary"} onClick={this.onButtonX6ToPng}>导出</Button>
-                                    <Button size={"small"} type={"primary"} onClick={this.onButtonX6GenerateWorkflow}>生成流程脚本</Button>
+                                    <Button size={"small"} type={"primary"}
+                                            onClick={this.onButtonX6GenerateWorkflow}>生成流程脚本</Button>
                                 </div>
                             </div>
                             <div ref={this.gRef.x6GraphContainerBox} className="box-canvas">
