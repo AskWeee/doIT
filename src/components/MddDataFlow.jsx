@@ -10,6 +10,7 @@ import {Addon, DataUri, Graph, Shape} from "@antv/x6";
 import TadMddTree from "../entity/TadMddTree";
 import TadMddFlowNode from "../entity/TadMddFlowNode";
 import TadMddFlowEdge from "../entity/TadMddFlowEdge";
+// import {parse} from "@babel/parser";
 
 const {Stencil} = Addon;
 const {Rect, Circle} = Shape;
@@ -2657,94 +2658,20 @@ export default class MddDataFlow extends React.PureComponent {
 
         let workflow = {value: "", ifelse: 0, ifelseChanged: 0};
         this.findNext(this.x6Data, eventBegin, workflow);
-        console.log(workflow.value);
-    }
-
-    onButtonX6GenerateWorkflow2(e) {
-        let babel = require("@babel/core");
-        let types = require("@babel/types");
         let {parse} = require("@babel/parser");
         let traverse = require("@babel/traverse").default;
         let generator = require("@babel/generator").default;
-
-        const code = "";
+        let code = workflow.value;
         const ast = parse(code);
-        const astTest = parse("if (a>0) {b = 10;}");
-        let astIf = lodash.cloneDeep(astTest.program.body[0]);
-
-        let body = {
-            type: "IfStatement",
-        }
-        let a = types.valueToNode(body);
-        console.log(a);
-
-        ast.program.body.push(
-            astIf
-        );
         traverse(ast, {
             enter(path) {
-                if (path.isIdentifier({name: "a"})) {
-                    path.node.name = "x";
+                if (path.isVariableDeclaration({kind: "let"})) {
+                    path.node.kind = "def"
                 }
             }
         })
-        console.log(ast, astTest);
         const output = generator(ast)["code"];
         console.log(output);
-
-        /*
-        let code = "const sum = (a, b) => a + b";
-        //插件对象，可以对特定类型的节点进行处理
-        let visitor = {
-            //代表处理 ArrowFunctionExpression 节点
-            ArrowFunctionExpression(path){
-                let params = path.node.params;
-                //创建一个blockStatement
-                let blockStatement = types.blockStatement([
-                    types.returnStatement(types.binaryExpression(
-                        '+',
-                        types.identifier('a'),
-                        types.identifier('b')
-                    ))
-                ]);
-                //创建一个函数
-                let func = types.functionExpression(null, params, blockStatement, false, false);
-                //替换
-                path.replaceWith(func);
-            }
-        }
-
-        let result = babel.transform(code, {
-            plugins: [
-                {
-                    visitor
-                }
-            ]
-        });
-
-        console.log(result.code);
-        */
-
-        /*
-        let eventBegin;
-        for(let i = 0; i < this.x6Data.events.length; i++) {
-            if (this.x6Data.events[i].nodeName === "EVENT_BEGIN") {
-                eventBegin = this.x6Data.events[i];
-                break
-            }
-        }
-
-        for(let i = 0; i < this.x6Data.events.length; i++) {
-            if (this.x6Data.events[i].nodeName === "EVENT_BEGIN") {
-                eventBegin = this.x6Data.events[i];
-                break
-            }
-        }
-
-        let workflow = {value: "", ifelse : 0, ifelseChanged: 0};
-        this.findNext(this.x6Data, eventBegin, workflow);
-        console.log(workflow.value);
-        */
     }
 
     getNode(nodes, nodeId) {
@@ -2813,10 +2740,6 @@ export default class MddDataFlow extends React.PureComponent {
     }
 
     findNext(nodes, node, workflow) {
-        let strTab = "\t";
-        for (let i = 0; i < workflow.ifelse; i++) {
-            strTab += "\t";
-        }
         switch (node.nodeType) {
             case "NODE_EVENT":
                 if (node.nodeName === "EVENT_BEGIN") {
@@ -2824,22 +2747,22 @@ export default class MddDataFlow extends React.PureComponent {
                 }
                 break
             case "NODE_MODEL":
-                workflow.value += strTab + "private _o_var1, _o_var2;\n\n";
+                workflow.value +="let _o_var1, _o_var2;\n";
                 break
             case "NODE_SCRIPT":
-                workflow.value += strTab + "_o_var1 = 100;\n";
-                workflow.value += strTab + "_o_var2 = 100;\n\n";
+                workflow.value += "_o_var1 = 100;\n";
+                workflow.value += "_o_var2 = 100;\n";
                 break
             case "NODE_TRANSFORMER":
-                workflow.value += strTab + "getResource();\n\n";
+                workflow.value += "getResource();\n";
                 break
             case "NODE_TRANSFORMER_GROUP":
-                workflow.value += strTab + "getResourceProvince();\n";
-                workflow.value += strTab + "getResourceCity();\n";
-                workflow.value += strTab + "getResourceRegion();\n\n";
+                workflow.value += "getResourceProvince();\n";
+                workflow.value += "getResourceCity();\n";
+                workflow.value += "getResourceRegion();\n";
                 break
             case "NODE_CONTROLLER":
-                workflow.value += strTab + "if (_o_var1 > _o_var2) {\n";
+                workflow.value += "if (_o_var1 > _o_var2) {\n";
                 workflow.ifelse++;
                 break
             default:
@@ -2853,16 +2776,11 @@ export default class MddDataFlow extends React.PureComponent {
                 isFound = true;
 
                 let nodeNextId = nodes.relations[i].targetNodeId;
-                let nodeNext = this.getNodeNew(nodeNextId); //this.getNode(nodes, nodeNextId);
+                let nodeNext = this.getNodeNew(nodeNextId);
                 if (nodeNext.nodeName === "EVENT_END") {
                     if (workflow.ifelse > 0) {
-                        let strTab2 = "\t";
-                        for (let i = 0; i < workflow.ifelse - 1; i++) {
-                            strTab2 += "\t";
-                        }
-                        workflow.value += strTab2 + "} else {\n";
+                        workflow.value += "} else {\n";
                         workflow.ifelse--;
-
                         workflow.ifelseChanged++;
                     } else {
                         let strEnd = "}\n";
@@ -2871,10 +2789,7 @@ export default class MddDataFlow extends React.PureComponent {
                         }
                         workflow.value += strEnd + "\n";
                     }
-                    console.log("is over = end")
-                    // workflow.value += "is over = end"
                 } else if (workflow.ifelse > 0 && nodeNext.in > 1) {
-                    // workflow.ifelse--;
                     if (nodeNext.isEnter === undefined) {
                         workflow.value += "} else {\n";
                         nodeNext.isEnter = true
@@ -2883,13 +2798,7 @@ export default class MddDataFlow extends React.PureComponent {
                         workflow.ifelse--;
                         this.findNext(nodes, nodeNext, workflow);
                     }
-                    // nodeNext.in--;
                 }
-                    // else if (workflow.ifelse > 0 && nodeNext.in <= 1) {
-                    //     workflow.value += "}\n";
-                    //     nodeNext.in++;
-                    //     this.findNext(nodes, nodeNext, workflow);
-                // }
                 else {
                     this.findNext(nodes, nodeNext, workflow);
                 }
@@ -2898,7 +2807,6 @@ export default class MddDataFlow extends React.PureComponent {
 
         if (!isFound) {
             console.log("is over = error");
-            // workflow.value += "is over = error"
         }
     }
 
@@ -4027,6 +3935,220 @@ export default class MddDataFlow extends React.PureComponent {
         //     console.log("error");
         // }
     }
+
+    /*
+
+    	public void localHandle(CommonAlarm src,CommonAlarm dest) {
+		// count++;
+		this.setLog(src);
+		o_msgserial = dest.getString("MsgSerial"); // 优先初始化o_msgserial，以便下面逻辑可以判断
+		o_fp0 = dest.getString("fp0"); // 优先初始化o_fp0，以便下面逻辑可以记录日志
+		log.debug("[MsgSerial], fp0={}, msgserial={}", o_fp0, o_msgserial);
+		// long step0 = System.currentTimeMillis();
+		if(StringUtils.isBlank(o_msgserial)) {
+			// 故障管理自采告警：rthandler逻辑（原69.128、69.128逻辑）
+			this.initRthandler(src,dest);
+			log.debug("[MsgSerial isBlank], fp0={}, professional_type={}, vendor_id={}, object_class={}, int_id={}, idn={}, msgserial={}", o_fp0, o_professional_type, o_vendor_id, o_object_class, o_int_id, o_idn, o_msgserial);
+			// long step1 = System.currentTimeMillis();
+			// sc1=sc1+(step1-step0);
+			if(!this.checkDataRthandler()) {
+			  return;
+			}
+			// long step2 = System.currentTimeMillis();
+			// sc2=sc2+(step2-step1);
+			this.PreCookIntidRthandler(); //某些告警需要先获取int_id
+
+			String filterOmcId=",6101,6102,6601,6602,6607,6608,6109,1502,";
+			if( filterOmcId.contains(","+o_omc_id+",")||o_professional_type == "3")
+			{
+			  this.addResourceForOmcIdRthandler(o_city_id,o_city_name);
+			  if(o_alarm_title in ["98","99"]){
+				this.AddResourceInfoRthandler();
+			  }
+			}
+			else
+			{
+			  this.AddResourceInfoRthandler();
+			  this.zhiNengXunJianRthandler();
+			}
+			// long step3 = System.currentTimeMillis();
+			// sc3=sc3+(step3-step2);
+			this.setEquipmentInfoRthandler();
+			this.gdZhuDongJianKongRthandler();
+			// long step4 = System.currentTimeMillis();
+			// sc4=sc4+(step4-step3);
+			this.alarmTitleTranslateRthandler();
+			// long step5 = System.currentTimeMillis();
+			// sc5=sc5+(step5-step4);
+			this.setNewNetworkTypeRthandler(dest);
+			this.setNewAlarmStandardRthandler(src, dest);
+			//this.setAlarmStandard();
+			this.setStandardAlarmNameIdRthandler();
+			// long step6 = System.currentTimeMillis();
+			// sc6=sc6+(step6-step5);
+			this.setPrepareProcessorRthandler();
+			// long step7 = System.currentTimeMillis();
+			// sc7=sc7+(step7-step6);
+			this.setRemoteAlarmAddResourceRthandler();
+			// long step8 = System.currentTimeMillis();
+			// sc8=sc8+(step8-step7);
+			this.setSubAlarmTypeRthandler();
+			this.setProjectStatusRthandler(); // 同步修改标工函数setProjectStatus和疑似标工函数setProjectStatusSuspect
+			// long step9 = System.currentTimeMillis();
+			// sc9=sc9+(step9-step8);
+			this.setEomsNetWorkTypeRthandler();
+			// long step10 = System.currentTimeMillis();
+			// sc10=sc10+(step10-step9);
+			this.setSignalingRthandler();
+			// long step11 = System.currentTimeMillis();
+			// sc11=sc11+(step11-step10);
+			this.setJikeInfoRthandler();
+			// long step12 = System.currentTimeMillis();
+			// sc12=sc12+(step12-step11);
+			this.setTransPortToCircuitRthandler();
+			// long step13 = System.currentTimeMillis();
+			// sc13=sc13+(step13-step12);
+			this.setTransportRelatedJikeRthandler();
+			this.setJikeServiceRegionRthandler();
+			// long step14 = System.currentTimeMillis();
+			// sc14=sc14+(step14-step13);
+			//this.setAffectUserNum();
+			this.verifyCircuitNoRthandler();
+			this.setSiteNoRthandler();
+			this.alarmAddGroupInfoRthandler(dest);//告警分组20131108
+			this.SetJiKeEffectServiceRthandler();//传输网集客告警处理时限
+			// long step15 = System.currentTimeMillis();
+			// sc15=sc15+(step15-step14);
+			this.setScenecAlarmRthandler();
+			this.setPostProcessorRthandler();
+			// long step16 = System.currentTimeMillis();
+			// sc16=sc16+(step16-step15);
+
+			//处理网元业务地市信息
+			this.redefineCityFromYWRthandler();
+			this.otherRthandler();
+			// add by daixueyue on 20130912
+			this.handlerAddAFieldRthandler();
+			this.JikePwTunnelRthandler();
+			this.MarkStarsRthandler();
+			this.SubProbableCauseRthandler();
+			this.setVendorTypeRthandler();
+			// long step17 = System.currentTimeMillis();
+			// sc17=sc17+(step17-step16);
+		} else {
+			// 统一采集推送告警（原69.143、109.29、109.30、109.200逻辑）
+			this.init(src,dest);
+			log.debug("[MsgSerial isNotBlank], fp0={}, professional_type={}, vendor_id={}, object_class={}, int_id={}, idn={}, msgserial={}", o_fp0, o_professional_type, o_vendor_id, o_object_class, o_int_id, o_idn, o_msgserial);
+			this.idn2Intid();
+			// long step1 = System.currentTimeMillis();
+			// sc1=sc1+(step1-step0);
+			if(!this.checkData()) {
+				return;
+			}
+			// long step2 = System.currentTimeMillis();
+			// sc2=sc2+(step2-step1);
+			this.PreCookIntid(); //某些告警需要先获取int_id
+
+			String filterOmcId=",6101,6102,6601,6602,6607,6608,6109,1502,";
+			String filterNFV=",20,508,1515,1516,1521,1614,1616,1617,1618,1619,1620,1621,1622,1623,1624,1625,1626,1627,";
+			if( filterOmcId.contains(","+o_omc_id+",")||o_professional_type == "3"||filterNFV.contains(","+o_object_class+","))
+			{
+				this.addResourceForOmcId(o_city_id,o_city_name);
+				if(o_alarm_title in ["98","99"]){
+					this.AddResourceInfo();
+				}
+			}
+			else
+			{
+				this.AddResourceInfo();
+				this.zhiNengXunJian();
+			}
+			// long step3 = System.currentTimeMillis();
+			// sc3=sc3+(step3-step2);
+			this.setEquipmentInfo();
+			this.gdZhuDongJianKong();
+			// long step4 = System.currentTimeMillis();
+			// sc4=sc4+(step4-step3);
+			this.alarmTitleTranslate();
+			// long step5 = System.currentTimeMillis();
+			// sc5=sc5+(step5-step4);
+			this.setPrepareProcessor();
+			this.setNewNetworkType(dest);
+			this.setNewAlarmStandard(src, dest);
+
+			//this.setAlarmStandardCS();
+			//this.setAlarmStandardNotCS();
+			this.setStandardAlarmNameId();
+			// long step6 = System.currentTimeMillis();
+			// sc6=sc6+(step6-step5);
+			// long step7 = System.currentTimeMillis();
+			// sc7=sc7+(step7-step6);
+			this.setRemoteAlarmAddResource();
+			// long step8 = System.currentTimeMillis();
+			// sc8=sc8+(step8-step7);
+			this.setSubAlarmType();
+			this.setProjectStatus(); // 同步修改标工函数setProjectStatus和疑似标工函数setProjectStatusSuspect
+			// long step9 = System.currentTimeMillis();
+			// sc9=sc9+(step9-step8);
+			this.setEomsNetWorkType();
+			// long step10 = System.currentTimeMillis();
+			// sc10=sc10+(step10-step9);
+			this.setSignaling();
+			// long step11 = System.currentTimeMillis();
+			// sc11=sc11+(step11-step10);
+			this.setJikeInfo();
+			// long step12 = System.currentTimeMillis();
+			// sc12=sc12+(step12-step11);
+			this.setTransPortToCircuit();
+			// long step13 = System.currentTimeMillis();
+			// sc13=sc13+(step13-step12);
+			this.setTransportRelatedJike();
+			this.setJikeServiceRegion();
+			// long step14 = System.currentTimeMillis();
+			// sc14=sc14+(step14-step13);
+			this.setAffectUserNum();
+			this.verifyCircuitNo();
+			this.setSiteNo();
+			this.alarmAddGroupInfo(dest);//告警分组20131108
+			//this.SetJiKeEffectService();//传输网集客告警处理时限
+			// long step15 = System.currentTimeMillis();
+			// sc15=sc15+(step15-step14);
+			this.setScenecAlarm();
+			this.setPostProcessor();
+			//处理网元业务地市信息
+			this.redefineCityFromYW();
+			this.other();
+			// add by daixueyue on 20130912
+			this.handlerAddAField(src, dest);
+			//this.JikePwTunnel();
+			this.SetJiKeEffectService();
+			this.MarkStars();
+			this.SetNFValarm();
+			this.SubProbableCause();
+		}
+
+		// if(StringUtils.isEmpty(o_province_id)){
+		// 	log.debug("alarmProvinceIdFp0={},province_id={}.msgserial={},professional_type={}",o_fp0,o_province_id,o_msgserial,o_professional_type);
+		// }
+		// if(StringUtils.isEmpty(o_org_severity)){
+		// 	log.debug("alarmOrgSeverityFp0={},province_id={}.msgserial={},professional_type={}",o_fp0,o_province_id,o_msgserial,o_professional_type);
+		// }
+		// 设置其他省份信息：解决故障中心自定义视图权限问题：无province_id则省份权限客户无法呈现该告警，需提圈到全国权限
+		if ((!(o_province_name in ["广东", "广东省"]) && StringUtils.isNotBlank(o_province_name)) || (o_province_id != "-1489894494" && StringUtils.isNotBlank(o_province_id))) {
+		  this.addOtherProvinceInfo(o_province_name, o_province_id);
+		}
+		// 设置广东省id默认值：解决故障中心自定义视图权限问题：无province_id则省份权限客户无法呈现该告警，需提圈到全国权限
+		if (StringUtils.isBlank(o_province_name) || o_province_name in ["广东", "广东省"]) {
+			// o_province_name = "广东省";
+			o_province_id   = "-1489894494";
+			// log.debug("setDefaultProvinceId-fp0={}, province_name={}, province_id={}, city_name={}, city_id={}, region_name={}, region_id={}", o_fp0, o_province_name, o_province_id, o_city_name, o_city_id, o_region_name, o_region_id);
+		}
+
+		this.thresholdCtrlJtFlag();
+		this.set1406Value(dest);
+	}
+
+     */
 
     //todo >>>>> render
     render() {

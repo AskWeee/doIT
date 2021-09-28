@@ -4,7 +4,7 @@ import GCtx from "../GCtx";
 import lodash from "lodash";
 import axios from "axios";
 import moment from 'moment';
-import {Button, Select, Tree, Table, Input, Tabs, Checkbox, Form, Tooltip} from 'antd'
+import {Button, Select, Tree, Table, Input, Tabs, Checkbox, Form, Tooltip, Radio} from 'antd'
 import {
     CaretDownOutlined,
     CaretLeftOutlined,
@@ -87,6 +87,8 @@ export default class DatabaseWorkspace extends React.Component {
             productLineDbUserId: -1,
             treeSelectedKeysTableFirstLetters: [],
             treeSelectedKeysTables: [],
+            radioDataSource: 1,
+            lettersUnknownTreeData: [],
 
             dbUsersSelectOptions: [{value: -1, label: "请选择产品线数据库用户"}],
             connectionsSelectOptions: [{value: -1, label: "请选择来源数据库"}],
@@ -298,9 +300,12 @@ export default class DatabaseWorkspace extends React.Component {
         this.uiUpdateTableIndexColumn = this.uiUpdateTableIndexColumn.bind(this);
         this.dsUpdateTableIndexColumn = this.dsUpdateTableIndexColumn.bind(this);
 
+        this.uiGetTablesByLetter = this.uiGetTablesByLetter.bind(this);
+
         this.onSelectDbUsersChanged = this.onSelectDbUsersChanged.bind(this);
         this.onSelect = this.onSelect.bind(this);
         this.onSelectConnectionsChanged = this.onSelectConnectionsChanged.bind(this);
+        this.onSelectOnlineConnectionsChanged = this.onSelectOnlineConnectionsChanged.bind(this);
         this.onTableUnknownChecked = this.onTableUnknownChecked.bind(this);
         this.onTableKnownChecked = this.onTableKnownChecked.bind(this);
 
@@ -378,6 +383,7 @@ export default class DatabaseWorkspace extends React.Component {
         this.onSelectX6TableColumnDataTypeChanged = this.onSelectX6TableColumnDataTypeChanged.bind(this);
 
         this.onTabsTablePropertiesChanged = this.onTabsTablePropertiesChanged.bind(this);
+        this.onDataSourceChanged = this.onDataSourceChanged.bind(this);
     }
 
     componentDidMount() {
@@ -3455,6 +3461,8 @@ export default class DatabaseWorkspace extends React.Component {
     }
 
     onButtonListTreeClicked(e) {
+        if (this.state.radioDataSource === 2) return
+
         let btnId = e.target.id === "" ? e.target.parentElement.id : e.target.id;
 
         this.setState({
@@ -3464,6 +3472,8 @@ export default class DatabaseWorkspace extends React.Component {
     }
 
     onButtonErDiagramClicked(e) {
+        if (this.state.radioDataSource === 2) return
+
         let btnId = e.target.id === "" ? e.target.parentElement.id : e.target.id;
 
         this.setState({
@@ -3891,6 +3901,8 @@ export default class DatabaseWorkspace extends React.Component {
     }
 
     onButtonProductsChangeComponentSizeClicked() {
+        if (this.state.radioDataSource === 2) return
+
         let styleLayout = "NNN";
 
         if (this.state.styleLayout === "NNN")
@@ -4330,6 +4342,239 @@ export default class DatabaseWorkspace extends React.Component {
     //todo <<<<< now >>>>> on select 目标数据库链接 changed
     onSelectConnectionsChanged(value, option) {
         this.gCurrent.dbTarget.connectionId = value;
+    }
+
+    uiGetTablesByLetter(source, letter) {
+        let myResult = [];
+
+        if (letter === undefined) return myResult
+
+        let tables;
+        switch (source) {
+            case "known":
+                tables = this.gMap.tablesKnownByLetter;
+                break
+            case "unknown":
+                tables = this.gMap.tablesUnknownByLetter;
+                break
+            case "archived":
+                tables = this.gMap.tablesArchivedByLetter;
+                break
+            case "ignored":
+                tables = this.gMap.tablesIgnoredByLetter;
+                break
+            default:
+                break
+        }
+
+        if (!tables.has(letter)) return myResult;
+
+        tables.get(letter).tables.forEach((value, key) => {
+            let tableName = key;
+
+            let nodeTable = {
+                key: tableName,
+                title: tableName,
+                children: [],
+                tag: {
+                    nodeType: "table",
+                    tableId: value.tableId,
+                },
+            }
+
+            value.columns.forEach((item) => {
+                let nodeColumn = {
+                    key: tableName + this.gSpliterTableColumn + item.name,
+                    title: item.name + " : " + item.type,
+                    children: [],
+                    tag: {
+                        nodeType: "table_column",
+                        dataType: item.type,
+                        dataLength: item.length
+                    },
+                }
+                nodeTable.children.push(nodeColumn);
+            })
+            myResult.push(nodeTable);
+        });
+
+        return myResult;
+    }
+
+    onSelectOnlineConnectionsChanged(value, option) {
+        this.gCurrent.onlineConnectionId = value;
+        let connection = this.gMap.connections.get(value);
+
+        axios.post("http://" + this.context.serviceIp + ":" + this.context.servicePort + "/api/core/get_db_schemas", connection,
+            {headers: {'Content-Type': 'application/json'}}).then((response) => {
+
+            let mapTablesByLetter = new Map();
+            let setLetters = new Set();
+            let data = response.data.data[0].data;
+            let dataIndex = response.data.data[1].data;
+            let dataPartition = response.data.data[2].data;
+            let lettersUnknown;
+            console.log(dataIndex, dataPartition);
+
+            for (let i = 0; i < data.rows.length; i++) {
+                let item = data.rows[i];
+                let tableName = item[0].toLowerCase();
+                let columnName = item[1].toLowerCase();
+                let dataType = item[2].toLowerCase();
+                let dataLength = item[3];
+
+                if (tableName.startsWith("temp_") || tableName.endsWith("$")) continue
+
+                let firstLetter = tableName[0].toUpperCase();
+                setLetters.add(firstLetter);
+                if (!mapTablesByLetter.has(firstLetter)) {
+                    let mapTables = new Map();
+                    mapTables.set(tableName, {columns: [{name: columnName, type: dataType, length: dataLength}]});
+                    mapTablesByLetter.set(firstLetter, {tables: mapTables});
+                } else {
+                    if (!mapTablesByLetter.get(firstLetter).tables.has(tableName)) {
+                        mapTablesByLetter.get(firstLetter).tables.set(tableName, {
+                            columns: [{
+                                name: columnName,
+                                type: dataType,
+                                length: dataLength
+                            }]
+                        });
+                    } else {
+                        mapTablesByLetter.get(firstLetter).tables.get(tableName).columns.push({
+                            name: columnName,
+                            type: dataType,
+                            length: dataLength
+                        });
+                    }
+                }
+            }
+            this.gMap.tablesUnknownByLetter = mapTablesByLetter;
+
+            // 生成UI数据
+            lettersUnknown = Array.from(setLetters).sort();
+            let lettersUnknownTreeData = [];
+            lettersUnknown.forEach((item) => {
+                lettersUnknownTreeData.push({
+                    key: item,
+                    title: item,
+                    children: []
+                })
+            })
+
+            let treeDataTablesUnknown = this.uiGetTablesByLetter("unknown", lettersUnknown[0]);
+            this.gCurrent.letterUnknownSelected = lettersUnknown[0];
+
+
+            if (connection.db_type === "oracle") {
+                // index information
+                let mapTableIndexes = new Map();
+                for (let i = 0; i < dataIndex.rows.length; i++) {
+                    let item = dataIndex.rows[i];
+                    let tableName = item[0] ? item[0].toLowerCase() : item[0]; //0: {name: "TABLE_NAME"}
+                    let indexName = item[1]; //1: {name: "INDEX_NAME"}
+                    let indexType = item[2] ? item[2].toLowerCase() : item[2]; //2: {name: "INDEX_TYPE"}
+                    let uniqueness = item[3] ? item[3].toLowerCase() : item[3]; //3: {name: "UNIQUENESS"}
+                    let columnName = item[4] ? item[4].toLowerCase() : item[4]; //4: {name: "COLUMN_NAME"}
+                    let columnPosition = item[5]; //5: {name: "COLUMN_POSITION"}
+                    let descend = item[6] ? item[6].toLowerCase() : item[6]; //6: {name: "DESCEND"}
+                    if (!mapTableIndexes.has(tableName)) {
+                        let mapIndex = new Map();
+                        mapIndex.set(indexName, {
+                            indexType: indexType, uniqueness: uniqueness, columns: [{
+                                indexName: indexName,
+                                columnName: columnName,
+                                columnPosition: columnPosition,
+                                descend: descend
+                            }]
+                        });
+                        mapTableIndexes.set(tableName, mapIndex);
+                    } else {
+                        if (!mapTableIndexes.get(tableName).has(indexName)) {
+                            mapTableIndexes.get(tableName).set(indexName, {
+                                indexType: indexType, uniqueness: uniqueness, columns: [{
+                                    indexName: indexName,
+                                    columnName: columnName,
+                                    columnPosition: columnPosition,
+                                    descend: descend
+                                }]
+                            })
+                        } else {
+                            mapTableIndexes.get(tableName).get(indexName).columns.push({
+                                indexName: indexName,
+                                columnName: columnName,
+                                columnPosition: columnPosition,
+                                descend: descend
+                            })
+                        }
+                    }
+                }
+                this.gMap.tableIndexes = mapTableIndexes;
+                console.log(mapTableIndexes);
+
+                // partition information
+                let mapTablePartitions = new Map();
+                for (let i = 0; i < dataPartition.rows.length; i++) {
+                    let item = dataPartition.rows[i];
+                    let tableName = item[0] ? item[0].toLowerCase() : item[0]; //0: {name: "TABLE_NAME"}
+                    let partitionType = item[1] ? item[1].toLowerCase() : item[1]; //1: {name: "PARTITION_TYPE"}
+                    let partitionName = item[2]; //2: {name: "PARTITION_NAME"}
+                    let highValue = item[3] ? item[3].toLowerCase() : item[3]; //3: {name: "HIGH_VALUE"}
+                    let partitionPosition = item[4]; //4: {name: "PARTITION_POSITION"}
+                    let columnName = item[5] ? item[5].toLowerCase() : item[5]; //5: {name: "COLUMN_NAME"}
+
+                    if (!mapTablePartitions.has(tableName)) {
+                        mapTablePartitions.set(tableName, {
+                            partitionType: partitionType, columnName: columnName, partitions: [{
+                                partitionName: partitionName, highValue: highValue, partitionPosition: partitionPosition
+                            }]
+                        });
+                    } else {
+                        mapTablePartitions.get(tableName).partitions.push({
+                            partitionName: partitionName, highValue: highValue, partitionPosition: partitionPosition
+                        })
+                    }
+                }
+                this.gMap.tablePartitions = mapTablePartitions;
+            } else if (connection.db_type === "mysql") {
+                // 索引信息
+                // 目前rest服务返回内容有问题，需要修正
+                this.gMap.tableIndexes = new Map();
+                // 分区信息
+                // 目前rest服务返回内容有问题，需要修正
+                this.gMap.tablePartitions = new Map();
+            }
+
+            this.setState({
+                lettersUnknownSelectedKeys: [],
+                lettersUnknownTreeData: [],
+                treeDataTablesUnknown: [],
+            }, () => {
+                this.setState({
+                    lettersUnknownSelectedKeys: [lettersUnknown[0]],
+                    lettersUnknownTreeData: lettersUnknownTreeData,
+                    treeDataTablesUnknown: treeDataTablesUnknown,
+                });
+            });
+        });
+    }
+
+    onDataSourceChanged(e) {
+        if (e.target.value === 1) {
+            // this.setState({
+            //     tabNavSelected: "tabNavOne"
+            // })
+        } else if (e.target.value === 2) {
+            this.setState({
+                tabNavSelected: "tabNavOne",
+                isErDiagram: false,
+            })
+        }
+
+        this.setState({
+            radioDataSource: e.target.value,
+            styleLayout: e.target.value === 1 ? "NNN" : "SNN"
+        })
     }
 
     //todo >>>>> render
@@ -4798,14 +5043,15 @@ export default class DatabaseWorkspace extends React.Component {
                               switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={{showLeafIcon: false}}
                               showIcon={true}/>
                     </div>
-                    <div
-                        className={this.state.styleLayout === "NNN" ? "BoxDescription" : "BoxDescription BoxHidden"}>information
-                    </div>
                 </div>
                 <div className={"BoxKnown"}>
                     <div className={"BoxTitleBar"}>
                         <div
-                            className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxTitle" : "BoxTitle BoxHidden"}>库表信息：
+                            className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxTitle" : "BoxTitle BoxHidden"}>
+                            <Radio.Group onChange={this.onDataSourceChanged} value={this.state.radioDataSource}>
+                                <Radio value={1}>产品库表：</Radio>
+                                <Radio value={2}>在线库表：</Radio>
+                            </Radio.Group>
                         </div>
                         <Button onClick={this.onButtonTablesChangeComponentSizeClicked}
                                 icon={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ?
@@ -4813,11 +5059,17 @@ export default class DatabaseWorkspace extends React.Component {
                     </div>
                     <div
                         className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxSelect" : "BoxSelect BoxHidden"}>
-                        <Select ref={this.gRef.selectDbUser}
+                        <Select className={this.state.radioDataSource === 2 ? "BoxHidden" : ""} ref={this.gRef.selectDbUser}
                                 onChange={this.onSelectDbUsersChanged}
                                 defaultValue={this.state.dbUserSelected}
                                 value={this.state.productLineDbUserId}
                                 options={this.state.dbUsersSelectOptions}/>
+                        <Select data-tag="在线数据源列表"
+                                className={this.state.radioDataSource === 1 ? "BoxHidden" : ""}
+                                onChange={this.onSelectOnlineConnectionsChanged}
+                                defaultValue={this.state.connectionsSelected}
+                                options={this.state.connectionsSelectOptions}
+                                size="small"/>
                     </div>
                     <div
                         className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxTabs" : "BoxTabs BoxHidden"}>
@@ -4825,7 +5077,7 @@ export default class DatabaseWorkspace extends React.Component {
                             <div className="TabPanes">
                                 <div
                                     className={this.state.tabNavSelected === "tabNavOne" ? "TabPane" : "TabPane BoxHidden"}>
-                                    <div className="BoxToolbar">
+                                    <div className={this.state.radioDataSource === 2 ? "BoxHidden" : "BoxToolbar"}>
                                         <div className={"BoxSearch"}>
                                             <Input.Search placeholder="Search" size="small" enterButton
                                                           onChange={this.onInputSearchSchemasChanged}
@@ -4843,7 +5095,7 @@ export default class DatabaseWorkspace extends React.Component {
                                         <Button size={"small"} type={"primary"} icon={<PlusSquareOutlined/>}>删除</Button>
                                         {/*<Checkbox>分组显示</Checkbox>*/}
                                     </div>
-                                    <div className="BoxListTree">
+                                    <div className={this.state.radioDataSource === 2 ? "BoxHidden" : "BoxListTree"}>
                                         <div className={"BoxList"}>
                                             <Tree ref={this.gRef.treeTableFirstLetters}
                                                   treeData={this.state.treeDataLettersKnown}
@@ -4860,6 +5112,35 @@ export default class DatabaseWorkspace extends React.Component {
                                                       onSelect={this.onTreeTablesKnownSelected}
                                                       selectedKeys={this.state.treeSelectedKeysTables}
                                                       selectable={!this.state.isTableNameEditing}
+                                                      className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>}
+                                                      blockNode={true} showLine={true} showIcon={true}/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className={this.state.radioDataSource === 1 ? "BoxHidden" : "BoxToolbar"}>
+                                        <div className={"BoxSearch"}>
+                                            <Input.Search placeholder="Search" size="small" enterButton
+                                                          onChange={this.onInputSearchSchemasChanged}
+                                                          onSearch={this.onInputSearchSchemasSearched}/>
+                                        </div>
+                                    </div>
+                                    <div className={this.state.radioDataSource === 1 ? "BoxHidden" : "BoxListTree"}>
+                                        <div className={"BoxList"}>
+                                            <Tree ref={this.gRef.treeTableFirstLetters}
+                                                  treeData={this.state.lettersUnknownTreeData}
+                                                  //onSelect={this.onTreeLettersKnownSelected}
+                                                  //defaultSelectedKeys={this.state.lettersKnownSelectedKeys}
+                                                  //selectedKeys={this.state.treeSelectedKeysTableFirstLetters}
+                                                  className={"TreeLetters"} blockNode={true}
+                                                  showLine={{showLeafIcon: false}} showIcon={false}/>
+                                        </div>
+                                        <div className={"BoxTree"}>
+                                            <div className={"BoxTree2"}>
+                                                <Tree ref={this.gRef.treeTables}
+                                                      treeData={this.state.treeDataTablesUnknown}
+                                                      //onSelect={this.onTreeTablesKnownSelected}
+                                                      //selectedKeys={this.state.treeSelectedKeysTables}
+                                                      //selectable={!this.state.isTableNameEditing}
                                                       className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>}
                                                       blockNode={true} showLine={true} showIcon={true}/>
                                             </div>

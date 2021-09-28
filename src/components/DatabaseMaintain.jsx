@@ -4,7 +4,7 @@ import GCtx from "../GCtx";
 import lodash from "lodash";
 import axios from "axios";
 import moment from 'moment';
-import {Button, Select, Tree, Table, Input, Tabs, Checkbox} from 'antd'
+import {Button, Select, Tree, Table, Input, Tabs, Checkbox, Radio} from 'antd'
 import {CaretDownOutlined, CaretLeftOutlined, CaretRightOutlined, PlusSquareOutlined} from '@ant-design/icons'
 import TadTableColumn from '../entity/TadTableColumn'
 import Mock from 'mockjs'
@@ -3115,11 +3115,15 @@ export default class DatabaseMaintain extends React.Component {
                     <div className={this.state.styleLayout === "NNN" ? "BoxTree" : "BoxTree BoxHidden"}>
                         <Tree treeData={this.state.treeDataProducts} onSelect={this.onTreeProductsSelected} switcherIcon={<CaretDownOutlined/>} blockNode={true} showLine={{showLeafIcon: false}} showIcon={true}/>
                     </div>
-                    <div className={this.state.styleLayout === "NNN" ? "BoxDescription" : "BoxDescription BoxHidden"}>information</div>
                 </div>
                 <div className={"BoxKnown"}>
                     <div className={"BoxTitleBar"}>
-                        <div className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxTitle" : "BoxTitle BoxHidden"}>库表信息：</div>
+                        <div className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxTitle" : "BoxTitle BoxHidden"}>
+                            <Radio.Group onChange={this.onDataSourceChanged}>
+                                <Radio value={1}>产品库表：</Radio>
+                                <Radio value={2}>在线库表：</Radio>
+                            </Radio.Group>
+                        </div>
                         <Button onClick={this.onButtonTablesChangeComponentSizeClicked} icon={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? <CaretLeftOutlined/> : <CaretRightOutlined/>} size={"small"} type={"ghost"}/>
                     </div>
                     <div className={(this.state.styleLayout === "NNN") || (this.state.styleLayout === "SNN") ? "BoxSelect" : "BoxSelect BoxHidden"}>

@@ -623,6 +623,7 @@ export default class OperationKafka extends React.PureComponent {
         this.addApplication = this.addApplication.bind(this);
         this.addService = this.addService.bind(this);
         this.addQueue = this.addQueue.bind(this);
+
         this.addContainers = this.addContainers.bind(this);
         this.addContainer = this.addContainer.bind(this);
         this.updateContainer = this.updateContainer.bind(this);
@@ -630,9 +631,14 @@ export default class OperationKafka extends React.PureComponent {
         this.updateBroker = this.updateBroker.bind(this);
         this.addProducer = this.addProducer.bind(this);
         this.addConsumer = this.addConsumer.bind(this);
+        this.addPartitionBak01 = this.addPartitionBak01.bind(this);
         this.addPartition = this.addPartition.bind(this);
-        this.addPartition2 = this.addPartition2.bind(this);
         this.updatePartition = this.updatePartition.bind(this);
+        this.updateLine = this.updateLine.bind(this);
+
+        this.addPartitionValue = this.addPartitionValue.bind(this);
+        this.addPartitionValueCurrent = this.addPartitionValueCurrent.bind(this);
+        this.addTopicValue = this.addTopicValue.bind(this);
 
         this.onG6ButtonAddBroker = this.onG6ButtonAddBroker.bind(this);
 
@@ -1100,7 +1106,7 @@ export default class OperationKafka extends React.PureComponent {
         this.g6DataPartitions.forEach((p) => {
             if (!this.gMap.partitions.has(p.name)) {
                 this.gMap.partitions.set(p.name, p);
-                this.addPartition(p, "DIRECTION_VERTICAL");
+                this.addPartitionBak01(p, "DIRECTION_VERTICAL");
             } else {
                 // do ...
             }
@@ -1122,7 +1128,7 @@ export default class OperationKafka extends React.PureComponent {
         this.g6DataPartitions2.forEach((p) => {
             if (!this.gMap.partitions.has(p.name)) {
                 this.gMap.partitions.set(p.name, p);
-                this.addPartition(p, "DIRECTION_VERTICAL");
+                this.addPartitionBak01(p, "DIRECTION_VERTICAL");
             } else {
                 // do ...
             }
@@ -1421,19 +1427,19 @@ export default class OperationKafka extends React.PureComponent {
                     let treeDataObjects = lodash.cloneDeep(this.state.treeDataMddTree);
                     let mapQueues = new Map();
                     records.forEach((record) => {
-                          let topic = record.topic.toUpperCase();
-                          let topicNodeName = "";
-                          if (topic === "TRANS.Q") {
-                              topicNodeName = "queue_alarms_transfer";
-                          } else if (topic === "MAT_AGENT.Q") {
-                              topicNodeName = "queue_alarms_matcher";
-                          } else if (topic === "CLIENTWORKER_1.Q") {
-                              topicNodeName = "queue_alarms_client_worker";
-                          }
+                        let topic = record.topic.toUpperCase();
+                        let topicNodeName = "";
+                        if (topic === "TRANS.Q") {
+                            topicNodeName = "queue_alarms_transfer";
+                        } else if (topic === "MAT_AGENT.Q") {
+                            topicNodeName = "queue_alarms_matcher";
+                        } else if (topic === "CLIENTWORKER_1.Q") {
+                            topicNodeName = "queue_alarms_client_worker";
+                        }
 
-                          let partition = record.partition;
+                        let partition = record.partition;
 
-                          if (!mapQueues.has(topic)) {
+                        if (!mapQueues.has(topic)) {
                             let mapPartitions = new Map();
                             mapPartitions.set(partition, {
                                 log_end_offset: record.log_end_offset,
@@ -1441,50 +1447,65 @@ export default class OperationKafka extends React.PureComponent {
                                 topicNodeName: topicNodeName
                             });
                             mapQueues.set(topic, mapPartitions);
-                          } else {
+                        } else {
                             let mapPartitions = mapQueues.get(topic);
                             mapPartitions.set(partition, {
                                 log_end_offset: record.log_end_offset,
                                 current_offset: record.current_offset,
                                 topicNodeName: topicNodeName
                             });
-                          }
+                        }
 
-                          let myPartition = {
-                              name: topicNodeName + "_" + partition,
-                              label: partition,
-                              broker: "broker_1",
-                              topic: topic,
-                              topicNodeName: topicNodeName,
-                              type: "leader",
-                              position: {
-                                  x: 0,
-                                  y: 0
-                              },
-                              size: {
-                                  w: 180,
-                                  h: 30
-                              }
+                        let myPartition = {
+                            name: topicNodeName + "_" + partition,
+                            label: partition,
+                            broker: "broker_1",
+                            topic: topic,
+                            topicNodeName: topicNodeName,
+                            type: "leader",
+                            position: {
+                                x: 0,
+                                y: 0
+                            },
+                            size: {
+                                w: 180,
+                                h: 30
+                            },
+                            tag: {
+                                maxOffset: 30000,
+                                log_end_offset: record.log_end_offset,
+                                current_offset: record.current_offset,
+                                topicNodeName: topicNodeName
+                            }
 
-                          };
+                        };
 
-                          let uiPartiton = {
-                              key: myPartition.name,
-                              title: myPartition.name,
-                              children: [],
-                              tag: {
-                                  nodeType: "NODE_PARTITION",
-                              }
-                          }
+                        let uiPartiton = {
+                            key: myPartition.name,
+                            title: myPartition.name,
+                            children: [],
+                            tag: {
+                                nodeType: "NODE_PARTITION",
+                            }
+                        }
 
                         treeDataObjects.forEach((object) => {
                             if (object.key === myPartition.topicNodeName) {
                                 object.children.push(uiPartiton);
                             }
                         })
-                          this.addPartition2(myPartition, "DIRECTION_VERTICAL");
-                          this.g6Config.nodes.set(myPartition.name, myPartition);
-                        });
+                        this.gMap.nodes.set(myPartition.name, myPartition);
+                        this.addPartition(myPartition, "DIRECTION_VERTICAL");
+                        this.addPartitionValue(myPartition, "DIRECTION_VERTICAL");
+                        this.addPartitionValueCurrent(myPartition, "DIRECTION_VERTICAL");
+                        let myTopic = this.gMap.nodes.get(topicNodeName);
+                        myTopic.totalAlarms = Math.floor(Math.random()*1000);
+                        this.addTopicValue(myTopic);
+
+                        // this.g6Config.nodes.set(myPartition.name, myPartition);
+                    });
+                    this.updateLine();
+                    console.log("01", this.gMap.nodes);
                     this.setState({treeDataMddTree: treeDataObjects});
                     this.g6ChangeData();
 
@@ -1650,7 +1671,7 @@ export default class OperationKafka extends React.PureComponent {
     }
 
     //todo <<<<< now >>>>> add partition
-    addPartition(partition, direction) {
+    addPartitionBak01(partition, direction) {
         if (direction === undefined) {
             direction = "DIRECTION_HORIZONTAL";
         } else {
@@ -1768,7 +1789,7 @@ export default class OperationKafka extends React.PureComponent {
         this.gMap.brokers.get(partition.broker).children.push(partition.name);
     }
 
-    addPartition2(partition, direction) {
+    addPartition(partition, direction) {
         if (direction === undefined) {
             direction = "DIRECTION_HORIZONTAL";
         } else {
@@ -1779,7 +1800,7 @@ export default class OperationKafka extends React.PureComponent {
         let container = this.gMap.nodes.get(partition.topicNodeName);
 
         partition.size.w = (container.size.h - this.g6Config.s * 2 - 30);
-        partition.size.h = 30;
+        partition.size.h = 50;
         let index = container.children.length;
         let w, h, xb, yb, x1, y1, x2, y2, x3, y3;
 
@@ -1793,8 +1814,8 @@ export default class OperationKafka extends React.PureComponent {
         } else if (direction === "DIRECTION_VERTICAL") {
             w = partition.size.h;
             h = partition.size.w;
-            xb = container.position.x - container.size.w/2 + w * index + this.g6Config.s * (index + 1);
-            yb = container.position.y - container.size.h/2 + container.size.h - h - this.g6Config.s;
+            xb = container.position.x - container.size.w / 2 + w * index + this.g6Config.s * (index + 1);
+            yb = container.position.y - container.size.h / 2 + container.size.h - h - this.g6Config.s;
             x1 = xb + w / 2;
             y1 = yb + 10 / 2;
             x2 = x1;
@@ -1828,7 +1849,7 @@ export default class OperationKafka extends React.PureComponent {
             x: x2,
             y: y2,
             style: {
-                fill: "lightblue",
+                fill: "#2F5FAF",
                 radius: [5, 5, 0, 0],
             },
             tag: {
@@ -1877,14 +1898,380 @@ export default class OperationKafka extends React.PureComponent {
             }
         }
 
-        partition.position.x = x1 - w / 2;
-        partition.position.y = y1 - h / 2;
+        partition.position.x = x1 - w/2;
+        partition.position.y = y1 - 10/2;
         // this.g6Graph.addItem("node", modelBroker);
         this.g6Data.nodes.push(modelPartitionTop);
         this.g6Data.nodes.push(modelPartitionBottom);
         this.g6Data.nodes.push(modelPartitionBody);
         this.g6Data.edges.push(modelPartitionEdge);
         container.children.push(partition.name);
+        // this.gMap.brokers.get(partition.broker).children.push(partition.name);
+    }
+
+    addPartitionValue(partition, direction) {
+        if (direction === undefined) {
+            direction = "DIRECTION_HORIZONTAL";
+        } else {
+            if (direction !== "DIRECTION_HORIZONTAL" && direction !== "DIRECTION_VERTICAL") {
+                direction = "DIRECTION_VERTICAL";
+            }
+        }
+        let partitionRoot = this.gMap.nodes.get(partition.name);
+        partitionRoot.tag.maxOffset = 30000000;
+
+        let w, h, xb, yb, x1, y1, x2, y2, x3, y3;
+
+        if (direction === "DIRECTION_HORIZONTAL") {
+            // ...
+        } else if (direction === "DIRECTION_VERTICAL") {
+            w = partition.size.h/2-5;
+            let hRoot = partition.size.w;
+            // h = Math.floor(hRoot * (partition.tag.log_end_offset / partitionRoot.tag.maxOffset));
+            h = Math.floor(hRoot * (partition.tag.log_end_offset / (partitionRoot.tag.log_end_offset + 1000)));
+            console.log("h = ", h);
+            // hCurrent = Math.floor(hRoot * (partition.tag.current_offset / partitionRoot.tag.maxOffset));
+            if (h > 0 && h < 50) h = 50; else if (h === 0) h = 20;
+            xb = partitionRoot.position.x;
+            yb = partitionRoot.position.y + (hRoot - h);
+            x1 = xb + w / 2;
+            y1 = yb + 10 / 2;
+            x2 = x1;
+            y2 = yb + h / 2;
+            x3 = x1;
+            y3 = yb + (h - 10) + 10 / 2;
+        }
+
+        let bodyColor = "#4FAF4F";
+        if (partition.tag.log_end_offset === 0) {
+            bodyColor = "#AF0000";
+        } else {
+            let rateOffset = Math.floor(((partition.tag.log_end_offset - partition.tag.current_offset) / partition.tag.log_end_offset)*10000)/10000;
+            console.log(rateOffset);
+            if (rateOffset*100 > 0.3 ) {
+                bodyColor = "#AF5F00";
+            }
+        }
+
+        let modelPartitionTop = {
+            id: partition.name + "_VALUE_TOP",
+            type: "rect",
+            size: [w, 10],
+            x: x1,
+            y: y1,
+            anchorPoints: [
+                [0.5, 0.5],
+                [1, 1],
+            ],
+            style: {
+                fill: "transparent",
+                stroke: 'transparent',
+            },
+            tag: {
+                name: partition.name + "_VALUE_TOP",
+                type: "NODE_PARTITION_VALUE_TOP",
+            }
+        }
+        let modelPartitionBody = {
+            id: partition.name + "_VALUE",
+            type: "rect",
+            size: [w, h],
+            x: x2,
+            y: y2,
+            style: {
+                fill: bodyColor,
+                radius: [5, 5, 0, 0],
+            },
+            tag: {
+                name: partition.name,
+                type: "NODE_PARTITION_VALUE",
+                isRotated: false,
+            }
+        }
+        let modelPartitionBottom = {
+            id: partition.name + "_VALUE_BOTTOM",
+            type: "rect",
+            size: [w, 10],
+            x: x3,
+            y: y3,
+            anchorPoints: [
+                [0.5, 0.5],
+                [1, 1],
+            ],
+            style: {
+                fill: "transparent",
+                stroke: 'transparent',
+            },
+            tag: {
+                name: partition.name + "_VALUE_BOTTOM",
+                type: "NODE_PARTITION_VALUE_BOTTOM",
+            }
+        }
+        let modelPartitionEdge = {
+            id: partition.name + "_VALUE_EDGE",
+            type: "edge",
+            source: partition.name + "_VALUE_BOTTOM",
+            target: partition.name + "_VALUE_TOP",
+            sourceAnchor: 0,
+            targetAnchor: 0,
+            label: partition.tag.log_end_offset,
+            labelCfg: {
+                position: "start"
+            },
+            style: {
+                stroke: "transparent",
+            },
+            autoRotate: true,
+            tag: {
+                name: partition.name + "_VALUE_EDGE",
+                type: "NODE_PARTITION_VALUE_EDGE",
+            }
+        }
+
+        // partition.position.x = x1 - w / 2;
+        // partition.position.y = y1 - h / 2;
+        // this.g6Graph.addItem("node", modelBroker);
+        this.g6Data.nodes.push(modelPartitionTop);
+        this.g6Data.nodes.push(modelPartitionBottom);
+        this.g6Data.nodes.push(modelPartitionBody);
+        this.g6Data.edges.push(modelPartitionEdge);
+        // container.children.push(partition.name);
+        // this.gMap.brokers.get(partition.broker).children.push(partition.name);
+    }
+
+    addPartitionValueCurrent(partition, direction) {
+        if (direction === undefined) {
+            direction = "DIRECTION_HORIZONTAL";
+        } else {
+            if (direction !== "DIRECTION_HORIZONTAL" && direction !== "DIRECTION_VERTICAL") {
+                direction = "DIRECTION_VERTICAL";
+            }
+        }
+        let partitionRoot = this.gMap.nodes.get(partition.name);
+        partitionRoot.tag.maxOffset = 30000000;
+
+        let w, h, xb, yb, x1, y1, x2, y2, x3, y3;
+
+        if (direction === "DIRECTION_HORIZONTAL") {
+            // ...
+        } else if (direction === "DIRECTION_VERTICAL") {
+            w = partition.size.h/2-5;
+            let hRoot = partition.size.w;
+            // h = Math.floor(hRoot * (partition.tag.current_offset / partitionRoot.tag.maxOffset));
+            h = Math.floor(hRoot * (partition.tag.log_end_offset*Math.random() / (partitionRoot.tag.log_end_offset + 1000)));
+            console.log("h2 = ", h);
+            if (h > 0 && h < 50) h = 50; else if (h === 0) h = 20;
+            xb = partitionRoot.position.x + partition.size.h/2+5;
+            yb = partitionRoot.position.y + (hRoot - h);
+            x1 = xb + w / 2;
+            y1 = yb + 10 / 2;
+            x2 = x1;
+            y2 = yb + h / 2;
+            x3 = x1;
+            y3 = yb + (h - 10) + 10 / 2;
+        }
+
+        let bodyColor = "#FFFFFF";
+        // if (partition.tag.log_end_offset === 0) {
+        //     bodyColor = "#AF0000";
+        // } else {
+        //     let rateOffset = Math.floor(((partition.tag.log_end_offset - partition.tag.current_offset) / partition.tag.log_end_offset)*10000)/10000;
+        //     console.log(rateOffset);
+        //     if (rateOffset*100 > 0.3 ) {
+        //         bodyColor = "#AF5F00";
+        //     }
+        // }
+
+        let modelPartitionTop = {
+            id: partition.name + "_VALUE_CURRENT_TOP",
+            type: "rect",
+            size: [w, 10],
+            x: x1,
+            y: y1,
+            anchorPoints: [
+                [0.5, 0.5],
+                [1, 1],
+            ],
+            style: {
+                fill: "transparent",
+                stroke: 'transparent',
+            },
+            tag: {
+                name: partition.name + "_VALUE_CURRENT_TOP",
+                type: "NODE_PARTITION_VALUE_CURRENT_TOP",
+            }
+        }
+        let modelPartitionBody = {
+            id: partition.name + "_VALUE_CURRENT",
+            type: "rect",
+            size: [w, h],
+            x: x2,
+            y: y2,
+            style: {
+                fill: bodyColor,
+                radius: [5, 5, 0, 0],
+            },
+            tag: {
+                name: partition.name + "_VALUE_CURRENT",
+                type: "NODE_PARTITION_VALUE_CURRENT",
+                isRotated: false,
+            }
+        }
+        let modelPartitionBottom = {
+            id: partition.name + "_VALUE_CURRENT_BOTTOM",
+            type: "rect",
+            size: [w, 10],
+            x: x3,
+            y: y3,
+            anchorPoints: [
+                [0.5, 0.5],
+                [1, 1],
+            ],
+            style: {
+                fill: "transparent",
+                stroke: 'transparent',
+            },
+            tag: {
+                name: partition.name + "_VALUE_CURRENT_BOTTOM",
+                type: "NODE_PARTITION_VALUE_CURRENT_BOTTOM",
+            }
+        }
+        let modelPartitionEdge = {
+            id: partition.name + "_VALUE_CURRENT_EDGE",
+            type: "edge",
+            source: partition.name + "_VALUE_CURRENT_BOTTOM",
+            target: partition.name + "_VALUE_CURRENT_TOP",
+            sourceAnchor: 0,
+            targetAnchor: 0,
+            label: partition.tag.current_offset,
+            labelCfg: {
+                position: "start"
+            },
+            style: {
+                stroke: "transparent",
+            },
+            autoRotate: true,
+            tag: {
+                name: partition.name + "_VALUE_CURRENT_EDGE",
+                type: "NODE_PARTITION_VALUE_CURRENT_EDGE",
+            }
+        }
+
+        // partition.position.x = x1 - w / 2;
+        // partition.position.y = y1 - h / 2;
+        // this.g6Graph.addItem("node", modelBroker);
+        this.g6Data.nodes.push(modelPartitionTop);
+        this.g6Data.nodes.push(modelPartitionBottom);
+        this.g6Data.nodes.push(modelPartitionBody);
+        this.g6Data.edges.push(modelPartitionEdge);
+        // container.children.push(partition.name);
+        // this.gMap.brokers.get(partition.broker).children.push(partition.name);
+    }
+
+    addTopicValue(queue) {
+        let queueRoot = this.gMap.nodes.get(queue.name);
+        let w, h, xb, yb, x1, y1, x2, y2, x3, y3;
+
+        w = 100;
+        h = 40;
+        xb = queueRoot.position.x - queueRoot.size.w/2 + (queueRoot.size.w - w) - 5;
+        yb = queueRoot.position.y - queueRoot.size.h /2 - h - 5;
+        x1 = xb + w / 2;
+        y1 = yb + 10 / 2;
+        x2 = x1;
+        y2 = yb + h / 2;
+        x3 = x1;
+        y3 = yb + (h - 10) + 10 / 2;
+
+        let bodyColor = "#4FAF4F";
+
+        let modelPartitionTop = {
+            id: queue.name + "_VALUE_TOP",
+            type: "rect",
+            size: [10, h],
+            x: xb + 10/2,
+            y: yb + h/2,
+            anchorPoints: [
+                [0.5, 0.5],
+                [1, 1],
+            ],
+            style: {
+                fill: "#00000000",
+                stroke: '#00000000',
+            },
+            tag: {
+                name: queue.name + "_VALUE_TOP",
+                type: "NODE_PARTITION_VALUE_TOP",
+            }
+        }
+        let modelPartitionBody = {
+            id: queue.name + "_VALUE",
+            type: "rect",
+            size: [w, h],
+            x: xb + w/2,
+            y: yb + h/2,
+            style: {
+                fill: bodyColor,
+                radius: [5, 5, 5, 5],
+            },
+            tag: {
+                name: queue.name,
+                type: "NODE_PARTITION_VALUE",
+                isRotated: false,
+            }
+        }
+        let modelPartitionBottom = {
+            id: queue.name + "_VALUE_BOTTOM",
+            type: "rect",
+            size: [10, h],
+            x: xb + w - 10/2,
+            y: yb + h/2,
+            anchorPoints: [
+                [0.5, 0.5],
+                [1, 1],
+            ],
+            style: {
+                fill: "#00000000",
+                stroke: '#00000000',
+            },
+            tag: {
+                name: queue.name + "_VALUE_BOTTOM",
+                type: "NODE_PARTITION_VALUE_BOTTOM",
+            }
+        }
+        let modelPartitionEdge = {
+            id: queue.name + "_VALUE_EDGE",
+            type: "edge",
+            source: queue.name + "_VALUE_BOTTOM",
+            target: queue.name + "_VALUE_TOP",
+            sourceAnchor: 0,
+            targetAnchor: 0,
+            label: queue.totalAlarms,
+            labelCfg: {
+                position: "center",
+                style: {
+                    fontSize: 24,
+                    fontWeight: "bold",
+                }
+            },
+            style: {
+                stroke: "transparent",
+            },
+            autoRotate: true,
+            tag: {
+                name: queue.name + "_VALUE_EDGE",
+                type: "NODE_PARTITION_VALUE_EDGE",
+            }
+        }
+
+        // partition.position.x = x1 - w / 2;
+        // partition.position.y = y1 - h / 2;
+        // this.g6Graph.addItem("node", modelBroker);
+        this.g6Data.nodes.push(modelPartitionTop);
+        this.g6Data.nodes.push(modelPartitionBottom);
+        this.g6Data.nodes.push(modelPartitionBody);
+        this.g6Data.edges.push(modelPartitionEdge);
+        // container.children.push(partition.name);
         // this.gMap.brokers.get(partition.broker).children.push(partition.name);
     }
 
@@ -1903,6 +2290,63 @@ export default class OperationKafka extends React.PureComponent {
                 delay: 0,
             },
         );
+    }
+
+    updateLine() {
+        console.log("yyyy");
+        this.g6Config.workflow.forEach((itemNode) => {
+            console.log("xxxx");
+            if (itemNode.parentNode !== "ROOT") {
+                let node1 = itemNode.parentNode;
+                let node2 = itemNode.name;
+
+                let myLine = this.g6Graph.findById(node1 + "_EDGE_" + node2);
+                console.log(myLine);
+                let myGroup = myLine.getContainer();
+                let myShape = myGroup.get("children")[0];
+                let startPoint = myShape.getPoint(0);
+                const myCircle = myGroup.addShape('circle', {
+                    attrs: {
+                        x: startPoint.x,
+                        y: startPoint.y,
+                        fill: '#1890ff',
+                        r: 5,
+                    },
+                    name: node1.name + "_EDGE_" + node2 + "_CIRCLE",
+                });
+
+                myCircle.animate(
+                    (ratio) => {
+                        // the operations in each frame. Ratio ranges from 0 to 1 indicating the prograss of the animation. Returns the modified configurations
+                        // get the position on the edge according to the ratio
+                        const tmpPoint = myShape.getPoint(ratio);
+                        // returns the modified configurations here, x and y here
+                        return {
+                            x: tmpPoint.x,
+                            y: tmpPoint.y,
+                        };
+                    },
+                    {
+                        repeat: true, // Whether executes the animation repeatly
+                        duration: 1000, // the duration for executing once
+                    },
+                );
+            }
+        })
+        //
+        //
+        // nodePartition.getContainer().get("children")[0].animate(
+        //     {
+        //         fill: "red",
+        //         stroke: "red"
+        //     },
+        //     {
+        //         repeat: true,
+        //         duration: 1000,
+        //         easing: 'easeLinear',
+        //         delay: 0,
+        //     },
+        // );
     }
 
     //todo <<<<< now >>>>> 新增 broker
