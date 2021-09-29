@@ -45,8 +45,8 @@ export default class OperationKafka extends React.PureComponent {
     g6Data = {};
     g6Config = {
         s: 10,
-        sH: 80,
-        sV: 100,
+        sH: 100,
+        sV: 180,
         workflow: [
             {
                 name: "app_alarms_center",
@@ -639,6 +639,7 @@ export default class OperationKafka extends React.PureComponent {
         this.addPartitionValue = this.addPartitionValue.bind(this);
         this.addPartitionValueCurrent = this.addPartitionValueCurrent.bind(this);
         this.addTopicValue = this.addTopicValue.bind(this);
+        this.addTopicName = this.addTopicName.bind(this);
 
         this.onG6ButtonAddBroker = this.onG6ButtonAddBroker.bind(this);
 
@@ -705,6 +706,11 @@ export default class OperationKafka extends React.PureComponent {
         // this.g6ChangeData();
 
         this.drawWorkflow();
+        this.g6ChangeData();
+        this.g6DataQueues.forEach((itemQueue) => {
+            let myTopic = this.gMap.nodes.get(itemQueue.name);
+            this.addTopicName(myTopic);
+        })
         this.g6ChangeData();
 
         this.setState({
@@ -1009,7 +1015,7 @@ export default class OperationKafka extends React.PureComponent {
         let modelApp = {
             id: app.name,
             type: "rect",
-            label: app.label,
+            //label: app.label,
             size: [app.size.w, app.size.h],
             x: app.position.x, // + app.size.w / 2,
             y: app.position.y, // + app.size.h / 2,
@@ -1072,24 +1078,6 @@ export default class OperationKafka extends React.PureComponent {
         this.g6Graph.changeData(this.g6Data);
         this.g6Graph.fitCenter();
         this.g6Graph.fitView();
-
-        // this.g6Data.nodes.forEach((itemNode) => {
-        //     if (itemNode.tag.type === "NODE_PARTITION") {
-        //         //if (!itemNode.tag.isRotated) {
-        //             itemNode.tag.isRotated = true;
-        //             let nodeInstance = this.g6Graph.findById(itemNode.tag.name);
-        //             let g = nodeInstance.getContainer();
-        //             let textInstance = g.get("children")[1];
-        //             textInstance.rotate(-Math.PI / 2);
-        //             console.log(itemNode);
-        //             let hR = itemNode.size[1];
-        //             let wT = itemNode.label.length * 7;
-        //             // let x = textInstance.attr("x");
-        //             textInstance.attr("x", - (hR - wT) / 2);
-        //             console.log(hR, wT);
-        //        //}
-        //     }
-        // });
     }
 
     doGetRecords() {
@@ -1422,6 +1410,13 @@ export default class OperationKafka extends React.PureComponent {
     doGetAlarmsQueue(params) {
         this.restGetAlarmsQueue(params).then((result) => {
             if (result.status === 200) {
+                this.g6DataQueues.forEach((itemQueue) => {
+                    let myTopic = this.gMap.nodes.get(itemQueue.name);
+                    myTopic.totalAlarms = Math.floor(Math.random()*1000);
+                    this.addTopicValue(myTopic);
+                    // this.addTopicName(myTopic);
+                })
+
                 if (result.data.success) {
                     let records = result.data.data.data[0];
                     let treeDataObjects = lodash.cloneDeep(this.state.treeDataMddTree);
@@ -1480,7 +1475,7 @@ export default class OperationKafka extends React.PureComponent {
 
                         };
 
-                        let uiPartiton = {
+                        let uiPartition = {
                             key: myPartition.name,
                             title: myPartition.name,
                             children: [],
@@ -1491,23 +1486,96 @@ export default class OperationKafka extends React.PureComponent {
 
                         treeDataObjects.forEach((object) => {
                             if (object.key === myPartition.topicNodeName) {
-                                object.children.push(uiPartiton);
+                                object.children.push(uiPartition);
                             }
                         })
                         this.gMap.nodes.set(myPartition.name, myPartition);
                         this.addPartition(myPartition, "DIRECTION_VERTICAL");
                         this.addPartitionValue(myPartition, "DIRECTION_VERTICAL");
                         this.addPartitionValueCurrent(myPartition, "DIRECTION_VERTICAL");
-                        let myTopic = this.gMap.nodes.get(topicNodeName);
-                        myTopic.totalAlarms = Math.floor(Math.random()*1000);
-                        this.addTopicValue(myTopic);
 
                         // this.g6Config.nodes.set(myPartition.name, myPartition);
                     });
                     this.updateLine();
-                    console.log("01", this.gMap.nodes);
                     this.setState({treeDataMddTree: treeDataObjects});
                     this.g6ChangeData();
+
+                    // records.forEach((record) => {
+                    //     let topic = record.topic.toUpperCase();
+                    //     let topicNodeName = "";
+                    //     if (topic === "TRANS.Q") {
+                    //         topicNodeName = "queue_alarms_transfer";
+                    //     } else if (topic === "MAT_AGENT.Q") {
+                    //         topicNodeName = "queue_alarms_matcher";
+                    //     } else if (topic === "CLIENTWORKER_1.Q") {
+                    //         topicNodeName = "queue_alarms_client_worker";
+                    //     }
+                    //
+                    //     let partition = record.partition;
+                    //
+                    //     // if (!mapQueues.has(topic)) {
+                    //     //     let mapPartitions = new Map();
+                    //     //     mapPartitions.set(partition, {
+                    //     //         log_end_offset: record.log_end_offset,
+                    //     //         current_offset: record.current_offset,
+                    //     //         topicNodeName: topicNodeName
+                    //     //     });
+                    //     //     mapQueues.set(topic, mapPartitions);
+                    //     // } else {
+                    //     //     let mapPartitions = mapQueues.get(topic);
+                    //     //     mapPartitions.set(partition, {
+                    //     //         log_end_offset: record.log_end_offset,
+                    //     //         current_offset: record.current_offset,
+                    //     //         topicNodeName: topicNodeName
+                    //     //     });
+                    //     // }
+                    //
+                    //     let myPartition = {
+                    //         name: topicNodeName + "_" + partition,
+                    //         label: partition,
+                    //         broker: "broker_1",
+                    //         topic: topic,
+                    //         topicNodeName: topicNodeName,
+                    //         type: "leader",
+                    //         position: {
+                    //             x: 0,
+                    //             y: 0
+                    //         },
+                    //         size: {
+                    //             w: 180,
+                    //             h: 30
+                    //         },
+                    //         tag: {
+                    //             maxOffset: 30000,
+                    //             log_end_offset: record.log_end_offset,
+                    //             current_offset: record.current_offset,
+                    //             topicNodeName: topicNodeName
+                    //         }
+                    //
+                    //     };
+                    //
+                    //     // let uiPartition = {
+                    //     //     key: myPartition.name,
+                    //     //     title: myPartition.name,
+                    //     //     children: [],
+                    //     //     tag: {
+                    //     //         nodeType: "NODE_PARTITION",
+                    //     //     }
+                    //     // }
+                    //
+                    //     // treeDataObjects.forEach((object) => {
+                    //     //     if (object.key === myPartition.topicNodeName) {
+                    //     //         object.children.push(uiPartition);
+                    //     //     }
+                    //     // })
+                    //     // this.gMap.nodes.set(myPartition.name, myPartition);
+                    //     //this.addPartition(myPartition, "DIRECTION_VERTICAL");
+                    //     //this.addPartitionValue(myPartition, "DIRECTION_VERTICAL");
+                    //     this.addPartitionValueCurrent(myPartition, "DIRECTION_VERTICAL");
+                    //
+                    //     // this.g6Config.nodes.set(myPartition.name, myPartition);
+                    // });
+                    // this.g6ChangeData();
 
                     this.context.showMessage("成功，内部ID为：" + result.data.data.id);
                 } else {
@@ -1803,6 +1871,7 @@ export default class OperationKafka extends React.PureComponent {
         partition.size.h = 50;
         let index = container.children.length;
         let w, h, xb, yb, x1, y1, x2, y2, x3, y3;
+        let hTopBottom = 2;
 
         if (direction === "DIRECTION_HORIZONTAL") {
             w = partition.size.w;
@@ -1817,16 +1886,16 @@ export default class OperationKafka extends React.PureComponent {
             xb = container.position.x - container.size.w / 2 + w * index + this.g6Config.s * (index + 1);
             yb = container.position.y - container.size.h / 2 + container.size.h - h - this.g6Config.s;
             x1 = xb + w / 2;
-            y1 = yb + 10 / 2;
+            y1 = yb + hTopBottom / 2;
             x2 = x1;
             y2 = yb + h / 2;
             x3 = x1;
-            y3 = yb + (h - 10) + 10 / 2;
+            y3 = yb + (h - hTopBottom) + hTopBottom / 2;
         }
         let modelPartitionTop = {
             id: partition.name + "_TOP",
             type: "rect",
-            size: [w, 10],
+            size: [w, hTopBottom],
             x: x1,
             y: y1,
             anchorPoints: [
@@ -1834,8 +1903,8 @@ export default class OperationKafka extends React.PureComponent {
                 [1, 1],
             ],
             style: {
-                fill: "transparent",
-                stroke: 'transparent',
+                fill: "rgb(255,255,255,0)",
+                stroke: 'rgb(255,255,255,0)',
             },
             tag: {
                 name: partition.name + "_TOP",
@@ -1849,8 +1918,8 @@ export default class OperationKafka extends React.PureComponent {
             x: x2,
             y: y2,
             style: {
-                fill: "#2F5FAF",
-                radius: [5, 5, 0, 0],
+                fill: "rgba(75, 175, 255, 1)",
+                // radius: [5, 5, 0, 0],
             },
             tag: {
                 name: partition.name,
@@ -1861,7 +1930,7 @@ export default class OperationKafka extends React.PureComponent {
         let modelPartitionBottom = {
             id: partition.name + "_BOTTOM",
             type: "rect",
-            size: [w, 10],
+            size: [w, hTopBottom],
             x: x3,
             y: y3,
             anchorPoints: [
@@ -1869,8 +1938,8 @@ export default class OperationKafka extends React.PureComponent {
                 [1, 1],
             ],
             style: {
-                fill: "transparent",
-                stroke: 'transparent',
+                fill: "rgb(255,255,255,0)",
+                stroke: 'rgb(255,255,255,0)',
             },
             tag: {
                 name: partition.name + "_BOTTOM",
@@ -1884,17 +1953,39 @@ export default class OperationKafka extends React.PureComponent {
             target: partition.name + "_TOP",
             sourceAnchor: 0,
             targetAnchor: 0,
-            label: partition.label,
+            label: "",
             labelCfg: {
                 position: "start"
             },
             style: {
-                stroke: "transparent",
+                lineWidth: 1,
+                stroke: "rgb(55,55,55,1)",
             },
             autoRotate: true,
             tag: {
                 name: partition.name + "_EDGE",
                 type: "NODE_PARTITION_EDGE",
+            }
+        }
+        let modelPartitionName = {
+            id: partition.name + "_NAME",
+            type: "rect",
+            size: [w, 20],
+            x: x1,
+            y: y1 - 20,
+            anchorPoints: [
+                [0.5, 0.5],
+                [1, 1],
+            ],
+            label: partition.label,
+            style: {
+                fill: "#2F7FAF",
+                stroke: "#1F5F9F",
+                radius: [10, 10, 0, 0],
+            },
+            tag: {
+                name: partition.name + "_NAME",
+                type: "NODE_PARTITION_NAME",
             }
         }
 
@@ -1905,6 +1996,7 @@ export default class OperationKafka extends React.PureComponent {
         this.g6Data.nodes.push(modelPartitionBottom);
         this.g6Data.nodes.push(modelPartitionBody);
         this.g6Data.edges.push(modelPartitionEdge);
+        this.g6Data.nodes.push(modelPartitionName);
         container.children.push(partition.name);
         // this.gMap.brokers.get(partition.broker).children.push(partition.name);
     }
@@ -1921,42 +2013,46 @@ export default class OperationKafka extends React.PureComponent {
         partitionRoot.tag.maxOffset = 30000000;
 
         let w, h, xb, yb, x1, y1, x2, y2, x3, y3;
+        let hTopBottom = 2;
+        let s = 0;
 
         if (direction === "DIRECTION_HORIZONTAL") {
             // ...
         } else if (direction === "DIRECTION_VERTICAL") {
-            w = partition.size.h/2-5;
+            w = partition.size.h/2-s;
             let hRoot = partition.size.w;
             // h = Math.floor(hRoot * (partition.tag.log_end_offset / partitionRoot.tag.maxOffset));
-            h = Math.floor(hRoot * (partition.tag.log_end_offset / (partitionRoot.tag.log_end_offset + 1000)));
-            console.log("h = ", h);
-            // hCurrent = Math.floor(hRoot * (partition.tag.current_offset / partitionRoot.tag.maxOffset));
+            partition.tag.log_end_offset += 1;
+            let vt = partition.tag.log_end_offset*Math.random();
+            h = Math.floor(hRoot * ( vt / (partitionRoot.tag.log_end_offset)));
+            partition.tag.hTemp = h;
+            partition.tag.log_end_offset = vt;
             if (h > 0 && h < 50) h = 50; else if (h === 0) h = 20;
             xb = partitionRoot.position.x;
             yb = partitionRoot.position.y + (hRoot - h);
             x1 = xb + w / 2;
-            y1 = yb + 10 / 2;
+            y1 = yb + hTopBottom / 2;
             x2 = x1;
             y2 = yb + h / 2;
             x3 = x1;
-            y3 = yb + (h - 10) + 10 / 2;
+            y3 = yb + (h - hTopBottom) + hTopBottom / 2;
         }
 
-        let bodyColor = "#4FAF4F";
-        if (partition.tag.log_end_offset === 0) {
-            bodyColor = "#AF0000";
-        } else {
-            let rateOffset = Math.floor(((partition.tag.log_end_offset - partition.tag.current_offset) / partition.tag.log_end_offset)*10000)/10000;
-            console.log(rateOffset);
-            if (rateOffset*100 > 0.3 ) {
-                bodyColor = "#AF5F00";
-            }
-        }
+        let bodyColor = "l(90) 0:rgba(0,0,255,1) 0.5:rgba(0,0,255,0)";
+        // if (partition.tag.log_end_offset === 0) {
+        //     bodyColor = "#AF0000";
+        // } else {
+        //     let rateOffset = Math.floor(((partition.tag.log_end_offset - partition.tag.current_offset) / partition.tag.log_end_offset)*10000)/10000;
+        //
+        //     if (rateOffset*100 > 0.3 ) {
+        //         bodyColor = "#AF5F00";
+        //     }
+        // }
 
         let modelPartitionTop = {
             id: partition.name + "_VALUE_TOP",
             type: "rect",
-            size: [w, 10],
+            size: [w, hTopBottom],
             x: x1,
             y: y1,
             anchorPoints: [
@@ -1964,8 +2060,9 @@ export default class OperationKafka extends React.PureComponent {
                 [1, 1],
             ],
             style: {
-                fill: "transparent",
-                stroke: 'transparent',
+                fill: "rgba(0,0,255,1)",
+                lineWidth: 0,
+                //stroke: 'rgba(0,0,0,1)',
             },
             tag: {
                 name: partition.name + "_VALUE_TOP",
@@ -1975,12 +2072,13 @@ export default class OperationKafka extends React.PureComponent {
         let modelPartitionBody = {
             id: partition.name + "_VALUE",
             type: "rect",
-            size: [w, h],
+            size: [w, h - hTopBottom],
             x: x2,
-            y: y2,
+            y: y2 + hTopBottom/2,
             style: {
                 fill: bodyColor,
-                radius: [5, 5, 0, 0],
+                lineWidth: 0,
+                // radius: [5, 5, 0, 0],
             },
             tag: {
                 name: partition.name,
@@ -1991,7 +2089,7 @@ export default class OperationKafka extends React.PureComponent {
         let modelPartitionBottom = {
             id: partition.name + "_VALUE_BOTTOM",
             type: "rect",
-            size: [w, 10],
+            size: [w, hTopBottom],
             x: x3,
             y: y3,
             anchorPoints: [
@@ -1999,8 +2097,8 @@ export default class OperationKafka extends React.PureComponent {
                 [1, 1],
             ],
             style: {
-                fill: "transparent",
-                stroke: 'transparent',
+                fill: "rgba(255,255,255,0)",
+                stroke: 'rgba(255,255,255,0)',
             },
             tag: {
                 name: partition.name + "_VALUE_BOTTOM",
@@ -2014,17 +2112,57 @@ export default class OperationKafka extends React.PureComponent {
             target: partition.name + "_VALUE_TOP",
             sourceAnchor: 0,
             targetAnchor: 0,
-            label: partition.tag.log_end_offset,
+            // label: partition.tag.log_end_offset,
             labelCfg: {
                 position: "start"
             },
             style: {
-                stroke: "transparent",
+                stroke: "rgba(255,255,255,0)",
             },
             autoRotate: true,
             tag: {
                 name: partition.name + "_VALUE_EDGE",
                 type: "NODE_PARTITION_VALUE_EDGE",
+            }
+        }
+        let modelPartitionProducer = {
+            id: partition.name + "_VALUE_PRODUCER",
+            type: "circle",
+            size: w-5,
+            x: x3,
+            y: y3 + 30,
+            anchorPoints: [
+                [0.5, 0.5],
+                [1, 1],
+            ],
+            label: "P",
+            style: {
+                fill: "rgba(75, 175, 255, 1)",
+                stroke: '#1F5FAF',
+            },
+            tag: {
+                name: partition.name + "_VALUE_PRODUCER",
+                type: "NODE_PARTITION_VALUE_PRODUCER",
+            }
+        }
+        let modelPartitionEdgeProducer = {
+            id: partition.name + "_VALUE_EDGE_PRODUCER",
+            type: "edge",
+            source: partition.name + "_VALUE_BOTTOM",
+            target: partition.name + "_VALUE_PRODUCER",
+            sourceAnchor: 0,
+            targetAnchor: 0,
+            label: "",
+            labelCfg: {
+                position: "start"
+            },
+            style: {
+                stroke: "rgba(55,55,55,0)",
+            },
+            autoRotate: true,
+            tag: {
+                name: partition.name + "_VALUE_EDGE_PRODUCER",
+                type: "NODE_PARTITION_VALUE_EDGE_PRODUCER",
             }
         }
 
@@ -2035,6 +2173,8 @@ export default class OperationKafka extends React.PureComponent {
         this.g6Data.nodes.push(modelPartitionBottom);
         this.g6Data.nodes.push(modelPartitionBody);
         this.g6Data.edges.push(modelPartitionEdge);
+        this.g6Data.nodes.push(modelPartitionProducer);
+        this.g6Data.edges.push(modelPartitionEdgeProducer);
         // container.children.push(partition.name);
         // this.gMap.brokers.get(partition.broker).children.push(partition.name);
     }
@@ -2051,27 +2191,31 @@ export default class OperationKafka extends React.PureComponent {
         partitionRoot.tag.maxOffset = 30000000;
 
         let w, h, xb, yb, x1, y1, x2, y2, x3, y3;
+        let hTopBottom = 2;
+        let s = 0;
 
         if (direction === "DIRECTION_HORIZONTAL") {
             // ...
         } else if (direction === "DIRECTION_VERTICAL") {
-            w = partition.size.h/2-5;
+            w = partition.size.h/2-s;
             let hRoot = partition.size.w;
             // h = Math.floor(hRoot * (partition.tag.current_offset / partitionRoot.tag.maxOffset));
-            h = Math.floor(hRoot * (partition.tag.log_end_offset*Math.random() / (partitionRoot.tag.log_end_offset + 1000)));
-            console.log("h2 = ", h);
+            partitionRoot.tag.current_offset = partitionRoot.tag.log_end_offset*Math.random();
+            let hTemp = partitionRoot.tag.hTemp;
+            h = Math.floor(hTemp * (partitionRoot.tag.current_offset / (partitionRoot.tag.log_end_offset)));
+
             if (h > 0 && h < 50) h = 50; else if (h === 0) h = 20;
-            xb = partitionRoot.position.x + partition.size.h/2+5;
+            xb = partitionRoot.position.x + partition.size.h/2+s;
             yb = partitionRoot.position.y + (hRoot - h);
             x1 = xb + w / 2;
-            y1 = yb + 10 / 2;
+            y1 = yb + hTopBottom / 2;
             x2 = x1;
             y2 = yb + h / 2;
             x3 = x1;
-            y3 = yb + (h - 10) + 10 / 2;
+            y3 = yb + (h - hTopBottom) + hTopBottom / 2;
         }
 
-        let bodyColor = "#FFFFFF";
+        let bodyColor = "l(90) 0:rgba(55,55,55,1) 0.5:rgba(0,0,255,0)";
         // if (partition.tag.log_end_offset === 0) {
         //     bodyColor = "#AF0000";
         // } else {
@@ -2085,7 +2229,7 @@ export default class OperationKafka extends React.PureComponent {
         let modelPartitionTop = {
             id: partition.name + "_VALUE_CURRENT_TOP",
             type: "rect",
-            size: [w, 10],
+            size: [w, hTopBottom],
             x: x1,
             y: y1,
             anchorPoints: [
@@ -2093,8 +2237,8 @@ export default class OperationKafka extends React.PureComponent {
                 [1, 1],
             ],
             style: {
-                fill: "transparent",
-                stroke: 'transparent',
+                fill: "rgba(55,55,55,1)",
+                //stroke: 'rgba(0,0,0,1)',
             },
             tag: {
                 name: partition.name + "_VALUE_CURRENT_TOP",
@@ -2109,7 +2253,7 @@ export default class OperationKafka extends React.PureComponent {
             y: y2,
             style: {
                 fill: bodyColor,
-                radius: [5, 5, 0, 0],
+                // radius: [5, 5, 0, 0],
             },
             tag: {
                 name: partition.name + "_VALUE_CURRENT",
@@ -2120,7 +2264,7 @@ export default class OperationKafka extends React.PureComponent {
         let modelPartitionBottom = {
             id: partition.name + "_VALUE_CURRENT_BOTTOM",
             type: "rect",
-            size: [w, 10],
+            size: [w, hTopBottom],
             x: x3,
             y: y3,
             anchorPoints: [
@@ -2128,8 +2272,8 @@ export default class OperationKafka extends React.PureComponent {
                 [1, 1],
             ],
             style: {
-                fill: "transparent",
-                stroke: 'transparent',
+                fill: "rgba(0,0,0,0)",
+                stroke: 'rgba(0,0,0,0)',
             },
             tag: {
                 name: partition.name + "_VALUE_CURRENT_BOTTOM",
@@ -2143,17 +2287,184 @@ export default class OperationKafka extends React.PureComponent {
             target: partition.name + "_VALUE_CURRENT_TOP",
             sourceAnchor: 0,
             targetAnchor: 0,
-            label: partition.tag.current_offset,
+            // label: partition.tag.current_offset,
             labelCfg: {
                 position: "start"
+            },
+            style: {
+                stroke: "rgba(0,0,0,0)",
+            },
+            autoRotate: true,
+            tag: {
+                name: partition.name + "_VALUE_CURRENT_EDGE",
+                type: "NODE_PARTITION_VALUE_CURRENT_EDGE",
+            }
+        }
+        let modelPartitionConsumer = {
+            id: partition.name + "_VALUE_CURRENT_CONSUMER",
+            type: "circle",
+            size: w - 5,
+            x: x3,
+            y: y3 + 30,
+            anchorPoints: [
+                [0.5, 0.5],
+                [1, 1],
+            ],
+            label: "C",
+            style: {
+                fill: "rgba(175, 175, 175,1)",
+                stroke: '#1F5FAF',
+            },
+            tag: {
+                name: partition.name + "_VALUE_CURRENT_CONSUMER",
+                type: "NODE_PARTITION_VALUE_CURRENT_CONSUMER",
+            }
+        }
+        let modelPartitionEdgeConsumer = {
+            id: partition.name + "_VALUE_CURRENT_EDGE_CONSUMER",
+            type: "edge",
+            source: partition.name + "_VALUE_CURRENT_BOTTOM",
+            target: partition.name + "_VALUE_CURRENT_CONSUMER",
+            sourceAnchor: 0,
+            targetAnchor: 0,
+            label: "",
+            labelCfg: {
+                position: "start"
+            },
+            style: {
+                stroke: "rgba(55,55,55,0)",
+            },
+            autoRotate: true,
+            tag: {
+                name: partition.name + "_VALUE_CURRENT_EDGE_CONSUMER",
+                type: "NODE_PARTITION_VALUE_CURRENT_EDGE_CONSUMER",
+            }
+        }
+
+
+        // partition.position.x = x1 - w / 2;
+        // partition.position.y = y1 - h / 2;
+        // this.g6Graph.addItem("node", modelBroker);
+        this.g6Data.nodes.push(modelPartitionTop);
+        this.g6Data.nodes.push(modelPartitionBottom);
+        this.g6Data.nodes.push(modelPartitionBody);
+        this.g6Data.edges.push(modelPartitionEdge);
+        this.g6Data.nodes.push(modelPartitionConsumer);
+        this.g6Data.edges.push(modelPartitionEdgeConsumer);
+
+        let r = partitionRoot.tag.current_offset/partitionRoot.tag.log_end_offset;
+        let color = "rgba(255, 0 , 0, " + (1-r) + ")";
+        if (r <= 0.7) {
+            this.g6Data.nodes.forEach((itemNode) => {
+                if (itemNode.id === partition.name) {
+                    console.log(r);
+                    itemNode.style.lineWidth = 3;
+                    itemNode.style.stroke = color;
+                }
+            });
+            // let pBody = this.g6Graph.findById(partition.name);
+            // console.log(pBody);
+            // // pBody.attr({
+            // //         fill: "red"
+            // // })
+        }
+        // container.children.push(partition.name);
+        // this.gMap.brokers.get(partition.broker).children.push(partition.name);
+    }
+
+    addTopicName(queue) {
+        let queueRoot = this.gMap.nodes.get(queue.name);
+        let w, h, xb, yb; //, x1, y1, x2, y2, x3, y3;
+
+        w = 160;
+        h = 30;
+        xb = queueRoot.position.x - queueRoot.size.w/2 + 5;
+        yb = queueRoot.position.y - queueRoot.size.h /2 - h - 5;
+        // x1 = xb + w / 2;
+        // y1 = yb + 10 / 2;
+        // x2 = x1;
+        // y2 = yb + h / 2;
+        // x3 = x1;
+        // y3 = yb + (h - 10) + 10 / 2;
+
+        let bodyColor = "#AFAFAF";
+
+        let modelPartitionTop = {
+            id: queue.name + "_NAME_TOP",
+            type: "rect",
+            size: [10, h],
+            x: xb + 10/2,
+            y: yb + h/2,
+            anchorPoints: [
+                [0.5, 0.5],
+                [1, 1],
+            ],
+            style: {
+                fill: "#00000000",
+                stroke: '#00000000',
+            },
+            tag: {
+                name: queue.name + "_NAME_TOP",
+                type: "NODE_TOPIC_NAME_TOP",
+            }
+        }
+        let modelPartitionBody = {
+            id: queue.name + "_NAME_BODY",
+            type: "rect",
+            size: [w, h],
+            x: xb + w/2,
+            y: yb + h/2,
+            style: {
+                fill: bodyColor,
+                radius: [5, 5, 5, 5],
+            },
+            tag: {
+                name: queue.name,
+                type: "NODE_TOPIC_NAME_BODY",
+                isRotated: false,
+            }
+        }
+        let modelPartitionBottom = {
+            id: queue.name + "_NAME_BOTTOM",
+            type: "rect",
+            size: [10, h],
+            x: xb + w - 10/2,
+            y: yb + h/2,
+            anchorPoints: [
+                [0.5, 0.5],
+                [1, 1],
+            ],
+            style: {
+                fill: "#00000000",
+                stroke: '#00000000',
+            },
+            tag: {
+                name: queue.name + "_NAME_BOTTOM",
+                type: "NODE_TOPIC_NAME_BOTTOM",
+            }
+        }
+        let modelPartitionEdge = {
+            id: queue.name + "_NAME_EDGE",
+            type: "edge",
+            source: queue.name + "_NAME_BOTTOM",
+            target: queue.name + "_NAME_TOP",
+            sourceAnchor: 0,
+            targetAnchor: 0,
+            label: queue.label,
+            labelCfg: {
+                position: "center",
+                style: {
+                    fontSize: 16,
+                    fontWeight: "bold",
+                }
             },
             style: {
                 stroke: "transparent",
             },
             autoRotate: true,
             tag: {
-                name: partition.name + "_VALUE_CURRENT_EDGE",
-                type: "NODE_PARTITION_VALUE_CURRENT_EDGE",
+                name: queue.name + "_NAME_EDGE",
+                type: "NODE_TOPIC_NAME_EDGE",
             }
         }
 
@@ -2170,18 +2481,18 @@ export default class OperationKafka extends React.PureComponent {
 
     addTopicValue(queue) {
         let queueRoot = this.gMap.nodes.get(queue.name);
-        let w, h, xb, yb, x1, y1, x2, y2, x3, y3;
+        let w, h, xb, yb; //, x1, y1, x2, y2, x3, y3;
 
         w = 100;
         h = 40;
         xb = queueRoot.position.x - queueRoot.size.w/2 + (queueRoot.size.w - w) - 5;
         yb = queueRoot.position.y - queueRoot.size.h /2 - h - 5;
-        x1 = xb + w / 2;
-        y1 = yb + 10 / 2;
-        x2 = x1;
-        y2 = yb + h / 2;
-        x3 = x1;
-        y3 = yb + (h - 10) + 10 / 2;
+        // x1 = xb + w / 2;
+        // y1 = yb + 10 / 2;
+        // x2 = x1;
+        // y2 = yb + h / 2;
+        // x3 = x1;
+        // y3 = yb + (h - 10) + 10 / 2;
 
         let bodyColor = "#4FAF4F";
 
@@ -2293,15 +2604,12 @@ export default class OperationKafka extends React.PureComponent {
     }
 
     updateLine() {
-        console.log("yyyy");
         this.g6Config.workflow.forEach((itemNode) => {
-            console.log("xxxx");
             if (itemNode.parentNode !== "ROOT") {
                 let node1 = itemNode.parentNode;
                 let node2 = itemNode.name;
 
                 let myLine = this.g6Graph.findById(node1 + "_EDGE_" + node2);
-                console.log(myLine);
                 let myGroup = myLine.getContainer();
                 let myShape = myGroup.get("children")[0];
                 let startPoint = myShape.getPoint(0);

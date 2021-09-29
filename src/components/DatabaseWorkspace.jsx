@@ -311,6 +311,7 @@ export default class DatabaseWorkspace extends React.Component {
 
         this.onTreeProductsSelected = this.onTreeProductsSelected.bind(this);
         this.onTreeTablesKnownSelected = this.onTreeTablesKnownSelected.bind(this);
+        this.onTreeTablesOnlineSelected = this.onTreeTablesOnlineSelected.bind(this);
         this.onTreeErDiagramSelected = this.onTreeErDiagramSelected.bind(this);
         this.onTreeProductsExpanded = this.onTreeProductsExpanded.bind(this);
 
@@ -3051,7 +3052,59 @@ export default class DatabaseWorkspace extends React.Component {
         }));
     }
 
-    // >>>>> on Tree 表 selected
+    //todo <<<<< now >>>>> on Tree 在线库表 列表 selected
+    onTreeTablesOnlineSelected(selectedKeys, info) {
+        //console.log(selectedKeys);
+        let connection = this.gMap.connections.get(this.gCurrent.onlineConnectionId);
+        //console.log(this.gCurrent);
+        //let myTable = this.gMap.tables.get(this.gCurrent.tableId);
+        connection.tag = {
+            tableName: selectedKeys[0]
+        };
+
+        // dataSource={this.state.dsRecords}
+        // columns={this.state.columnsRecord}
+
+        this.restGetTableRecords(connection).then((result) => {
+            if (result.status === 200) {
+                console.log(result.data);
+                if (result.data.success) {
+                    console.log(result.data);
+                    let recordsDynamic = lodash.cloneDeep(result.data.data[0]);
+                    let columns = lodash.cloneDeep(result.data.data[1]);
+
+                    let columnsDynamic = [];
+                    columns.forEach((itemColumn) => {
+                        columnsDynamic.push({
+                            title: itemColumn.column_name,
+                            dataIndex: itemColumn.column_name,
+                            key: itemColumn.column_name,
+                            // className: "clsColumnColumnName",
+                            // render: (text, record) => {
+                            //     if (itemColumn.data_type === "varchar") {
+                            //         if (text.length > 10)
+                            //             return text.substr(0, 10) + "..."
+                            //         else
+                            //             return text
+                            //     } else {
+                            //         return text
+                            //     }
+                            // }
+                        });
+                    });
+                    console.log(recordsDynamic, columnsDynamic);
+                    this.setState({
+                        dsRecords: recordsDynamic,
+                        columnsRecord: columnsDynamic
+                    })
+                } else {
+                    this.context.showMessage(result.data.code);
+                }
+            }
+        });
+
+    };
+
     onTreeTablesKnownSelected(selectedKeys, info) {
         // if (selectedKeys[0] === undefined) return;
         // if (info.node.tag.nodeType !== "table") return;
@@ -4339,7 +4392,7 @@ export default class DatabaseWorkspace extends React.Component {
         }
     }
 
-    //todo <<<<< now >>>>> on select 目标数据库链接 changed
+    // >>>>> on select 目标数据库链接 changed
     onSelectConnectionsChanged(value, option) {
         this.gCurrent.dbTarget.connectionId = value;
     }
@@ -5136,9 +5189,10 @@ export default class DatabaseWorkspace extends React.Component {
                                         </div>
                                         <div className={"BoxTree"}>
                                             <div className={"BoxTree2"}>
-                                                <Tree ref={this.gRef.treeTables}
+                                                <Tree data-tag="在线库表树"
+                                                      ref={this.gRef.treeTables}
                                                       treeData={this.state.treeDataTablesUnknown}
-                                                      //onSelect={this.onTreeTablesKnownSelected}
+                                                      onSelect={this.onTreeTablesOnlineSelected}
                                                       //selectedKeys={this.state.treeSelectedKeysTables}
                                                       //selectable={!this.state.isTableNameEditing}
                                                       className={"TreeKnown"} switcherIcon={<CaretDownOutlined/>}
